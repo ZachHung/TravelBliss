@@ -3,4 +3,5 @@
 *.mjs
 *.d.ts
 *.d.mts
+coverage
 vite.config.ts

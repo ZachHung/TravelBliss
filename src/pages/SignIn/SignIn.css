@@ -3,12 +3,15 @@
   align-items: center;
   justify-content: space-around;
 }
+
 .checkbox {
   width: 100%;
 }
+
 .checkbox .mantine-Checkbox-labelWrapper {
   width: 100%;
 }
+
 .checkbox label {
   width: 100%;
 }
