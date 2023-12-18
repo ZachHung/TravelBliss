@@ -1,11 +1,27 @@
 import { createTheme } from '@mantine/core';
 
 export const theme = createTheme({
-  fontFamily: 'Lato, sans-serif',
+  fontFamily: 'Poppins, sans-serif',
+  headings: {
+    fontFamily: 'Lato, sans-serif',
+    fontWeight: '700',
+  },
   white: '#eceff4',
   black: '#232731',
   primaryColor: 'blue',
   colors: {
+    dark: [
+      '#d5d7e0',
+      '#acaebf',
+      '#4c566a',
+      '#434c5e',
+      '#3b4252',
+      '#2e3440',
+      '#2b2c3d',
+      '#232731',
+      '#0c0d21',
+      '#01010a',
+    ],
     blue: [
       '#edf4ff',
       '#dde7f3',
@@ -115,4 +131,5 @@ export const theme = createTheme({
       '#2d6e6f',
     ],
   },
+  defaultRadius: 'md',
 });

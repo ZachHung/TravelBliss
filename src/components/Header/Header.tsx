@@ -10,12 +10,12 @@ const Header = ({ opened, toggle }: HeaderProps) => {
   const { toggleColorScheme, colorScheme } = useMantineColorScheme();
   return (
     <>
-      <Flex justify="space-between" align="center">
+      <Flex justify="space-between" align="center" h="100%">
         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
 
         <Group gap={0} c="blue">
-          <IconTrain size={40} />
-          <Text size="xl" fw={700}>
+          <IconTrain size={36} />
+          <Text size="xl" fw="bold" style={{ fontFamily: 'Lato' }}>
             TravelBliss
           </Text>
         </Group>
