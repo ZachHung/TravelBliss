@@ -1,5 +1,10 @@
-import { ActionIcon, Burger, Flex, Group, Text, useMantineColorScheme } from '@mantine/core';
-import { IconTrain, IconWorld, IconSun, IconMoon } from '@tabler/icons-react';
+import { ActionIcon, Burger, Flex, Group, useMantineColorScheme } from '@mantine/core';
+import { IconLogout, IconMoon, IconSun, IconWorld } from '@tabler/icons-react';
+import { ROUTES } from '@/constants';
+import useAuth from '@/hooks/useAuth';
+import useCurrentPath from '@/hooks/useCurrentPath';
+import Logo from '../Logo/Logo';
+import NavLink from '../NavLink/NavLink';
 
 type HeaderProps = {
   opened: boolean;
@@ -7,27 +12,35 @@ type HeaderProps = {
 };
 
 const Header = ({ opened, toggle }: HeaderProps) => {
+  const {
+    info: [user],
+    onLogout: [logout],
+  } = useAuth();
   const { toggleColorScheme, colorScheme } = useMantineColorScheme();
+  const currentPath = useCurrentPath();
+
   return (
     <>
       <Flex justify="space-between" align="center" h="100%">
         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
 
-        <Group gap={0} c="blue">
-          <IconTrain size={36} />
-          <Text size="xl" fw="bold" style={{ fontFamily: 'Lato' }}>
-            TravelBliss
-          </Text>
-        </Group>
+        <Logo />
 
         <Group>
+          {!user && currentPath !== ROUTES.SIGN_IN && (
+            <NavLink to={ROUTES.SIGN_IN} label="Sign In" active />
+          )}
           <ActionIcon variant="light" size="lg">
             <IconWorld size={20} />
           </ActionIcon>
-
           <ActionIcon variant="light" size="lg" onClick={toggleColorScheme}>
             {colorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
           </ActionIcon>
+          {user && (
+            <ActionIcon variant="light" size="lg" onClick={logout}>
+              <IconLogout size={20} />
+            </ActionIcon>
+          )}
         </Group>
       </Flex>
     </>

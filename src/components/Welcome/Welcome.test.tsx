@@ -2,11 +2,13 @@ import { render, screen } from '@test-utils';
 import { Welcome } from './Welcome';
 
 describe('Welcome component', () => {
-  it('has correct Vite guide link', () => {
+  it('has correct title', () => {
     render(<Welcome />);
-    expect(screen.getByText('this guide')).toHaveAttribute(
-      'href',
-      'https://mantine.dev/guides/vite/'
-    );
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Welcome to TravelBliss',
+      })
+    ).toBeInTheDocument();
   });
 });
