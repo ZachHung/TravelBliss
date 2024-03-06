@@ -5,3 +5,5 @@
 *.d.mts
 coverage
 vite.config.ts
+# graphql types from codegen file
+src/graphql/codegen

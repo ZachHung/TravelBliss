@@ -15,21 +15,28 @@ import {
 } from '@mantine/core';
 import { IconEye, IconEyeOff } from '@tabler/icons-react';
 import { useState } from 'react';
-import TextGradient from '@/components/TextGradient/TextGradient';
 import Form from '@/components/Form/Form';
+import TextGradient from '@/components/TextGradient/TextGradient';
+import useAuth from '@/hooks/useAuth';
 import './SignIn.css';
 
 const SignInPage = () => {
   const [showPassword, setShowPassword] = useState(false);
+
+  const {
+    onLogin: [login],
+  } = useAuth();
+
   const initialValues = {
     phoneNumber: '',
     password: '',
     alwaySignIn: false,
   };
 
-  const handleSubmit = (values: typeof initialValues) => {
-    console.log(values);
+  const handleSubmit = async (values: typeof initialValues) => {
+    login(values.phoneNumber, values.password);
   };
+
   return (
     <>
       <Container h="calc(100dvh - 52px - 36px)" fluid px={0}>
@@ -37,7 +44,7 @@ const SignInPage = () => {
           h="100%"
           src="https://raw.githubusercontent.com/mantinedev/mantine/master/.demo/images/bg-6.png"
         >
-          <Center h="100%" mr="-50%">
+          <Center h="100%">
             <Paper shadow="xs" p="md" mr={16} my="auto">
               <Form onSubmit={handleSubmit} initialValues={initialValues}>
                 {(form) => (
