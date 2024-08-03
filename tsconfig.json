@@ -3,7 +3,7 @@
     "types": ["node", "@testing-library/jest-dom", "vitest/globals"],
     "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["dom", "dom.iterable", "ESNext"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": false,
@@ -18,8 +18,9 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],
-      "@test-utils": ["./test-utils"]
+      "@test-utils": ["./test-utils"],
+      "@generated/*": ["./generated/*"]
     }
   },
-  "include": ["src", "test-utils", "codegen.ts"]
+  "include": ["src", "test-utils", "codegen.ts", "generated"]
 }

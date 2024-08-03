@@ -1,4 +1,4 @@
-import { graphql } from '../codegen';
+import { graphql } from '@generated/codegen';
 
 export const GET_ME = graphql(`
   query GetMe {
@@ -10,6 +10,8 @@ export const GET_ME = graphql(`
       firstName
       email
       age
+      birthday
+      fullName
     }
   }
 `);

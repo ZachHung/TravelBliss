@@ -1,21 +1,22 @@
-import { ApolloQueryResult, MutationResult, useMutation, useQuery } from '@apollo/client';
+import { ApolloQueryResult, MutationResult, useMutation } from '@apollo/client';
+import { Exact, GetMeQuery, LoginMutation, User } from '@generated/codegen/graphql';
 import { ReactNode, createContext, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FullScreenLoader from '@/components/FullScreenLoader/FullScreenLoader';
 import { ROUTES } from '@/constants';
-import { Exact, GetMeQuery } from '@/graphql/codegen/graphql';
-import { LOGIN, LOGOUT } from '@/graphql/mutations';
-import { GET_ME } from '@/graphql/queries';
-import { SerializedUser } from '@/types';
+import { LOGOUT } from '@/graphql/mutations/logout';
+import useGetMe from '@/hooks/graphql/useGetMe';
+import useLogin from '@/hooks/graphql/useLogin';
+import { Serialized } from '@/types';
 
 export type AuthContextValue = {
   info: readonly [
-    SerializedUser | undefined,
-    React.Dispatch<React.SetStateAction<SerializedUser | undefined>>,
+    Serialized<User> | undefined,
+    React.Dispatch<React.SetStateAction<Serialized<User> | undefined>>,
   ];
   onLogin: readonly [
-    (phoneNumber: string, password: string) => void,
-    MutationResult<any>,
+    (phoneNumber: string, password: string, hasRefresh?: boolean) => Promise<void>,
+    MutationResult<LoginMutation>,
     (
       variables?:
         | Partial<
@@ -34,31 +35,32 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { loading, refetch } = useQuery(GET_ME, {
+  const { isLoading: isGetMeLoading, refetch: refetchGetUserInfo } = useGetMe({
     onCompleted: (data) => {
       setUser((prev) => ({ prev, ...data.me }));
     },
-    notifyOnNetworkStatusChange: true,
   });
-  const [login, loginData] = useMutation(LOGIN, {
+
+  const { login, result } = useLogin({
     onCompleted: () => {
       const origin = location.state?.from?.pathname || ROUTES.ROOT;
-      refetch();
+      refetchGetUserInfo();
       navigate(origin);
-      return <></>;
     },
   });
 
-  const [logout] = useMutation(LOGOUT, {
+  const [logout, { loading: isLogOutLoading }] = useMutation(LOGOUT, {
     onCompleted: () => {
       setUser(undefined);
     },
   });
 
-  const [user, setUser] = useState<SerializedUser>();
+  const [user, setUser] = useState<Serialized<User>>();
 
-  const onLogin = (phoneNumber: string, password: string) => {
-    login({ variables: { input: { usernameOrEmailOrPhone: phoneNumber, password } } });
+  const onLogin = async (phoneNumber: string, password: string, hasRefresh?: boolean) => {
+    await login({
+      variables: { input: { usernameOrEmailOrPhone: phoneNumber, password, hasRefresh } },
+    });
   };
 
   const onLogout = () => {
@@ -67,11 +69,11 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value: AuthContextValue = {
     info: [user, setUser],
-    onLogin: [onLogin, loginData, refetch],
+    onLogin: [onLogin, result, refetchGetUserInfo],
     onLogout: [onLogout],
   };
 
-  if (loading) {
+  if (isGetMeLoading || isLogOutLoading) {
     return <FullScreenLoader />;
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
