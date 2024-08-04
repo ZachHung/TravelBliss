@@ -7,6 +7,7 @@ import ErrorPage from '../pages/Error/Error.page';
 import ProtectedRoute from './ProtectedRoute';
 import AuthProvider from '@/contexts/AuthProvider';
 import PublicRoute from './PublicRoute';
+import RegisterPage from '@/pages/Register/Register.page';
 
 const router = createBrowserRouter([
   {
@@ -29,6 +30,10 @@ const router = createBrowserRouter([
           {
             path: ROUTES.SIGN_IN,
             element: <SignInPage />,
+          },
+          {
+            path: ROUTES.REGISTER,
+            element: <RegisterPage />,
           },
         ],
       },
