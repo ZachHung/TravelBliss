@@ -1,40 +1,52 @@
 import {
   Anchor,
   BackgroundImage,
-  Button,
   Center,
   Checkbox,
   Group,
   Paper,
   PasswordInput,
-  Stack,
   Text,
   TextInput,
   Title,
 } from '@mantine/core';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Form from '@/components/Form/Form';
+import { z } from 'zod';
+import { zodResolver } from '@mantine/form';
+import Form, { FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';
+import { ErrorsCodes } from '@/types';
 import './SignIn.css';
+import createValidationSchema from '@/validations';
+
+const initialValues = {
+  phoneNumber: '',
+  password: '',
+  alwaySignIn: false,
+};
+
+const formErrors: FormError<typeof initialValues> = {
+  [ErrorsCodes.USER_NOT_FOUND]: [{ fieldName: 'phoneNumber', message: 'This user does not exist' }],
+  [ErrorsCodes.WRONG_PASSWORD]: [{ fieldName: 'password', message: 'Wrong password' }],
+};
+
+const validationSchema = createValidationSchema({
+  phoneNumber: z.string().trim().min(1, 'This field is required'),
+  password: z.string().trim().min(1, 'This field is required'),
+});
 
 const SignInPage = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const {
-    onLogin: [login],
+    onLogin: [login, { loading }],
   } = useAuth();
 
-  const initialValues = {
-    phoneNumber: '',
-    password: '',
-    alwaySignIn: false,
-  };
-
   const handleSubmit = async (values: typeof initialValues) => {
-    login(values.phoneNumber, values.password);
+    await login(values.phoneNumber, values.password, values.alwaySignIn);
   };
 
   return (
@@ -42,9 +54,18 @@ const SignInPage = () => {
       <BackgroundImage h="100%" src="images/bg-6.png">
         <Center h="100%">
           <Paper shadow="xs" p="md" mr={16} my="auto">
-            <Form onSubmit={handleSubmit} initialValues={initialValues}>
+            <Form
+              onSubmit={handleSubmit}
+              formErrors={formErrors}
+              initialValues={initialValues}
+              loading={loading}
+              footer={formFooter}
+              submitLabel="Sign In"
+              validate={zodResolver(validationSchema)}
+              submitFullWidth
+            >
               {(form) => (
-                <Stack w={360}>
+                <>
                   <Title size="h2" ta="center">
                     <TextGradient>Sign In</TextGradient>
                   </Title>
@@ -55,14 +76,17 @@ const SignInPage = () => {
                     label="Phone Number"
                     placeholder="Enter your phone number"
                     {...form.getInputProps('phoneNumber')}
+                    key={form.key('phoneNumber')}
                   />
 
                   <PasswordInput
                     withAsterisk
                     label="Password"
                     visible={showPassword}
+                    placeholder="Enter your password"
                     onVisibilityChange={setShowPassword}
                     {...form.getInputProps('password')}
+                    key={form.key('password')}
                   />
 
                   <Checkbox
@@ -77,19 +101,9 @@ const SignInPage = () => {
                       </Group>
                     }
                     {...form.getInputProps('alwaySignIn', { type: 'checkbox' })}
+                    key={form.key('alwaySignIn')}
                   />
-
-                  <Button type="submit" fw="normal" mt="md">
-                    Sign In
-                  </Button>
-
-                  <Group fz="sm" justify="center" gap="xs">
-                    Not a member?{' '}
-                    <Anchor to={ROUTES.REGISTER} inherit component={Link}>
-                      Sign up
-                    </Anchor>
-                  </Group>
-                </Stack>
+                </>
               )}
             </Form>
           </Paper>
@@ -98,5 +112,14 @@ const SignInPage = () => {
     </>
   );
 };
+
+const formFooter = (
+  <Group fz="sm" justify="center" gap="xs">
+    Not a member?{' '}
+    <Anchor to={ROUTES.REGISTER} inherit component={Link}>
+      Sign up
+    </Anchor>
+  </Group>
+);
 
 export default SignInPage;

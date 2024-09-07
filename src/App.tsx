@@ -1,17 +1,28 @@
 import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
 import { MantineProvider } from '@mantine/core';
-import { ApolloClient, ApolloProvider, InMemoryCache, createHttpLink } from '@apollo/client';
+import { ApolloClient, ApolloProvider, InMemoryCache, createHttpLink, from } from '@apollo/client';
+import { onError } from '@apollo/client/link/error';
 import { Router } from './routes/Router';
 import { theme } from './theme';
 
-const link = createHttpLink({
+const httpLink = createHttpLink({
   uri: import.meta.env.VITE_GRAPHQL_URI,
   credentials: 'include',
 });
 
+const errorLink = onError(({ graphQLErrors, networkError }) => {
+  if (graphQLErrors) {
+    graphQLErrors.forEach(({ message, locations, path }) =>
+      console.log(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`)
+    );
+  }
+  if (networkError) console.error(`[Network error]: ${networkError}`);
+});
+
 const client = new ApolloClient({
   cache: new InMemoryCache(),
-  link,
+  link: from([errorLink, httpLink]),
   defaultOptions: {
     watchQuery: {
       fetchPolicy: 'no-cache',

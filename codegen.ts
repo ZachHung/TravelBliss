@@ -2,12 +2,16 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 
 const config: CodegenConfig = {
   overwrite: true,
-  schema: 'http://localhost:5000/graphql',
+  schema: 'https://raw.githubusercontent.com/ZachHung/TravelBliss-API/main/schema.graphql',
   documents: 'src/graphql/**/*.tsx',
+  ignoreNoDocuments: true,
   generates: {
-    'src/graphql/codegen/': {
+    'generated/codegen/': {
       preset: 'client',
       plugins: [],
+      hooks: {
+        afterOneFileWrite: ['prettier --write'],
+      },
     },
   },
 };

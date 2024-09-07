@@ -1,23 +1,94 @@
-import { Box } from '@mantine/core';
-import { useForm, UseFormInput, UseFormReturnType } from '@mantine/form';
-import { isFunction } from 'lodash';
+import { ApolloError } from '@apollo/client';
+import { Box, Button, Center, MantineStyleProps, Stack } from '@mantine/core';
+import { createFormContext, UseFormInput, UseFormReturnType } from '@mantine/form';
+import { isEmpty, isFunction } from 'lodash';
+import React, { useCallback } from 'react';
+import { ErrorsCodes } from '@/types';
 
-type FormProps<V extends Record<string, any>> = UseFormInput<V> & {
-  onSubmit: (values: V, event: React.FormEvent<HTMLFormElement> | undefined) => void;
-  children: (formData: UseFormReturnType<V>) => JSX.Element | JSX.Element;
+export type FormError<V> = {
+  [key in ErrorsCodes]?: {
+    message: string;
+    fieldName: keyof V;
+  }[];
 };
 
-const Form = <V extends Record<string, any>>({
+type FormProps<V> = UseFormInput<V> & {
+  onSubmit: (values: V, event?: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  formErrors?: FormError<V>;
+  children: (formData: UseFormReturnType<V>) => JSX.Element | JSX.Element;
+  loading?: boolean;
+  footer?: JSX.Element;
+  submitLabel?: string;
+  submitFullWidth?: boolean;
+} & Pick<MantineStyleProps, 'w'>;
+
+const Form = <V,>({
   children,
   onSubmit,
+  formErrors,
+  footer,
+  submitLabel,
+  loading,
+  submitFullWidth,
+  w,
   ...useFormInput
 }: FormProps<V>) => {
-  const form = useForm(useFormInput);
+  const [FormProvider, _, useForm] = createFormContext<V>();
+
+  const form = useForm({ ...useFormInput, mode: 'uncontrolled' });
+
+  const handleFormError = useCallback(
+    (error: ApolloError) => {
+      if (isEmpty(formErrors)) return;
+
+      const exceptions = error.graphQLErrors.map((graphError) => ({
+        code: graphError.extensions?.code as ErrorsCodes,
+        where: graphError.extensions?.where as keyof V,
+      }));
+
+      for (const exceptionInfo of exceptions) {
+        if (formErrors[exceptionInfo.code]) {
+          for (const exception of formErrors[exceptionInfo.code]!) {
+            form.setFieldError(exceptionInfo.where || exception.fieldName, exception.message);
+          }
+        }
+      }
+    },
+    [formErrors]
+  );
+
+  const handleFormSubmit = async (
+    values: V,
+    event: React.FormEvent<HTMLFormElement> | undefined
+  ) => {
+    try {
+      await onSubmit(values, event);
+    } catch (e) {
+      if (e instanceof ApolloError) handleFormError(e);
+    }
+  };
+
   return (
     <Box p={16}>
-      <form onSubmit={form.onSubmit(onSubmit)}>
-        {isFunction(children) ? children(form) : children}
-      </form>
+      <FormProvider form={form}>
+        <form onSubmit={form.onSubmit(handleFormSubmit)}>
+          <Stack w={w || 360} justify="center">
+            {isFunction(children) ? children(form) : children}
+            <Center>
+              <Button
+                type="submit"
+                fw="normal"
+                mt="md"
+                loading={loading}
+                w={submitFullWidth ? '100%' : '25%'}
+              >
+                {submitLabel || 'Submit'}
+              </Button>
+            </Center>
+            {footer}
+          </Stack>
+        </form>
+      </FormProvider>
     </Box>
   );
 };
