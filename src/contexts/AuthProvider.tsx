@@ -1,6 +1,6 @@
+import { createContext, ReactNode, useState } from 'react';
 import { ApolloQueryResult, MutationResult, useMutation } from '@apollo/client';
 import { Exact, GetMeQuery, LoginMutation, User } from '@generated/codegen/graphql';
-import { ReactNode, createContext, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FullScreenLoader from '@/components/FullScreenLoader/FullScreenLoader';
 import { ROUTES } from '@/constants';

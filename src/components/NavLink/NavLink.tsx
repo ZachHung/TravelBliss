@@ -1,5 +1,5 @@
-import { Button } from '@mantine/core';
 import { NavLink as RouterNavLink } from 'react-router-dom';
+import { Button } from '@mantine/core';
 
 type NavLinkProps = {
   to: string;

@@ -1,8 +1,8 @@
+import React, { useCallback } from 'react';
 import { ApolloError } from '@apollo/client';
+import { isEmpty, isFunction } from 'lodash';
 import { Box, Button, Center, MantineStyleProps, Stack } from '@mantine/core';
 import { createFormContext, UseFormInput, UseFormReturnType } from '@mantine/form';
-import { isEmpty, isFunction } from 'lodash';
-import React, { useCallback } from 'react';
 import { ErrorsCodes } from '@/types';
 
 export type FormError<V> = {
@@ -39,7 +39,9 @@ const Form = <V,>({
 
   const handleFormError = useCallback(
     (error: ApolloError) => {
-      if (isEmpty(formErrors)) return;
+      if (isEmpty(formErrors)) {
+        return;
+      }
 
       const exceptions = error.graphQLErrors.map((graphError) => ({
         code: graphError.extensions?.code as ErrorsCodes,
@@ -64,7 +66,9 @@ const Form = <V,>({
     try {
       await onSubmit(values, event);
     } catch (e) {
-      if (e instanceof ApolloError) handleFormError(e);
+      if (e instanceof ApolloError) {
+        handleFormError(e);
+      }
     }
   };
 

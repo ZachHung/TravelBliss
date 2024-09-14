@@ -1,9 +1,0 @@
-*.js
-*.cjs
-*.mjs
-*.d.ts
-*.d.mts
-coverage
-vite.config.ts
-# graphql types from codegen file
-generated

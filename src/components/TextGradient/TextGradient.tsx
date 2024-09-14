@@ -1,5 +1,5 @@
-import { Text, TextProps } from '@mantine/core';
 import { PropsWithChildren } from 'react';
+import { Text, TextProps } from '@mantine/core';
 
 type TextGradientProps = TextProps & PropsWithChildren;
 const TextGradient = ({ children, ...textProps }: TextGradientProps) => (

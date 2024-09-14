@@ -1,6 +1,6 @@
-import { Button } from '@mantine/core';
 import { IconTrain } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@mantine/core';
 import { ROUTES } from '@/constants';
 
 const Logo = () => {

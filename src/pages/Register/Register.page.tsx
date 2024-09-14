@@ -1,3 +1,7 @@
+import dayjs from 'dayjs';
+import { IconCalendar } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
+import { z } from 'zod';
 import {
   BackgroundImage,
   Center,
@@ -11,16 +15,12 @@ import {
 import { DatePickerInput } from '@mantine/dates';
 import { zodResolver } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
-import { IconCalendar } from '@tabler/icons-react';
-import dayjs from 'dayjs';
-import { useNavigate } from 'react-router-dom';
-import { z } from 'zod';
-import createValidationSchema from '@/validations';
-import { ErrorsCodes } from '@/types';
-import useRegister from '@/hooks/graphql/useRegister';
-import { ROUTES } from '@/constants';
-import TextGradient from '@/components/TextGradient/TextGradient';
 import Form, { FormError } from '@/components/Form/Form';
+import TextGradient from '@/components/TextGradient/TextGradient';
+import { ROUTES } from '@/constants';
+import useRegister from '@/hooks/graphql/useRegister';
+import { ErrorsCodes } from '@/types';
+import createValidationSchema from '@/validations';
 
 const initialValues = {
   fullName: '',
