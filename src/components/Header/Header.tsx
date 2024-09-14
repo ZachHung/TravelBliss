@@ -1,5 +1,5 @@
-import { ActionIcon, Burger, Flex, Group, useMantineColorScheme } from '@mantine/core';
 import { IconLogout, IconMoon, IconSun, IconWorld } from '@tabler/icons-react';
+import { ActionIcon, Burger, Flex, Group, useMantineColorScheme } from '@mantine/core';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';
 import useCurrentPath from '@/hooks/useCurrentPath';

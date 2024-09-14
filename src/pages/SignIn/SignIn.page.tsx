@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { z } from 'zod';
 import {
   Anchor,
   BackgroundImage,
@@ -10,16 +13,15 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { z } from 'zod';
 import { zodResolver } from '@mantine/form';
 import Form, { FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';
 import { ErrorsCodes } from '@/types';
+
 import './SignIn.css';
+
 import createValidationSchema from '@/validations';
 
 const initialValues = {

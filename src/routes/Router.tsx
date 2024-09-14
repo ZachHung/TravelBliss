@@ -1,13 +1,13 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import AuthProvider from '@/contexts/AuthProvider';
+import RegisterPage from '@/pages/Register/Register.page';
+import { ROUTES } from '../constants';
 import RootLayout from '../layouts/Root.layout';
+import ErrorPage from '../pages/Error/Error.page';
 import { HomePage } from '../pages/Home.page';
 import SignInPage from '../pages/SignIn/SignIn.page';
-import { ROUTES } from '../constants';
-import ErrorPage from '../pages/Error/Error.page';
 import ProtectedRoute from './ProtectedRoute';
-import AuthProvider from '@/contexts/AuthProvider';
 import PublicRoute from './PublicRoute';
-import RegisterPage from '@/pages/Register/Register.page';
 
 const router = createBrowserRouter([
   {
