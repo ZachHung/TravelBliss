@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useState } from 'react';
+import { createContext, PropsWithChildren, useState } from 'react';
 import { ApolloQueryResult, MutationResult, useMutation } from '@apollo/client';
 import { Exact, GetMeQuery, LoginMutation, User } from '@generated/codegen/graphql';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -31,7 +31,7 @@ export type AuthContextValue = {
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-const AuthProvider = ({ children }: { children: ReactNode }) => {
+const AuthProvider = ({ children }: PropsWithChildren) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { refetch: refetchGetUserInfo } = useGetMe({
