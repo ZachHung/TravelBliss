@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "start:dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -62,7 +63,7 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "@vitest/coverage-v8": "^2.1.1",
+    "@vitest/coverage-istanbul": "^2.1.1",
     "eslint": "^9.10.0",
     "eslint-config-mantine": "^4.0.3",
     "eslint-plugin-jsx-a11y": "^6.10.0",
