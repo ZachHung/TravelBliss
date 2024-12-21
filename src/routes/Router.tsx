@@ -1,21 +1,26 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import AuthProvider from '@/contexts/AuthProvider';
-import RegisterPage from '@/pages/Register/Register.page';
+import FullScreenLoader from '@/components/FullScreenLoader/FullScreenLoader';
 import { ROUTES } from '../constants';
-import RootLayout from '../layouts/Root.layout';
 import ErrorPage from '../pages/Error/Error.page';
-import { HomePage } from '../pages/Home.page';
-import SignInPage from '../pages/SignIn/SignIn.page';
-import ProtectedRoute from './ProtectedRoute';
-import PublicRoute from './PublicRoute';
+
+const RootLayout = lazy(() => import('@/layouts/Root.layout'));
+const AuthProvider = lazy(() => import('@/contexts/AuthProvider'));
+const HomePage = lazy(() => import('@/pages/Home.page'));
+const SignInPage = lazy(() => import('@/pages/SignIn/SignIn.page'));
+const RegisterPage = lazy(() => import('@/pages/Register/Register.page'));
+const PublicRoute = lazy(() => import('./PublicRoute'));
+const ProtectedRoute = lazy(() => import('./ProtectedRoute'));
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: (
-      <AuthProvider>
-        <RootLayout />
-      </AuthProvider>
+      <Suspense fallback={<FullScreenLoader />}>
+        <AuthProvider>
+          <RootLayout />
+        </AuthProvider>
+      </Suspense>
     ),
     errorElement: <ErrorPage />,
     children: [

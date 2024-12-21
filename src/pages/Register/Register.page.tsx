@@ -103,7 +103,6 @@ const RegisterPage = () => {
                       label="Full Name"
                       placeholder="Enter your full name"
                       {...form.getInputProps('fullName')}
-                      key={form.key('fullName')}
                     />
 
                     <TextInput
@@ -112,14 +111,12 @@ const RegisterPage = () => {
                       label="Username"
                       placeholder="Enter your username"
                       {...form.getInputProps('username')}
-                      key={form.key('username')}
                     />
                   </Group>
 
                   <Group justify="space-between">
                     <TextInput
                       {...form.getInputProps('phoneNumber')}
-                      key={form.key('phoneNumber')}
                       withAsterisk
                       type="tel"
                       label="Phone Number"
@@ -128,7 +125,6 @@ const RegisterPage = () => {
 
                     <TextInput
                       {...form.getInputProps('email')}
-                      key={form.key('email')}
                       withAsterisk
                       type="email"
                       label="Email"
@@ -142,13 +138,11 @@ const RegisterPage = () => {
                     label="Birthday"
                     placeholder="Pick your birthday"
                     {...form.getInputProps('birthday')}
-                    key={form.key('birthday')}
                   />
 
                   <PasswordInput
                     withAsterisk
                     {...form.getInputProps('password')}
-                    key={form.key('password')}
                     label="Password"
                     visible={visible}
                     placeholder="Enter your password"
@@ -158,7 +152,6 @@ const RegisterPage = () => {
                   <PasswordInput
                     withAsterisk
                     {...form.getInputProps('confirmPassword')}
-                    key={form.key('confirmPassword')}
                     label="Confirm password"
                     visible={visible}
                     placeholder="Reenter your password"

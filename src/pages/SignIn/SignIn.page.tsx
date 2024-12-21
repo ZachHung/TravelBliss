@@ -78,7 +78,6 @@ const SignInPage = () => {
                     label="Phone Number"
                     placeholder="Enter your phone number"
                     {...form.getInputProps('phoneNumber')}
-                    key={form.key('phoneNumber')}
                   />
 
                   <PasswordInput
@@ -88,7 +87,6 @@ const SignInPage = () => {
                     placeholder="Enter your password"
                     onVisibilityChange={setShowPassword}
                     {...form.getInputProps('password')}
-                    key={form.key('password')}
                   />
 
                   <Checkbox
@@ -103,7 +101,6 @@ const SignInPage = () => {
                       </Group>
                     }
                     {...form.getInputProps('alwaySignIn', { type: 'checkbox' })}
-                    key={form.key('alwaySignIn')}
                   />
                 </>
               )}
