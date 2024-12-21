@@ -8,6 +8,13 @@ import { theme } from '../src/theme';
 
 const channel = addons.getChannel();
 
+export const parameters = {
+  layout: 'fullscreen',
+  options: {
+    showPanel: false,
+  },
+};
+
 function ColorSchemeWrapper({ children }: { children: React.ReactNode }) {
   const { setColorScheme } = useMantineColorScheme();
   const handleColorScheme = (value: boolean) => setColorScheme(value ? 'dark' : 'light');
