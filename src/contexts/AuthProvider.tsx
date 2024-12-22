@@ -2,7 +2,6 @@ import { createContext, ReactNode, useState } from 'react';
 import { ApolloQueryResult, MutationResult, useMutation } from '@apollo/client';
 import { Exact, GetMeQuery, LoginMutation, User } from '@generated/codegen/graphql';
 import { useLocation, useNavigate } from 'react-router-dom';
-import FullScreenLoader from '@/components/FullScreenLoader/FullScreenLoader';
 import { ROUTES } from '@/constants';
 import { LOGOUT } from '@/graphql/mutations/logout';
 import useGetMe from '@/hooks/graphql/useGetMe';
@@ -35,7 +34,7 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoading: isGetMeLoading, refetch: refetchGetUserInfo } = useGetMe({
+  const { refetch: refetchGetUserInfo } = useGetMe({
     onCompleted: (data) => {
       setUser((prev) => ({ prev, ...data.me }));
     },
@@ -49,7 +48,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
-  const [logout, { loading: isLogOutLoading }] = useMutation(LOGOUT, {
+  const [logout] = useMutation(LOGOUT, {
     onCompleted: () => {
       setUser(undefined);
     },
@@ -73,9 +72,6 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     onLogout: [onLogout],
   };
 
-  if (isGetMeLoading || isLogOutLoading) {
-    return <FullScreenLoader />;
-  }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 export default AuthProvider;

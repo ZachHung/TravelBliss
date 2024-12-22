@@ -2,7 +2,7 @@ import TextGradient from '@/components/TextGradient/TextGradient';
 import { Welcome } from '@/components/Welcome/Welcome';
 import useAuth from '@/hooks/useAuth';
 
-export function HomePage() {
+const HomePage = () => {
   const { info } = useAuth();
   const [user] = info;
   return (
@@ -11,4 +11,6 @@ export function HomePage() {
       <Welcome />
     </>
   );
-}
+};
+
+export default HomePage;

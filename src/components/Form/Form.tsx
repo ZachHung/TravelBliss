@@ -49,8 +49,9 @@ const Form = <V,>({
       }));
 
       for (const exceptionInfo of exceptions) {
-        if (formErrors[exceptionInfo.code]) {
-          for (const exception of formErrors[exceptionInfo.code]!) {
+        const errors = formErrors[exceptionInfo.code];
+        if (errors) {
+          for (const exception of errors) {
             form.setFieldError(exceptionInfo.where || exception.fieldName, exception.message);
           }
         }
