@@ -18,10 +18,10 @@ importers:
         specifier: 7.15.1
         version: 7.15.1(@mantine/hooks@7.15.1(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/dates':
-        specifier: ^7.15.1
+        specifier: 7.15.1
         version: 7.15.1(@mantine/core@7.15.1(@mantine/hooks@7.15.1(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.15.1(react@18.3.1))(dayjs@1.11.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/form':
-        specifier: ^7.15.1
+        specifier: 7.15.1
         version: 7.15.1(react@18.3.1)
       '@mantine/hooks':
         specifier: 7.15.1
