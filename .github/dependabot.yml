@@ -11,4 +11,4 @@ updates:
       interval: "weekly"
     ignore:
       - dependency-name: "*"
-        update-types: [sem-ver:major]
+        update-types: [version-update:semver-major]
