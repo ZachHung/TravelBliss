@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "pnpm eslint && pnpm stylelint",
     "eslint": "eslint . --cache",
-    "stylelint": "stylelint '**/*.css' --cache",
+    "stylelint": "stylelint \"**/*.css\" --cache",
     "prettier": "prettier --check \"**/*.{ts,tsx}\"",
     "prettier:write": "prettier --write \"**/*.{ts,tsx}\"",
     "vitest": "vitest run",
