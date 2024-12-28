@@ -12,3 +12,16 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
+    groups:
+      mantine:
+        patterns:
+          - "@mantine/*"
+      eslint:
+        patterns:
+          - "*eslint*"
+      storybook:
+        patterns:
+          - "@storybook/*"
+          - storybook
+          - storybook-dark-mode
+    

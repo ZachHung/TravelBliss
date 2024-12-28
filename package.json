@@ -25,10 +25,10 @@
   "dependencies": {
     "@apollo/client": "^3.12.4",
     "@graphql-typed-document-node/core": "^3.2.0",
-    "@mantine/core": "7.15.1",
+    "@mantine/core": "^7.15.1",
     "@mantine/dates": "^7.15.1",
     "@mantine/form": "^7.15.1",
-    "@mantine/hooks": "7.15.1",
+    "@mantine/hooks": "^7.15.1",
     "@storybook/preview-api": "^8.4.7",
     "@tabler/icons-react": "^3.26.0",
     "dayjs": "^1.11.13",
