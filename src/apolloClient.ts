@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { ApolloClient, ApolloLink, createHttpLink, from, InMemoryCache } from '@apollo/client';
 import { onError } from '@apollo/client/link/error';
-import { REFRESH_TOKEN } from './graphql/mutations/refreshToken';
+// import { REFRESH_TOKEN } from './graphql/mutations/refreshToken';
 import { parseJwt } from './utils/helpers';
 
 const REFRESH_TOKEN_LEGROOM = 30;
@@ -42,22 +42,22 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   }
 });
 
-const authClient = new ApolloClient({
-  cache: new InMemoryCache(),
-  link: from([errorLink, httpLink]),
-});
+// const authClient = new ApolloClient({
+//   cache: new InMemoryCache(),
+//   link: from([errorLink, httpLink]),
+// });
 
-const refreshToken = async (): Promise<string | null> => {
-  const { data } = await authClient.mutate({
-    mutation: REFRESH_TOKEN,
-  });
+// const refreshToken = async (): Promise<string | null> => {
+//   const { data } = await authClient.mutate({
+//     mutation: REFRESH_TOKEN,
+//   });
 
-  if (!data) {
-    return null;
-  }
-  localStorage.setItem('token', data.refreshToken.accessToken);
-  return data.refreshToken.accessToken;
-};
+//   if (!data) {
+//     return null;
+//   }
+//   localStorage.setItem('token', data.refreshToken.accessToken);
+//   return data.refreshToken.accessToken;
+// };
 
 const authLink = new ApolloLink((operation, forward) => {
   // add the authorization to the headers
