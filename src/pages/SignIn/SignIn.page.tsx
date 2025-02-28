@@ -76,6 +76,7 @@ const SignInPage = () => {
                     type="tel"
                     label="Phone Number"
                     placeholder="Enter your phone number"
+                    key={form.key('phoneNumber')}
                     {...form.getInputProps('phoneNumber')}
                   />
 
@@ -85,6 +86,7 @@ const SignInPage = () => {
                     visible={showPassword}
                     placeholder="Enter your password"
                     onVisibilityChange={setShowPassword}
+                    key={form.key('password')}
                     {...form.getInputProps('password')}
                   />
 
@@ -92,6 +94,7 @@ const SignInPage = () => {
                     className="checkbox"
                     radius="sm"
                     label="Remember Me"
+                    key={form.key('alwaysSignIn')}
                     {...form.getInputProps('alwaysSignIn', { type: 'checkbox' })}
                   />
                 </>
