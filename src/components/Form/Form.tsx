@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { ApolloError } from '@apollo/client';
 import { isEmpty, isFunction } from 'lodash';
 import { Box, Button, Center, MantineStyleProps, Stack } from '@mantine/core';
-import { createFormContext, UseFormInput, UseFormReturnType } from '@mantine/form';
+import { useForm, UseFormReturnType } from '@mantine/form';
 import { ErrorsCodes } from '@/types';
 
 export type FormError<V> = {
@@ -12,8 +12,8 @@ export type FormError<V> = {
   }[];
 };
 
-type FormProps<V> = UseFormInput<V> & {
-  onSubmit: (values: V, event?: React.FormEvent<HTMLFormElement>) => Promise<void>;
+type FormProps<V extends Record<string, any>> = Parameters<typeof useForm<V>>[0] & {
+  onSubmit?: (values: V, event?: React.FormEvent<HTMLFormElement>) => Promise<void>;
   formErrors?: FormError<V>;
   children: (formData: UseFormReturnType<V>) => JSX.Element | JSX.Element;
   loading?: boolean;
@@ -22,7 +22,7 @@ type FormProps<V> = UseFormInput<V> & {
   submitFullWidth?: boolean;
 } & Pick<MantineStyleProps, 'w'>;
 
-const Form = <V,>({
+const Form = <V extends Record<string, any>>({
   children,
   onSubmit,
   formErrors,
@@ -33,8 +33,6 @@ const Form = <V,>({
   w,
   ...useFormInput
 }: FormProps<V>) => {
-  const [FormProvider, _, useForm] = createFormContext<V>();
-
   const form = useForm({ ...useFormInput, mode: 'uncontrolled' });
 
   const handleFormError = useCallback(
@@ -60,12 +58,11 @@ const Form = <V,>({
     [formErrors]
   );
 
-  const handleFormSubmit = async (
-    values: V,
-    event: React.FormEvent<HTMLFormElement> | undefined
-  ) => {
+  const handleFormSubmit = async (values: V, event?: React.FormEvent<HTMLFormElement>) => {
     try {
-      await onSubmit(values, event);
+      if (onSubmit) {
+        await onSubmit(values, event);
+      }
     } catch (e) {
       if (e instanceof ApolloError) {
         handleFormError(e);
@@ -75,25 +72,23 @@ const Form = <V,>({
 
   return (
     <Box p={16}>
-      <FormProvider form={form}>
-        <form onSubmit={form.onSubmit(handleFormSubmit)}>
-          <Stack w={w || 360} justify="center">
-            {isFunction(children) ? children(form) : children}
-            <Center>
-              <Button
-                type="submit"
-                fw="normal"
-                mt="md"
-                loading={loading}
-                w={submitFullWidth ? '100%' : '25%'}
-              >
-                {submitLabel || 'Submit'}
-              </Button>
-            </Center>
-            {footer}
-          </Stack>
-        </form>
-      </FormProvider>
+      <form onSubmit={form.onSubmit(handleFormSubmit)}>
+        <Stack w={w || 360} justify="center">
+          {isFunction(children) ? children(form) : children}
+          <Center>
+            <Button
+              type="submit"
+              fw="normal"
+              mt="md"
+              loading={loading}
+              w={submitFullWidth ? '100%' : '25%'}
+            >
+              {submitLabel || 'Submit'}
+            </Button>
+          </Center>
+          {footer}
+        </Stack>
+      </form>
     </Box>
   );
 };
