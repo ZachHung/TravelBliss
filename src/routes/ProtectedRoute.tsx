@@ -1,9 +1,9 @@
-import { ReactNode } from 'react';
+import { PropsWithChildren } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';
 
-const ProtectedRoute = ({ children }: { children?: ReactNode }) => {
+const ProtectedRoute = ({ children }: Partial<PropsWithChildren>) => {
   const {
     info: [user],
   } = useAuth();
