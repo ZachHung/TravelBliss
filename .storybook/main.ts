@@ -6,8 +6,10 @@ const config: StorybookConfig = {
     disableTelemetry: true,
     enableCrashReports: false,
   },
+
   stories: ['../src/**/*.mdx', '../src/**/*.story.@(js|jsx|ts|tsx)'],
-  addons: ['storybook-dark-mode'],
+  addons: ['storybook-dark-mode', '@chromatic-com/storybook'],
+
   framework: {
     name: '@storybook/react-vite',
     options: {},

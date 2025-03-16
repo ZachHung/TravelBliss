@@ -22,6 +22,6 @@ updates:
       storybook:
         patterns:
           - "@storybook/*"
+          - "@chromatic-com/storybook"
           - storybook
           - storybook-dark-mode
-    
