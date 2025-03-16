@@ -32,7 +32,7 @@ const initialValues = {
   birthday: new Date(),
 };
 
-const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
+const phoneRegex = /(?:\+84|0084|0)[235789][0-9]{1,2}[0-9]{7}/;
 
 const validationSchema = createValidationSchema<typeof initialValues>({
   fullName: z.string().trim().min(1, 'This field is required'),
@@ -102,6 +102,7 @@ const RegisterPage = () => {
                       type="text"
                       label="Full Name"
                       placeholder="Enter your full name"
+                      key={form.key('fullName')}
                       {...form.getInputProps('fullName')}
                     />
 
@@ -110,12 +111,14 @@ const RegisterPage = () => {
                       type="text"
                       label="Username"
                       placeholder="Enter your username"
+                      key={form.key('username')}
                       {...form.getInputProps('username')}
                     />
                   </Group>
 
                   <Group justify="space-between">
                     <TextInput
+                      key={form.key('phoneNumber')}
                       {...form.getInputProps('phoneNumber')}
                       withAsterisk
                       type="tel"
@@ -124,6 +127,7 @@ const RegisterPage = () => {
                     />
 
                     <TextInput
+                      key={form.key('email')}
                       {...form.getInputProps('email')}
                       withAsterisk
                       type="email"
@@ -137,11 +141,13 @@ const RegisterPage = () => {
                     leftSectionPointerEvents="none"
                     label="Birthday"
                     placeholder="Pick your birthday"
+                    key={form.key('birthday')}
                     {...form.getInputProps('birthday')}
                   />
 
                   <PasswordInput
                     withAsterisk
+                    key={form.key('password')}
                     {...form.getInputProps('password')}
                     label="Password"
                     visible={visible}
@@ -151,6 +157,7 @@ const RegisterPage = () => {
 
                   <PasswordInput
                     withAsterisk
+                    key={form.key('confirmPassword')}
                     {...form.getInputProps('confirmPassword')}
                     label="Confirm password"
                     visible={visible}
