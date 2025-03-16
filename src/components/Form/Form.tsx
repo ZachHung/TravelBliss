@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { ApolloError } from '@apollo/client';
-import { isEmpty, isFunction } from 'lodash';
+import isEmpty from 'lodash/isEmpty';
+import isFunction from 'lodash/isFunction';
 import { Box, Button, Center, MantineStyleProps, Stack } from '@mantine/core';
 import { createFormContext, UseFormInput, UseFormReturnType } from '@mantine/form';
 import { ErrorsCodes } from '@/types';
