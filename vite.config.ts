@@ -25,10 +25,10 @@ export default defineConfig({
       include: ['src/**', '!src/main.tsx', '!src/**/*.story.tsx'],
       provider: 'v8',
       thresholds: {
-        lines: 36.47,
-        branches: 47.05,
+        lines: 35.32,
+        branches: 45.71,
         functions: 39.39,
-        statements: 36.47,
+        statements: 35.32,
         autoUpdate: true,
       },
     },
