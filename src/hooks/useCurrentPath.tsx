@@ -1,4 +1,4 @@
-import { matchRoutes, useLocation } from 'react-router-dom';
+import { matchRoutes, useLocation } from 'react-router';
 import { ROUTES } from '@/constants';
 
 const routes = Object.values(ROUTES).map((pathname) => ({ path: pathname }));

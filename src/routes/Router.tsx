@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import FullScreenLoader from '@/components/FullScreenLoader/FullScreenLoader';
+import { createBrowserRouter, RouterProvider } from 'react-router';
+import FullscreenLoader from '@/components/FullscreenLoader/FullscreenLoader';
 import { ROUTES } from '../constants';
 import ErrorPage from '../pages/Error/Error.page';
 
@@ -16,7 +16,7 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: (
-      <Suspense fallback={<FullScreenLoader />}>
+      <Suspense fallback={<FullscreenLoader />}>
         <AuthProvider>
           <RootLayout />
         </AuthProvider>

@@ -1,4 +1,4 @@
-import { NavLink as RouterNavLink } from 'react-router-dom';
+import { NavLink as RouterNavLink } from 'react-router';
 import { Button } from '@mantine/core';
 
 type NavLinkProps = {
@@ -7,7 +7,7 @@ type NavLinkProps = {
   active?: boolean;
 };
 
-function NavLink({ to, label, active }: NavLinkProps) {
+const NavLink = ({ to, label, active }: NavLinkProps) => {
   return (
     <RouterNavLink to={to} style={{ textDecoration: 'none' }}>
       {({ isActive }) => (
@@ -17,6 +17,6 @@ function NavLink({ to, label, active }: NavLinkProps) {
       )}
     </RouterNavLink>
   );
-}
+};
 
 export default NavLink;
