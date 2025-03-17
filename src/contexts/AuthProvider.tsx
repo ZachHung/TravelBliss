@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useState } from 'react';
 import { ApolloQueryResult, MutationResult, useMutation } from '@apollo/client';
 import { Exact, GetMeQuery, LoginMutation, User } from '@generated/codegen/graphql';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { ROUTES } from '@/constants';
 import { LOGOUT } from '@/graphql/mutations/logout';
 import useGetMe from '@/hooks/graphql/useGetMe';

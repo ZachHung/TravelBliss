@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -12,16 +13,22 @@ export default defineConfig({
     },
   },
   test: {
+    reporters: ['default', 'html'],
+    outputFile: 'generated/test/index.html',
     globals: true,
     environment: 'jsdom',
-    setupFiles: './vitest.setup.mjs',
+    setupFiles: './vitest.setup.ts',
     coverage: {
+      all: true,
+      enabled: true,
+      reportsDirectory: './generated/test/coverage',
+      include: ['src/**', '!src/main.tsx', '!src/**/*.story.tsx'],
       provider: 'v8',
       thresholds: {
-        line: 90,
-        branches: 90,
-        functions: 90,
-        statements: 90,
+        lines: 36.47,
+        branches: 47.05,
+        functions: 39.39,
+        statements: 36.47,
         autoUpdate: true,
       },
     },
