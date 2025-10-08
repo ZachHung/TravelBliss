@@ -30,7 +30,7 @@
     "@mantine/core": "^7.17.3",
     "@mantine/dates": "^7.17.3",
     "@mantine/form": "^7.17.3",
-    "@mantine/hooks": "^7.17.3",
+    "@mantine/hooks": "^7.17.8",
     "@storybook/preview-api": "^8.6.8",
     "@tabler/icons-react": "^3.31.0",
     "dayjs": "^1.11.13",
