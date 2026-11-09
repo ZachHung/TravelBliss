@@ -1,6 +1,5 @@
 import type { ErrorLike } from '@apollo/client';
 
-export type Serialized<T> = Omit<T, 'createdAt' | 'updatedAt'>;
 export type MutationHookProps<TData> = Partial<{
   onCompleted: (data: TData) => void;
   onError: (error: ErrorLike) => void;

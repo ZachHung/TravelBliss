@@ -1,17 +1,18 @@
 import { createContext, ReactNode, useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@apollo/client/react';
-import { LoginMutation, User } from '@generated/codegen/graphql';
+import { GetMeQuery, LoginMutation } from '@generated/codegen/graphql';
 import { useLocation, useNavigate } from 'react-router';
 import { ROUTES } from '@/constants';
 import { LOGOUT } from '@/graphql/mutations/logout';
 import useGetMe from '@/hooks/graphql/useGetMe';
 import useLogin from '@/hooks/graphql/useLogin';
-import { Serialized } from '@/types';
+
+export type CurrentUser = GetMeQuery['me'];
 
 export type AuthContextValue = {
   info: readonly [
-    Serialized<User> | undefined,
-    React.Dispatch<React.SetStateAction<Serialized<User> | undefined>>,
+    CurrentUser | undefined,
+    React.Dispatch<React.SetStateAction<CurrentUser | undefined>>,
   ];
   onLogin: readonly [
     (phoneNumber: string, password: string, hasRefresh?: boolean) => Promise<void>,
@@ -26,7 +27,7 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState<Serialized<User>>();
+  const [user, setUser] = useState<CurrentUser>();
   const { data: me, refetch: refetchGetUserInfo } = useGetMe();
 
   useEffect(() => {
