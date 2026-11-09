@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import { IconCalendar } from '@tabler/icons-react';
+import { zod4Resolver } from 'mantine-form-zod-resolver';
 import { useNavigate } from 'react-router';
 import { z } from 'zod';
 import {
@@ -13,7 +14,6 @@ import {
   Title,
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { zodResolver } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import Form, { FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
@@ -87,7 +87,7 @@ const RegisterPage = () => {
               initialValues={initialValues}
               w={480}
               formErrors={formErrors}
-              validate={zodResolver(validationSchema)}
+              validate={zod4Resolver(validationSchema)}
               loading={loading}
             >
               {(form) => (

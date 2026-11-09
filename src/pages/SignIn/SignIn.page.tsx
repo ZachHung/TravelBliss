@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { zod4Resolver } from 'mantine-form-zod-resolver';
 import { Link } from 'react-router';
 import { z } from 'zod';
 import {
@@ -13,7 +14,6 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { zodResolver } from '@mantine/form';
 import Form, { FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
@@ -63,7 +63,7 @@ const SignInPage = () => {
               loading={loading}
               footer={formFooter}
               submitLabel="Sign In"
-              validate={zodResolver(validationSchema)}
+              validate={zod4Resolver(validationSchema)}
               submitFullWidth
             >
               {(form) => (

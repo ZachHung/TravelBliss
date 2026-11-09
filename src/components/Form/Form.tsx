@@ -53,7 +53,10 @@ const Form = <V,>({
         const errors = formErrors[exceptionInfo.code];
         if (errors) {
           for (const exception of errors) {
-            form.setFieldError(exceptionInfo.where || exception.fieldName, exception.message);
+            form.setFieldError(
+              String(exceptionInfo.where || exception.fieldName),
+              exception.message
+            );
           }
         }
       }
