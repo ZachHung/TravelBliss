@@ -15,7 +15,7 @@ import {
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
-import Form, { FormError } from '@/components/Form/Form';
+import Form, { type FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
 import useRegister from '@/hooks/graphql/useRegister';

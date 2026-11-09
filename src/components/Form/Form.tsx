@@ -2,9 +2,9 @@ import React, { useCallback } from 'react';
 import { CombinedGraphQLErrors } from '@apollo/client';
 import isEmpty from 'lodash/isEmpty';
 import isFunction from 'lodash/isFunction';
-import { Box, Button, Center, MantineStyleProps, Stack } from '@mantine/core';
-import { createFormContext, UseFormInput, UseFormReturnType } from '@mantine/form';
-import { ErrorsCodes } from '@/types';
+import { Box, Button, Center, Stack, type MantineStyleProps } from '@mantine/core';
+import { createFormContext, type UseFormInput, type UseFormReturnType } from '@mantine/form';
+import { type ErrorsCodes } from '@/types';
 
 export type FormError<V> = {
   [key in ErrorsCodes]?: {

@@ -14,7 +14,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import Form, { FormError } from '@/components/Form/Form';
+import Form, { type FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';

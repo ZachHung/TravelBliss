@@ -1,6 +1,6 @@
-import { createContext, ReactNode, useEffect, useMemo, useState } from 'react';
+import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation } from '@apollo/client/react';
-import { GetMeQuery, LoginMutation } from '@generated/codegen/graphql';
+import { type GetMeQuery, type LoginMutation } from '@generated/codegen/graphql';
 import { useLocation, useNavigate } from 'react-router';
 import { ROUTES } from '@/constants';
 import { LOGOUT } from '@/graphql/mutations/logout';

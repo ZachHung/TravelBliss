@@ -6,13 +6,18 @@
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": false,
     "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
@@ -21,5 +26,5 @@
       "@generated/*": ["./generated/*"]
     }
   },
-  "include": ["src", "test-utils", "codegen.ts", "generated"]
+  "include": ["src", "test-utils", "generated", "codegen.ts", "vite.config.ts", "vitest.setup.ts"]
 }

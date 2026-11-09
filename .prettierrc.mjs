@@ -10,26 +10,13 @@ const config = {
     '',
     'dayjs',
     '^react$',
-    '^next$',
-    '^next/.*$',
     '<BUILTIN_MODULES>',
     '<THIRD_PARTY_MODULES>',
     '^@mantine/(.*)$',
-    '^@mantinex/(.*)$',
-    '^@mantine-tests/(.*)$',
-    '^@docs/(.*)$',
     '^@/.*$',
     '^../(?!.*.css$).*$',
     '^./(?!.*.css$).*$',
     '\\.css$',
-  ],
-  overrides: [
-    {
-      files: '*.mdx',
-      options: {
-        printWidth: 70,
-      },
-    },
   ],
 };
 

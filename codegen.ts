@@ -12,6 +12,9 @@ const config: CodegenConfig = {
     'generated/codegen/': {
       preset: 'client',
       plugins: [],
+      config: {
+        useTypeImports: true,
+      },
       hooks: {
         afterOneFileWrite: ['prettier --write'],
       },
