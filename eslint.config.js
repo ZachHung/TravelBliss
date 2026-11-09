@@ -6,6 +6,7 @@ export default tseslint.config(...mantine, {
     'coverage',
     'generated',
     'dist',
+    'storybook-static',
     '**/*.{mjs,cjs,js,d.ts,d.mts}',
     './.storybook/main.ts',
   ],
