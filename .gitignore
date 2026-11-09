@@ -133,3 +133,4 @@ dist
 
 # generated file
 generated
+.vitest

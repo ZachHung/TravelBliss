@@ -16,9 +16,9 @@ export type FormError<V> = {
 type FormProps<V> = UseFormInput<V> & {
   onSubmit: (values: V, event?: React.FormEvent<HTMLFormElement>) => Promise<void>;
   formErrors?: FormError<V>;
-  children: (formData: UseFormReturnType<V>) => JSX.Element | JSX.Element;
+  children: ((formData: UseFormReturnType<V>) => React.ReactElement) | React.ReactElement;
   loading?: boolean;
-  footer?: JSX.Element;
+  footer?: React.ReactElement;
   submitLabel?: string;
   submitFullWidth?: boolean;
 } & Pick<MantineStyleProps, 'w'>;
