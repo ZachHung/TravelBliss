@@ -1,27 +1,40 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-    ignore:
-      - dependency-name: "*"
-        update-types: [version-update:semver-major]
+      interval: 'weekly'
     groups:
       mantine:
         patterns:
-          - "@mantine/*"
+          - '@mantine/*'
+          - 'postcss-preset-mantine'
+          - 'mantine-form-zod-resolver'
       eslint:
         patterns:
-          - "*eslint*"
+          - '*eslint*'
       storybook:
         patterns:
-          - "@storybook/*"
-          - "@chromatic-com/storybook"
-          - storybook
-          - storybook-dark-mode
+          - '@storybook/*'
+          - '@chromatic-com/storybook'
+          - 'storybook'
+          - 'storybook-dark-mode'
+      react:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - '@types/react'
+          - '@types/react-dom'
+      vitest:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+      graphql:
+        patterns:
+          - '@graphql-codegen/*'
+          - 'graphql'
+          - '@graphql-typed-document-node/*'
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'

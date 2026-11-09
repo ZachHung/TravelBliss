@@ -1,14 +1,9 @@
-import { NetworkStatus, useQuery } from '@apollo/client';
-import { GetMeQuery } from '@generated/codegen/graphql';
+import { NetworkStatus } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { GET_ME } from '@/graphql/queries/me';
 
-type UseGetMeProps = {
-  onCompleted?: (data: GetMeQuery) => void;
-};
-
-const useGetMe = ({ onCompleted }: UseGetMeProps) => {
+const useGetMe = () => {
   const { loading, data, refetch, networkStatus } = useQuery(GET_ME, {
-    onCompleted,
     notifyOnNetworkStatusChange: true,
   });
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { zod4Resolver } from 'mantine-form-zod-resolver';
 import { Link } from 'react-router';
 import { z } from 'zod';
 import {
@@ -9,12 +10,10 @@ import {
   Group,
   Paper,
   PasswordInput,
-  Text,
   TextInput,
   Title,
 } from '@mantine/core';
-import { zodResolver } from '@mantine/form';
-import Form, { FormError } from '@/components/Form/Form';
+import Form, { type FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';
@@ -27,7 +26,7 @@ import createValidationSchema from '@/validations';
 const initialValues = {
   phoneNumber: '',
   password: '',
-  alwaySignIn: false,
+  alwaysSignIn: false,
 };
 
 const formErrors: FormError<typeof initialValues> = {
@@ -48,7 +47,7 @@ const SignInPage = () => {
   } = useAuth();
 
   const handleSubmit = async (values: typeof initialValues) => {
-    await login(values.phoneNumber, values.password, values.alwaySignIn);
+    await login(values.phoneNumber, values.password, values.alwaysSignIn);
   };
 
   return (
@@ -63,7 +62,7 @@ const SignInPage = () => {
               loading={loading}
               footer={formFooter}
               submitLabel="Sign In"
-              validate={zodResolver(validationSchema)}
+              validate={zod4Resolver(validationSchema)}
               submitFullWidth
             >
               {(form) => (
@@ -92,15 +91,8 @@ const SignInPage = () => {
                   <Checkbox
                     className="checkbox"
                     radius="sm"
-                    label={
-                      <Group justify="space-between" w="100%">
-                        <Text inherit>Remember Me</Text>
-                        <Anchor href="https://mantine.dev" target="_blank" inherit>
-                          Forgot your password?
-                        </Anchor>
-                      </Group>
-                    }
-                    {...form.getInputProps('alwaySignIn', { type: 'checkbox' })}
+                    label="Remember Me"
+                    {...form.getInputProps('alwaysSignIn', { type: 'checkbox' })}
                   />
                 </>
               )}

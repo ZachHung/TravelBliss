@@ -133,3 +133,5 @@ dist
 
 # generated file
 generated
+.vitest
+storybook-static

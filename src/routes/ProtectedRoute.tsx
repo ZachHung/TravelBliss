@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';

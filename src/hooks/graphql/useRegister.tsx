@@ -1,7 +1,7 @@
-import { useMutation } from '@apollo/client';
-import { RegisterMutation } from '@generated/codegen/graphql';
+import { useMutation } from '@apollo/client/react';
+import { type RegisterMutation } from '@generated/codegen/graphql';
 import { REGISTER } from '@/graphql/mutations/register';
-import { MutationHookProps } from '@/types';
+import { type MutationHookProps } from '@/types';
 
 const useRegister = ({ onCompleted, onError }: Partial<MutationHookProps<RegisterMutation>>) => {
   const [register, result] = useMutation(REGISTER, {

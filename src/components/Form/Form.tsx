@@ -1,10 +1,10 @@
 import React, { useCallback } from 'react';
-import { ApolloError } from '@apollo/client';
+import { CombinedGraphQLErrors } from '@apollo/client';
 import isEmpty from 'lodash/isEmpty';
 import isFunction from 'lodash/isFunction';
-import { Box, Button, Center, MantineStyleProps, Stack } from '@mantine/core';
-import { createFormContext, UseFormInput, UseFormReturnType } from '@mantine/form';
-import { ErrorsCodes } from '@/types';
+import { Box, Button, Center, Stack, type MantineStyleProps } from '@mantine/core';
+import { useForm, type UseFormInput, type UseFormReturnType } from '@mantine/form';
+import { type ErrorsCodes } from '@/types';
 
 export type FormError<V> = {
   [key in ErrorsCodes]?: {
@@ -13,17 +13,17 @@ export type FormError<V> = {
   }[];
 };
 
-type FormProps<V> = UseFormInput<V> & {
+type FormProps<V extends Record<string, any>> = UseFormInput<V> & {
   onSubmit: (values: V, event?: React.FormEvent<HTMLFormElement>) => Promise<void>;
   formErrors?: FormError<V>;
-  children: (formData: UseFormReturnType<V>) => JSX.Element | JSX.Element;
+  children: ((formData: UseFormReturnType<V>) => React.ReactElement) | React.ReactElement;
   loading?: boolean;
-  footer?: JSX.Element;
+  footer?: React.ReactElement;
   submitLabel?: string;
   submitFullWidth?: boolean;
 } & Pick<MantineStyleProps, 'w'>;
 
-const Form = <V,>({
+const Form = <V extends Record<string, any>>({
   children,
   onSubmit,
   formErrors,
@@ -34,17 +34,15 @@ const Form = <V,>({
   w,
   ...useFormInput
 }: FormProps<V>) => {
-  const [FormProvider, _, useForm] = createFormContext<V>();
-
-  const form = useForm({ ...useFormInput, mode: 'uncontrolled' });
+  const form = useForm<V>({ ...useFormInput, mode: 'uncontrolled' });
 
   const handleFormError = useCallback(
-    (error: ApolloError) => {
+    (error: CombinedGraphQLErrors) => {
       if (isEmpty(formErrors)) {
         return;
       }
 
-      const exceptions = error.graphQLErrors.map((graphError) => ({
+      const exceptions = error.errors.map((graphError) => ({
         code: graphError.extensions?.code as ErrorsCodes,
         where: graphError.extensions?.where as keyof V,
       }));
@@ -53,7 +51,10 @@ const Form = <V,>({
         const errors = formErrors[exceptionInfo.code];
         if (errors) {
           for (const exception of errors) {
-            form.setFieldError(exceptionInfo.where || exception.fieldName, exception.message);
+            form.setFieldError(
+              String(exceptionInfo.where || exception.fieldName),
+              exception.message
+            );
           }
         }
       }
@@ -68,7 +69,7 @@ const Form = <V,>({
     try {
       await onSubmit(values, event);
     } catch (e) {
-      if (e instanceof ApolloError) {
+      if (CombinedGraphQLErrors.is(e)) {
         handleFormError(e);
       }
     }
@@ -76,25 +77,23 @@ const Form = <V,>({
 
   return (
     <Box p={16}>
-      <FormProvider form={form}>
-        <form onSubmit={form.onSubmit(handleFormSubmit)}>
-          <Stack w={w || 360} justify="center">
-            {isFunction(children) ? children(form) : children}
-            <Center>
-              <Button
-                type="submit"
-                fw="normal"
-                mt="md"
-                loading={loading}
-                w={submitFullWidth ? '100%' : '25%'}
-              >
-                {submitLabel || 'Submit'}
-              </Button>
-            </Center>
-            {footer}
-          </Stack>
-        </form>
-      </FormProvider>
+      <form onSubmit={form.onSubmit(handleFormSubmit)}>
+        <Stack w={w || 360} justify="center">
+          {isFunction(children) ? children(form) : children}
+          <Center>
+            <Button
+              type="submit"
+              fw="normal"
+              mt="md"
+              loading={loading}
+              w={submitFullWidth ? '100%' : '25%'}
+            >
+              {submitLabel || 'Submit'}
+            </Button>
+          </Center>
+          {footer}
+        </Stack>
+      </form>
     </Box>
   );
 };

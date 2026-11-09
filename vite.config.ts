@@ -1,11 +1,11 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react()],
   resolve: {
+    tsconfigPaths: true,
     alias: {
       // /esm/icons/index.mjs only exports the icons statically, so no separate chunks are created
       // fix https://github.com/tabler/tabler-icons/issues/1233
@@ -19,17 +19,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './vitest.setup.ts',
     coverage: {
-      all: true,
       enabled: true,
       reportsDirectory: './generated/test/coverage',
       include: ['src/**', '!src/main.tsx', '!src/**/*.story.tsx'],
       provider: 'v8',
       thresholds: {
-        lines: 35.32,
-        branches: 45.71,
-        functions: 39.39,
-        statements: 35.32,
-        autoUpdate: true,
+        lines: 78,
+        branches: 63,
+        functions: 71,
+        statements: 76,
       },
     },
   },

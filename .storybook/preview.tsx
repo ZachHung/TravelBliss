@@ -1,8 +1,8 @@
 import '@mantine/core/styles.css';
 
 import React, { useEffect } from 'react';
-import { addons } from '@storybook/preview-api';
 import { DARK_MODE_EVENT_NAME } from 'storybook-dark-mode';
+import { addons } from 'storybook/preview-api';
 import { MantineProvider, useMantineColorScheme } from '@mantine/core';
 import { theme } from '../src/theme';
 
@@ -31,4 +31,4 @@ export const decorators = [
   (renderStory: any) => <ColorSchemeWrapper>{renderStory()}</ColorSchemeWrapper>,
   (renderStory: any) => <MantineProvider theme={theme}>{renderStory()}</MantineProvider>,
 ];
-export const tags = ['autodocs', 'autodocs'];
+export const tags = ['autodocs'];

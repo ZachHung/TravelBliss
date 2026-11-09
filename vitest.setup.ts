@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest';
 
+import { configure } from '@testing-library/react';
 import { vi } from 'vitest';
+
+// Mantine + lazy routes are slow to settle in jsdom, especially on the first render of a file
+configure({ asyncUtilTimeout: 5000 });
 
 const { getComputedStyle } = window;
 window.getComputedStyle = (elt) => getComputedStyle(elt);

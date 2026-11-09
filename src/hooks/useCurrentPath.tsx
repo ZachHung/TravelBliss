@@ -5,8 +5,7 @@ const routes = Object.values(ROUTES).map((pathname) => ({ path: pathname }));
 
 const useCurrentPath = () => {
   const location = useLocation();
-  const [{ route }] = matchRoutes(routes, location)!;
-  return route.path;
+  return matchRoutes(routes, location)?.[0]?.route.path;
 };
 
 export default useCurrentPath;
