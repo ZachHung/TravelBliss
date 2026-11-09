@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { RegisterMutation } from '@generated/codegen/graphql';
 import { REGISTER } from '@/graphql/mutations/register';
 import { MutationHookProps } from '@/types';

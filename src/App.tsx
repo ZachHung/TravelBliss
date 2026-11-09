@@ -1,26 +1,31 @@
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 
-import { ApolloClient, ApolloProvider, createHttpLink, from, InMemoryCache } from '@apollo/client';
-import { onError } from '@apollo/client/link/error';
+import { ApolloClient, CombinedGraphQLErrors, from, HttpLink, InMemoryCache } from '@apollo/client';
+import { ErrorLink } from '@apollo/client/link/error';
+import { ApolloProvider } from '@apollo/client/react';
 import { MantineProvider } from '@mantine/core';
 import { Router } from './routes/Router';
 import { theme } from './theme';
 
-const httpLink = createHttpLink({
+const httpLink = new HttpLink({
   uri: import.meta.env.VITE_GRAPHQL_URI,
   credentials: 'include',
 });
 
-const errorLink = onError(({ graphQLErrors, networkError }) => {
-  if (graphQLErrors) {
-    graphQLErrors.forEach(({ message, locations, path }) =>
-      console.log(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`)
+const errorLink = new ErrorLink(({ error }) => {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+  /* eslint-disable no-console */
+  if (CombinedGraphQLErrors.is(error)) {
+    error.errors.forEach(({ message, locations, path }) =>
+      console.error(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`)
     );
+  } else {
+    console.error(`[Network error]: ${error}`);
   }
-  if (networkError) {
-    console.error(`[Network error]: ${networkError}`);
-  }
+  /* eslint-enable no-console */
 });
 
 const client = new ApolloClient({
@@ -29,11 +34,9 @@ const client = new ApolloClient({
   defaultOptions: {
     watchQuery: {
       fetchPolicy: 'no-cache',
-      errorPolicy: 'ignore',
     },
     query: {
       fetchPolicy: 'no-cache',
-      errorPolicy: 'all',
     },
   },
 });

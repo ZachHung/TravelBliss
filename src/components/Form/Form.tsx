@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { ApolloError } from '@apollo/client';
+import { CombinedGraphQLErrors } from '@apollo/client';
 import isEmpty from 'lodash/isEmpty';
 import isFunction from 'lodash/isFunction';
 import { Box, Button, Center, MantineStyleProps, Stack } from '@mantine/core';
@@ -39,12 +39,12 @@ const Form = <V,>({
   const form = useForm({ ...useFormInput, mode: 'uncontrolled' });
 
   const handleFormError = useCallback(
-    (error: ApolloError) => {
+    (error: CombinedGraphQLErrors) => {
       if (isEmpty(formErrors)) {
         return;
       }
 
-      const exceptions = error.graphQLErrors.map((graphError) => ({
+      const exceptions = error.errors.map((graphError) => ({
         code: graphError.extensions?.code as ErrorsCodes,
         where: graphError.extensions?.where as keyof V,
       }));
@@ -71,7 +71,7 @@ const Form = <V,>({
     try {
       await onSubmit(values, event);
     } catch (e) {
-      if (e instanceof ApolloError) {
+      if (CombinedGraphQLErrors.is(e)) {
         handleFormError(e);
       }
     }

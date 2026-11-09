@@ -1,6 +1,6 @@
-import { createContext, ReactNode, useState } from 'react';
-import { ApolloQueryResult, MutationResult, useMutation } from '@apollo/client';
-import { Exact, GetMeQuery, LoginMutation, User } from '@generated/codegen/graphql';
+import { createContext, ReactNode, useEffect, useMemo, useState } from 'react';
+import { useMutation } from '@apollo/client/react';
+import { LoginMutation, User } from '@generated/codegen/graphql';
 import { useLocation, useNavigate } from 'react-router';
 import { ROUTES } from '@/constants';
 import { LOGOUT } from '@/graphql/mutations/logout';
@@ -15,16 +15,8 @@ export type AuthContextValue = {
   ];
   onLogin: readonly [
     (phoneNumber: string, password: string, hasRefresh?: boolean) => Promise<void>,
-    MutationResult<LoginMutation>,
-    (
-      variables?:
-        | Partial<
-            Exact<{
-              [key: string]: never;
-            }>
-          >
-        | undefined
-    ) => Promise<ApolloQueryResult<GetMeQuery>>,
+    useMutation.Result<LoginMutation>,
+    ReturnType<typeof useGetMe>['refetch'],
   ];
   onLogout: readonly [() => void];
 };
@@ -34,11 +26,14 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { refetch: refetchGetUserInfo } = useGetMe({
-    onCompleted: (data) => {
-      setUser((prev) => ({ prev, ...data.me }));
-    },
-  });
+  const [user, setUser] = useState<Serialized<User>>();
+  const { data: me, refetch: refetchGetUserInfo } = useGetMe();
+
+  useEffect(() => {
+    if (me) {
+      setUser((prev) => ({ ...prev, ...me.me }));
+    }
+  }, [me]);
 
   const { login, result } = useLogin({
     onCompleted: () => {
@@ -54,8 +49,6 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
-  const [user, setUser] = useState<Serialized<User>>();
-
   const onLogin = async (phoneNumber: string, password: string, hasRefresh?: boolean) => {
     await login({
       variables: { input: { usernameOrEmailOrPhone: phoneNumber, password, hasRefresh } },
@@ -66,11 +59,14 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout();
   };
 
-  const value: AuthContextValue = {
-    info: [user, setUser],
-    onLogin: [onLogin, result, refetchGetUserInfo],
-    onLogout: [onLogout],
-  };
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      info: [user, setUser],
+      onLogin: [onLogin, result, refetchGetUserInfo],
+      onLogout: [onLogout],
+    }),
+    [user, result, refetchGetUserInfo]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

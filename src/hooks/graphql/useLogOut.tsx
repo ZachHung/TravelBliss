@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { LogOutMutation } from '@generated/codegen/graphql';
 import { LOGOUT } from '@/graphql/mutations/logout';
 import { MutationHookProps } from '@/types';

@@ -1,9 +1,9 @@
-import { ApolloError, BaseMutationOptions } from '@apollo/client';
+import type { ErrorLike } from '@apollo/client';
 
 export type Serialized<T> = Omit<T, 'createdAt' | 'updatedAt'>;
 export type MutationHookProps<TData> = Partial<{
-  onCompleted: (data: TData, clientOptions?: BaseMutationOptions) => void;
-  onError: (error: ApolloError, clientOptions?: BaseMutationOptions) => void;
+  onCompleted: (data: TData) => void;
+  onError: (error: ErrorLike) => void;
 }>;
 
 export enum ErrorsCodes {
