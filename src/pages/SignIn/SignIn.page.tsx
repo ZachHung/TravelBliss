@@ -10,7 +10,6 @@ import {
   Group,
   Paper,
   PasswordInput,
-  Text,
   TextInput,
   Title,
 } from '@mantine/core';
@@ -27,7 +26,7 @@ import createValidationSchema from '@/validations';
 const initialValues = {
   phoneNumber: '',
   password: '',
-  alwaySignIn: false,
+  alwaysSignIn: false,
 };
 
 const formErrors: FormError<typeof initialValues> = {
@@ -48,7 +47,7 @@ const SignInPage = () => {
   } = useAuth();
 
   const handleSubmit = async (values: typeof initialValues) => {
-    await login(values.phoneNumber, values.password, values.alwaySignIn);
+    await login(values.phoneNumber, values.password, values.alwaysSignIn);
   };
 
   return (
@@ -92,15 +91,8 @@ const SignInPage = () => {
                   <Checkbox
                     className="checkbox"
                     radius="sm"
-                    label={
-                      <Group justify="space-between" w="100%">
-                        <Text inherit>Remember Me</Text>
-                        <Anchor href="https://mantine.dev" target="_blank" inherit>
-                          Forgot your password?
-                        </Anchor>
-                      </Group>
-                    }
-                    {...form.getInputProps('alwaySignIn', { type: 'checkbox' })}
+                    label="Remember Me"
+                    {...form.getInputProps('alwaysSignIn', { type: 'checkbox' })}
                   />
                 </>
               )}
