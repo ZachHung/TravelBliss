@@ -4,7 +4,7 @@ API for the Travel Bliss project
 
 ## Prerequisite
 
-- NodeJS v18
+- NodeJS v22
 - Posgres
 
 ## Getting Started

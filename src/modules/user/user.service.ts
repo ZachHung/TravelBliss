@@ -4,7 +4,7 @@ import { compare, hash } from 'bcrypt';
 import dayjs from 'dayjs';
 import { Request, Response } from 'express';
 import { Redis } from 'ioredis';
-import { sign } from 'jsonwebtoken';
+import { sign, SignOptions } from 'jsonwebtoken';
 
 import logger from '../../config/logger';
 import TOKEN from '../../core/container/types.container';
@@ -178,10 +178,10 @@ export class UserService implements Service<User> {
 
   private createTokens(userId: string): UserTokens & { refreshToken: string } {
     const accessToken = sign({ userId }, getEnv('SECRET_JWT'), {
-      expiresIn: getEnv('JWT_EXPIRED'),
+      expiresIn: getEnv('JWT_EXPIRED') as SignOptions['expiresIn'],
     });
     const refreshToken = sign({ userId }, getEnv('SECRET_REFRESH'), {
-      expiresIn: getEnv('REFRESH_EXPIRED'),
+      expiresIn: getEnv('REFRESH_EXPIRED') as SignOptions['expiresIn'],
     });
 
     return {
@@ -191,13 +191,12 @@ export class UserService implements Service<User> {
   }
 
   private setCookie(res: Response, name: string, value: string): void {
-    res.cookie(`${getEnv('COOKIE_NAME')}:${name}`, this.aesEncrypt(value)),
-      {
-        maxAge: 1000 * 60 * 60 * 24 * 30,
-        httpOnly: true,
-        sameSite: getEnv('NODE_ENV') === 'production' ? 'none' : 'lax',
-        secure: getEnv('NODE_ENV') === 'production',
-      };
+    res.cookie(`${getEnv('COOKIE_NAME')}:${name}`, this.aesEncrypt(value), {
+      maxAge: 1000 * 60 * 60 * 24 * 30,
+      httpOnly: true,
+      sameSite: getEnv('NODE_ENV') === 'production' ? 'none' : 'lax',
+      secure: getEnv('NODE_ENV') === 'production',
+    });
   }
 
   private getCookie(req: Request, name: string): string {

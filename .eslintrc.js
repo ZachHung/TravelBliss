@@ -81,15 +81,7 @@ module.exports = {
       parserOptions: tsParserOpts,
       plugins: ['@typescript-eslint'],
       rules: {
-        '@typescript-eslint/ban-types': ['error', { types: banTypes(), extendDefaults: false }],
-        '@typescript-eslint/type-annotation-spacing': [
-          'error',
-          {
-            before: false,
-            after: true,
-            overrides: { arrow: { before: true, after: true } },
-          },
-        ],
+        '@typescript-eslint/no-restricted-types': ['error', { types: banTypes() }],
         indent: 'off',
         '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
         'no-invalid-this': 'off',
@@ -193,7 +185,7 @@ module.exports = {
         'max-lines-per-function': 'off',
         'no-console': 'off',
         '@typescript-eslint/naming-convention': 'off',
-        '@typescript-eslint/ban-types': 'off',
+        '@typescript-eslint/no-restricted-types': 'off',
       },
     },
   ],
