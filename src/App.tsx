@@ -5,7 +5,7 @@ import { ApolloClient, CombinedGraphQLErrors, from, HttpLink, InMemoryCache } fr
 import { ErrorLink } from '@apollo/client/link/error';
 import { ApolloProvider } from '@apollo/client/react';
 import { MantineProvider } from '@mantine/core';
-import { createRefreshLink } from './refreshLink';
+import { createAuthLink } from './authLink';
 import { Router } from './routes/Router';
 import { theme } from './theme';
 
@@ -33,7 +33,7 @@ const errorLink = new ErrorLink(({ error }) => {
 
 const client = new ApolloClient({
   cache: new InMemoryCache(),
-  link: from([createRefreshLink(uri), errorLink, httpLink]),
+  link: from([createAuthLink(uri), errorLink, httpLink]),
   defaultOptions: {
     watchQuery: {
       fetchPolicy: 'no-cache',

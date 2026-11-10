@@ -2,6 +2,7 @@ import { createContext, useEffect, useMemo, useState, type ReactNode } from 'rea
 import { useMutation } from '@apollo/client/react';
 import { type GetMeQuery, type LoginMutation } from '@generated/codegen/graphql';
 import { useLocation, useNavigate } from 'react-router';
+import { setAccessToken } from '@/authLink';
 import { ROUTES } from '@/constants';
 import { LOGOUT } from '@/graphql/mutations/logout';
 import useGetMe from '@/hooks/graphql/useGetMe';
@@ -37,7 +38,8 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [me]);
 
   const { login, result } = useLogin({
-    onCompleted: () => {
+    onCompleted: (data) => {
+      setAccessToken(data.login.accessToken);
       const origin = location.state?.from?.pathname || ROUTES.ROOT;
       refetchGetUserInfo();
       navigate(origin);
@@ -46,6 +48,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const [logout] = useMutation(LOGOUT, {
     onCompleted: () => {
+      setAccessToken(null);
       setUser(undefined);
     },
   });
