@@ -32,7 +32,7 @@ const initialValues = {
   birthday: new Date(),
 };
 
-const phoneRegex = /(?:\+84|0084|0)[235789][0-9]{1,2}[0-9]{7}/;
+const phoneRegex = /^(?:\+84|0084|0)[35789]\d{8}$/;
 
 const validationSchema = createValidationSchema<typeof initialValues>({
   fullName: z.string().trim().min(1, 'This field is required'),
