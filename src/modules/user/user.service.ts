@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'crypto';
 
 import { compare, hash } from 'bcrypt';
 import dayjs from 'dayjs';
@@ -33,31 +33,26 @@ export class UserService implements Service<User> {
   ) {}
 
   public async findById(id: string): Promise<User> {
-    const user = await this.userRepository.findOneWhere('id', id);
+    const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new UserNotFoundException();
     return user;
   }
 
   public async register(input: RegisterInput): Promise<User> {
-    const { password } = input;
+    // Cheap checks first, so taken names do not cost a bcrypt hash.
+    for (const column of ['username', 'email', 'phoneNumber'] as const) {
+      if (await this.userRepository.findOneBy({ [column]: input[column] })) {
+        throw new UserExistException(column);
+      }
+    }
 
-    const hashedPassword = await hash(password, +getEnv('SALT_ROUND'));
+    const hashedPassword = await hash(input.password, +getEnv('SALT_ROUND'));
 
-    let user = await this.userRepository.findOneWhere('username', input.username);
-    if (user) throw new UserExistException('username');
-
-    user = await this.userRepository.findOneWhere('email', input.email);
-    if (user) throw new UserExistException('email');
-
-    user = await this.userRepository.findOneWhere('phoneNumber', input.phoneNumber);
-    if (user) throw new UserExistException('phoneNumber');
-
-    const newUser = await this.userRepository.save({
-      ...input,
-      password: hashedPassword,
-    });
-
-    return newUser;
+    try {
+      return await this.userRepository.save({ ...input, password: hashedPassword });
+    } catch (error) {
+      throw this.toUserExist(error);
+    }
   }
 
   public async login(input: LoginInput, { res }: Context): Promise<UserTokens> {
@@ -97,41 +92,36 @@ export class UserService implements Service<User> {
     req,
   }: Required<Context>): Promise<boolean> {
     try {
+      // Block the access token first: users without "remember me" have no refresh cookie.
+      await this.store.set(REDIS_KEY.BLACK_LIST + accessToken, accessToken, 'EXAT', exp);
+
       const cookieName = `${getEnv('COOKIE_NAME')}:rf`;
-      const refreshToken = this.getCookie(req, cookieName);
+      const refreshToken = this.readCookie(req, cookieName);
+      if (refreshToken) await this.store.del(`${REDIS_KEY.REFRESH_TOKEN}${userId}:${refreshToken}`);
 
-      const blacklistKey = REDIS_KEY.BLACK_LIST + accessToken;
-      const refreshTokenKey = `${REDIS_KEY.REFRESH_TOKEN}${userId}:${refreshToken}`;
-
-      await this.store.set(blacklistKey, accessToken, 'EXAT', exp);
-      await this.store.del(refreshTokenKey);
       res.clearCookie(cookieName);
       return true;
-    } catch {
+    } catch (error) {
+      logger.error(error);
       return false;
     }
   }
 
-  public async refreshToken(ctx: Context): Promise<UserTokens> {
-    const { res, req } = ctx;
-    const cookieName = `${getEnv('COOKIE_NAME')}:rf`;
-    const refreshToken = this.getCookie(req, cookieName);
+  public async refreshToken({ res, req }: Context): Promise<UserTokens> {
+    const refreshToken = this.getCookie(req, `${getEnv('COOKIE_NAME')}:rf`);
 
     const refreshTokenAuth = await verifyToken(refreshToken, getEnv('SECRET_REFRESH'));
-
     if (!refreshTokenAuth) throw new InvalidTokenException();
     const { userId } = refreshTokenAuth;
-    await this.findById(refreshTokenAuth.userId);
+    await this.findById(userId);
 
-    const refreshTokenKey = `${REDIS_KEY.REFRESH_TOKEN}${userId}:${refreshToken}`;
-    const storeValueToken = this.store.get(refreshTokenKey);
-
-    // Token reuse detected
-    // use redis scan to get all the refresh token of a user and delete them
-    if (!storeValueToken) {
+    // DEL is atomic: only the first caller removes the key, so each refresh token works once.
+    const used = await this.store.del(`${REDIS_KEY.REFRESH_TOKEN}${userId}:${refreshToken}`);
+    if (!used) {
+      // Reuse of a rotated or logged-out token: revoke every refresh token of this user.
       await this.storeDelMulti(`${REDIS_KEY.REFRESH_TOKEN}${userId}:*`);
+      throw new InvalidTokenException();
     }
-    await this.logout({ auth: refreshTokenAuth, req, res });
 
     const { accessToken, refreshToken: newRefreshToken } = this.createTokens(userId);
     const { exp } = (await verifyToken(newRefreshToken, getEnv('SECRET_REFRESH'))) as AuthContext;
@@ -151,19 +141,24 @@ export class UserService implements Service<User> {
   }
 
   public async editInfo(input: Partial<User>, userId: string): Promise<User> {
-    const update = await mutationReturn<User>(
-      // User query builder because of issue https://github.com/typeorm/typeorm/issues/2415
-      this.userRepository
-        .createQueryBuilder()
-        .update(User)
-        .set({ ...input, updatedAt: dayjs().toISOString() })
-        .where('id = :id ', {
-          id: userId,
-        })
-        .returning('*')
-        .execute(),
-    );
-    return update;
+    // GraphQL nullable inputs arrive as null; writing null would break NOT NULL columns.
+    const changes = Object.fromEntries(Object.entries(input).filter(([, value]) => value != null));
+    if (!Object.keys(changes).length) return this.findById(userId);
+
+    try {
+      return await mutationReturn<User>(
+        // User query builder because of issue https://github.com/typeorm/typeorm/issues/2415
+        this.userRepository
+          .createQueryBuilder()
+          .update(User)
+          .set({ ...changes, updatedAt: dayjs().toISOString() })
+          .where('id = :id ', { id: userId })
+          .returning('*')
+          .execute(),
+      );
+    } catch (error) {
+      throw this.toUserExist(error);
+    }
   }
 
   public async changePassword(input: ChangePasswordInput, userId: string): Promise<User> {
@@ -182,6 +177,8 @@ export class UserService implements Service<User> {
     });
     const refreshToken = sign({ userId }, getEnv('SECRET_REFRESH'), {
       expiresIn: getEnv('REFRESH_EXPIRED') as SignOptions['expiresIn'],
+      // Unique id: two tokens signed in the same second must still differ for rotation to work.
+      jwtid: randomUUID(),
     });
 
     return {
@@ -199,13 +196,28 @@ export class UserService implements Service<User> {
     });
   }
 
+  private readCookie(req: Request, name: string): string | undefined {
+    const cookieValue = req.cookies?.[name];
+    if (!cookieValue) return;
+    try {
+      return this.aesDecrypt(cookieValue);
+    } catch {
+      return;
+    }
+  }
+
   private getCookie(req: Request, name: string): string {
-    const cookieValue = req.cookies[name];
-    if (!cookieValue) throw new InvalidCookiesException();
+    const value = this.readCookie(req, name);
+    if (!value) throw new InvalidCookiesException();
+    return value;
+  }
 
-    const decryptedValue = this.aesDecrypt(cookieValue);
-
-    return decryptedValue;
+  // Postgres unique violation (23505) -> the same error the pre-check gives, with the column name.
+  private toUserExist(error: unknown): unknown {
+    const { code, detail } = (error as { driverError?: { code?: string; detail?: string } })
+      .driverError ?? { code: undefined, detail: undefined };
+    if (code !== '23505') return error;
+    return new UserExistException(/Key \("?(\w+)"?\)/.exec(detail ?? '')?.[1] as keyof User);
   }
 
   private aesEncrypt(text: string): string {
@@ -237,25 +249,11 @@ export class UserService implements Service<User> {
     return decrypted.toString();
   }
 
-  private async storeDelMulti(match?: string, count = 100): Promise<void> {
-    return new Promise((resolve, _) => {
-      const stream = this.store.scanStream({
-        match,
-        count,
-      });
-
-      stream.on('data', (resultKeys) => {
-        if (resultKeys.length) {
-          logger.info(resultKeys);
-          this.store.unlink(resultKeys);
-        } else {
-          logger.info('nothing found');
-        }
-      });
-      stream.on('end', () => {
-        logger.info('Ending redis scan');
-        resolve();
-      });
-    });
+  private async storeDelMulti(match: string): Promise<void> {
+    for await (const keys of this.store.scanStream({ match, count: 100 }) as AsyncIterable<
+      string[]
+    >) {
+      if (keys.length) await this.store.unlink(...keys);
+    }
   }
 }

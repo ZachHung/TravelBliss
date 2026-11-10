@@ -44,6 +44,7 @@ JWT_EXPIRED =
 SECRET_REFRESH =
 REFRESH_EXPIRED =
 SALT_ROUND =
+CORS_ORIGIN = (optional, defaults to http://localhost:5173)
 ```
 
 ### Run the migration for the Postgres DB

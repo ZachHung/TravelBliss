@@ -1,4 +1,4 @@
-import { IsDate, IsEmail, MinLength } from 'class-validator';
+import { IsDate, IsEmail, IsOptional, MinLength } from 'class-validator';
 import { Field, InputType } from 'type-graphql';
 
 import { User } from './user.entity';
@@ -41,10 +41,12 @@ export class LoginInput implements Readonly<Pick<User, 'password'>> {
 
 @InputType()
 export class EditInfoInput implements Partial<RegisterInput> {
+  @IsOptional()
   @IsDate()
   @Field({ nullable: true })
   public readonly birthday?: Date;
 
+  @IsOptional()
   @IsEmail()
   @Field({ nullable: true })
   public readonly email?: string;

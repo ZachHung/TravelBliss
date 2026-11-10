@@ -21,8 +21,8 @@
     "migration:generate": "pnpm typeorm migration:generate ./src/migration/migration",
     "migration:up": "pnpm typeorm migration:run",
     "migration:down": "pnpm typeorm migration:revert",
-    "test": "pnpm typecheck && pnpm prettier && pnpm lint && pnpm build",
-    "test:watch": "pnpm jest --watch --verbose",
+    "test": "pnpm typecheck && pnpm prettier && pnpm lint && pnpm jest && pnpm build",
+    "test:watch": "jest --watch --verbose",
     "preinstall": "npx only-allow pnpm"
   },
   "keywords": [],

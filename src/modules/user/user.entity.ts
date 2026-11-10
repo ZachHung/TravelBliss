@@ -28,7 +28,7 @@ export class User extends BaseEntity {
 
   @Field((_type) => Int)
   public age(): number {
-    return dayjs().year() - dayjs(this.birthday).year();
+    return dayjs().diff(dayjs(this.birthday), 'year');
   }
 
   @Authorized(Role.ADMIN)

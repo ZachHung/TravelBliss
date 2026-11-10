@@ -32,7 +32,7 @@ export class CustomAuthChecker implements AuthCheckerInterface<Context> {
       if (!roles.includes(user.role) && roles.length !== 0) return false;
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

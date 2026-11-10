@@ -20,7 +20,7 @@ export class ErrorLoggerMiddleware implements MiddlewareInterface<Context> {
             message: err.message,
             operation: info.operation.operation,
             fieldName: info.fieldName,
-            auth: context.auth,
+            userId: context.auth?.userId,
             stack: err.stack,
             locations: err.locations,
           }),
