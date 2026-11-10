@@ -5,11 +5,14 @@ import { ApolloClient, CombinedGraphQLErrors, from, HttpLink, InMemoryCache } fr
 import { ErrorLink } from '@apollo/client/link/error';
 import { ApolloProvider } from '@apollo/client/react';
 import { MantineProvider } from '@mantine/core';
+import { createRefreshLink } from './refreshLink';
 import { Router } from './routes/Router';
 import { theme } from './theme';
 
+const uri = import.meta.env.VITE_GRAPHQL_URI;
+
 const httpLink = new HttpLink({
-  uri: import.meta.env.VITE_GRAPHQL_URI,
+  uri,
   credentials: 'include',
 });
 
@@ -30,7 +33,7 @@ const errorLink = new ErrorLink(({ error }) => {
 
 const client = new ApolloClient({
   cache: new InMemoryCache(),
-  link: from([errorLink, httpLink]),
+  link: from([createRefreshLink(uri), errorLink, httpLink]),
   defaultOptions: {
     watchQuery: {
       fetchPolicy: 'no-cache',
