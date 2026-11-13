@@ -16,7 +16,7 @@ export const setAccessToken = (token: string | null) => {
 const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
 
 /** Adds the access token to every request, and on UNAUTHENTICATED refreshes it once and retries. */
-export const createAuthLink = (uri: string | undefined) => {
+export const createSessionLink = (uri: string | undefined) => {
   // One shared request, so parallel failures do not each rotate the refresh cookie.
   let pending: Promise<string | null> | null = null;
 

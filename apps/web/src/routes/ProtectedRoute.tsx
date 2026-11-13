@@ -1,12 +1,10 @@
 import { type ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { ROUTES } from '@/constants';
-import useAuth from '@/hooks/useAuth';
+import { useSession } from '@/session';
 
 const ProtectedRoute = ({ children }: { children?: ReactNode }) => {
-  const {
-    info: [user],
-  } = useAuth();
+  const { user } = useSession();
 
   const location = useLocation();
 

@@ -6,7 +6,7 @@ import {
   InMemoryCache,
 } from '@apollo/client';
 import { Observable } from 'rxjs';
-import { createAuthLink, setAccessToken } from './authLink';
+import { createSessionLink, setAccessToken } from './link';
 
 const query = gql`
   query Q {
@@ -36,7 +36,7 @@ const setup = (refreshResponse: Response) => {
   );
   const client = new ApolloClient({
     cache: new InMemoryCache(),
-    link: createAuthLink('/gql').concat(server),
+    link: createSessionLink('/gql').concat(server),
   });
   return {
     fetchMock,
@@ -45,7 +45,7 @@ const setup = (refreshResponse: Response) => {
   };
 };
 
-describe('createAuthLink', () => {
+describe('createSessionLink', () => {
   beforeEach(() => setAccessToken(null));
   afterEach(() => vi.unstubAllGlobals());
 

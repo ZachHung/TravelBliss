@@ -123,20 +123,20 @@ docker build -f apps/api/Dockerfile .             # API image alone, from the re
 ```
 apps/web/src/
   components/   reusable UI, each with its tests and stories
-  contexts/     React contexts (AuthProvider)
   graphql/      queries and mutations
   hooks/        custom hooks, GraphQL hooks in hooks/graphql
   layouts/      page shells
   pages/        route components
   routes/       router and route guards (PublicRoute, ProtectedRoute)
+  session/      who is signed in: SessionProvider, useSession, createSessionLink
   validations/  zod schema helpers
 apps/web/test-utils/  render() with Mantine, Apollo MockedProvider and an optional router
 ```
 
-Authentication: `login` returns an access token that `authLink.ts` keeps in memory and sends as a Bearer header. On
-`UNAUTHENTICATED` it calls `refreshToken` once, which reads the HttpOnly `<API_COOKIE_NAME>_rf` cookie
-(`credentials: 'include'`), and retries. `AuthProvider` loads the current user with the `GetMe` query and exposes login
-and logout through `useAuth`.
+Authentication lives in `src/session/`. Use `useSession()` → `{ user, signIn, signOut, isSigningIn }`; nothing else
+about tokens leaks out. `createSessionLink` (in the Apollo client) keeps the access token in memory, sends it as a Bearer
+header, and on `UNAUTHENTICATED` calls `refreshToken` once with the HttpOnly `<API_COOKIE_NAME>_rf` cookie and retries.
+`SessionProvider` shows a loader until the first "who am I" request settles.
 
 ### Testing
 

@@ -5,7 +5,7 @@ import { ROUTES } from '@/constants';
 import ErrorPage from '@/pages/Error/Error.page';
 
 const RootLayout = lazy(() => import('@/layouts/Root.layout'));
-const AuthProvider = lazy(() => import('@/contexts/AuthProvider'));
+const SessionProvider = lazy(() => import('@/session/SessionProvider'));
 const HomePage = lazy(() => import('@/pages/Home.page'));
 const SignInPage = lazy(() => import('@/pages/SignIn/SignIn.page'));
 const RegisterPage = lazy(() => import('@/pages/Register/Register.page'));
@@ -17,9 +17,9 @@ const router = createBrowserRouter([
     path: '/',
     element: (
       <Suspense fallback={<FullscreenLoader />}>
-        <AuthProvider>
+        <SessionProvider>
           <RootLayout />
-        </AuthProvider>
+        </SessionProvider>
       </Suspense>
     ),
     errorElement: <ErrorPage />,

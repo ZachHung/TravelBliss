@@ -23,4 +23,4 @@ Monorepo for TravelBliss, a passenger rail booking service. pnpm workspace + Tur
 
 - Issue tracker: [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md) (GitHub Issues via `gh`)
 - Triage labels: [docs/agents/triage-labels.md](docs/agents/triage-labels.md)
-- Domain docs: [docs/agents/domain.md](docs/agents/domain.md) (single-context)
+- Domain docs: [docs/agents/domain.md](docs/agents/domain.md) (single-context); terms in [GLOSSARY.md](GLOSSARY.md)

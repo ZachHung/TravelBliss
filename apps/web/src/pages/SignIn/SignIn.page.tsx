@@ -17,7 +17,7 @@ import {
 import Form, { type FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
-import useAuth from '@/hooks/useAuth';
+import { useSession } from '@/session';
 
 import './SignIn.css';
 
@@ -42,12 +42,14 @@ const validationSchema = createValidationSchema({
 const SignInPage = () => {
   const [showPassword, setShowPassword] = useState(false);
 
-  const {
-    onLogin: [login, { loading }],
-  } = useAuth();
+  const { signIn, isSigningIn } = useSession();
 
   const handleSubmit = async (values: typeof initialValues) => {
-    await login(values.phoneNumber, values.password, values.alwaysSignIn);
+    await signIn({
+      usernameOrEmailOrPhone: values.phoneNumber,
+      password: values.password,
+      hasRefresh: values.alwaysSignIn,
+    });
   };
 
   return (
@@ -59,7 +61,7 @@ const SignInPage = () => {
               onSubmit={handleSubmit}
               formErrors={formErrors}
               initialValues={initialValues}
-              loading={loading}
+              loading={isSigningIn}
               footer={formFooter}
               submitLabel="Sign In"
               validate={zod4Resolver(validationSchema)}

@@ -4,10 +4,10 @@ import { Route, Routes, useLocation } from 'react-router';
 import { LOGIN } from '@/graphql/mutations/login';
 import { LOGOUT } from '@/graphql/mutations/logout';
 import { GET_ME } from '@/graphql/queries/me';
-import useAuth from '@/hooks/useAuth';
 import ProtectedRoute from '@/routes/ProtectedRoute';
 import PublicRoute from '@/routes/PublicRoute';
-import AuthProvider from './AuthProvider';
+import SessionProvider from './SessionProvider';
+import useSession from './useSession';
 
 const me = {
   __typename: 'User',
@@ -33,21 +33,22 @@ const loginOk = {
 };
 
 const Consumer = () => {
-  const {
-    info: [user],
-    onLogin: [login],
-    onLogout: [logout],
-  } = useAuth();
+  const { user, signIn, signOut } = useSession();
   const { pathname } = useLocation();
 
   return (
     <>
       <p>{user ? `Hello ${user.firstName}` : 'Guest'}</p>
       <p>path {pathname}</p>
-      <button type="button" onClick={() => login('0123456789', 'secret', false)}>
+      <button
+        type="button"
+        onClick={() =>
+          signIn({ usernameOrEmailOrPhone: '0123456789', password: 'secret', hasRefresh: false })
+        }
+      >
         login
       </button>
-      <button type="button" onClick={logout}>
+      <button type="button" onClick={signOut}>
         logout
       </button>
     </>
@@ -60,16 +61,16 @@ const renderProvider = (mocks: Parameters<typeof render>[1] extends infer O ? O 
       <Route
         path="*"
         element={
-          <AuthProvider>
+          <SessionProvider>
             <Consumer />
-          </AuthProvider>
+          </SessionProvider>
         }
       />
     </Routes>,
     { route: '/sign-in', ...mocks }
   );
 
-describe('AuthProvider', () => {
+describe('SessionProvider', () => {
   it('loads the current user on mount', async () => {
     renderProvider({ mocks: [getMeOk] });
 
@@ -104,7 +105,7 @@ describe('AuthProvider', () => {
 
   it('returns to the protected page it came from after login', async () => {
     render(
-      <AuthProvider>
+      <SessionProvider>
         <Routes>
           <Route element={<PublicRoute />}>
             <Route path="/sign-in" element={<Consumer />} />
@@ -114,7 +115,7 @@ describe('AuthProvider', () => {
           </Route>
           <Route path="*" element={<Consumer />} />
         </Routes>
-      </AuthProvider>,
+      </SessionProvider>,
       // The user query answers after login does, as it does over the network
       { route: '/protected', mocks: [getMeUnauthenticated, loginOk, { ...getMeOk, delay: 50 }] }
     );
@@ -133,16 +134,14 @@ describe('AuthProvider', () => {
     // Stands in for the header, which sits outside the route guards
     const guestHeaderRendered = vi.fn();
     const HeaderSpy = () => {
-      const {
-        info: [user],
-      } = useAuth();
+      const { user } = useSession();
       if (!user) {
         guestHeaderRendered();
       }
       return null;
     };
     render(
-      <AuthProvider>
+      <SessionProvider>
         <HeaderSpy />
         <Routes>
           <Route element={<PublicRoute />}>
@@ -152,7 +151,7 @@ describe('AuthProvider', () => {
             <Route path="/protected" element={<p>Secret page</p>} />
           </Route>
         </Routes>
-      </AuthProvider>,
+      </SessionProvider>,
       { route: '/protected', mocks: [{ ...getMeOk, delay: 50 }] }
     );
 

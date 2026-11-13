@@ -1,18 +1,36 @@
 import { render, screen } from '@test-utils';
+import { GraphQLError } from 'graphql';
 import { Route, Routes, useLocation } from 'react-router';
 import { ROUTES } from '@/constants';
-import { AuthContext, type AuthContextValue, type CurrentUser } from '@/contexts/AuthProvider';
+import { GET_ME } from '@/graphql/queries/me';
+import { SessionProvider } from '@/session';
 import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
 
-const user = { id: '1', firstName: 'An' } as CurrentUser;
-
-const withUser = (current?: CurrentUser) =>
-  ({
-    info: [current],
-    onLogin: [],
-    onLogout: [vi.fn()],
-  }) as unknown as AuthContextValue;
+// The real session, fed by Apollo mocks: the guards are tested through the same seam the app uses
+const signedIn = {
+  request: { query: GET_ME },
+  result: {
+    data: {
+      me: {
+        __typename: 'User',
+        id: '1',
+        username: 'an',
+        phoneNumber: '0123456789',
+        lastName: 'Nguyen',
+        firstName: 'An',
+        email: 'an@example.com',
+        age: 20,
+        birthday: '2005-01-01',
+        fullName: 'An Nguyen',
+      },
+    },
+  },
+};
+const guest = {
+  request: { query: GET_ME },
+  result: { errors: [new GraphQLError('Unauthenticated')] },
+};
 
 const LocationState = () => {
   const { pathname, state } = useLocation();
@@ -24,11 +42,11 @@ const LocationState = () => {
 };
 
 const renderRoutes = (
-  current: CurrentUser | undefined,
+  session: typeof signedIn | typeof guest,
   route: string | { pathname: string; state: unknown }
 ) =>
   render(
-    <AuthContext.Provider value={withUser(current)}>
+    <SessionProvider>
       <Routes>
         <Route element={<PublicRoute />}>
           <Route path={ROUTES.SIGN_IN} element={<p>Sign in page</p>} />
@@ -38,40 +56,43 @@ const renderRoutes = (
         </Route>
         <Route path="*" element={<LocationState />} />
       </Routes>
-    </AuthContext.Provider>,
-    { route }
+    </SessionProvider>,
+    { route, mocks: [session] }
   );
 
 describe('ProtectedRoute', () => {
-  it('renders the nested route for a signed-in user', () => {
-    renderRoutes(user, ROUTES.PROTECTED);
+  it('renders the nested route for a signed-in user', async () => {
+    renderRoutes(signedIn, ROUTES.PROTECTED);
 
-    expect(screen.getByText('Secret page')).toBeInTheDocument();
+    expect(await screen.findByText('Secret page')).toBeInTheDocument();
   });
 
-  it('redirects guests to the sign in page', () => {
-    renderRoutes(undefined, ROUTES.PROTECTED);
+  it('redirects guests to the sign in page', async () => {
+    renderRoutes(guest, ROUTES.PROTECTED);
 
-    expect(screen.getByText('Sign in page')).toBeInTheDocument();
+    expect(await screen.findByText('Sign in page')).toBeInTheDocument();
   });
 });
 
 describe('PublicRoute', () => {
-  it('renders the nested route for guests', () => {
-    renderRoutes(undefined, ROUTES.SIGN_IN);
+  it('renders the nested route for guests', async () => {
+    renderRoutes(guest, ROUTES.SIGN_IN);
 
-    expect(screen.getByText('Sign in page')).toBeInTheDocument();
+    expect(await screen.findByText('Sign in page')).toBeInTheDocument();
   });
 
-  it('redirects signed-in users to the home page', () => {
-    renderRoutes(user, ROUTES.SIGN_IN);
+  it('redirects signed-in users to the home page', async () => {
+    renderRoutes(signedIn, ROUTES.SIGN_IN);
 
-    expect(screen.getByText('at / from nowhere')).toBeInTheDocument();
+    expect(await screen.findByText('at / from nowhere')).toBeInTheDocument();
   });
 
-  it('sends a user who just signed in back to the page they came from', () => {
-    renderRoutes(user, { pathname: ROUTES.SIGN_IN, state: { from: { pathname: '/somewhere' } } });
+  it('sends a user who just signed in back to the page they came from', async () => {
+    renderRoutes(signedIn, {
+      pathname: ROUTES.SIGN_IN,
+      state: { from: { pathname: '/somewhere' } },
+    });
 
-    expect(screen.getByText('at /somewhere from nowhere')).toBeInTheDocument();
+    expect(await screen.findByText('at /somewhere from nowhere')).toBeInTheDocument();
   });
 });

@@ -1,8 +1,8 @@
 import { render, screen, userEvent } from '@test-utils';
 import { GraphQLError } from 'graphql';
-import AuthProvider from '@/contexts/AuthProvider';
 import { LOGIN } from '@/graphql/mutations/login';
 import { GET_ME } from '@/graphql/queries/me';
+import { SessionProvider } from '@/session';
 import SignInPage from './SignIn.page';
 
 const getMeUnauthenticated = {
@@ -12,9 +12,9 @@ const getMeUnauthenticated = {
 
 const renderPage = (mocks: NonNullable<Parameters<typeof render>[1]>['mocks']) =>
   render(
-    <AuthProvider>
+    <SessionProvider>
       <SignInPage />
-    </AuthProvider>,
+    </SessionProvider>,
     { route: '/sign-in', mocks }
   );
 

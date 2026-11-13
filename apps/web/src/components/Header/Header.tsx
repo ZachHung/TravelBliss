@@ -3,8 +3,8 @@ import { ActionIcon, Burger, Flex, Group, useMantineColorScheme } from '@mantine
 import Logo from '@/components/Logo/Logo';
 import NavLink from '@/components/NavLink/NavLink';
 import { ROUTES } from '@/constants';
-import useAuth from '@/hooks/useAuth';
 import useCurrentPath from '@/hooks/useCurrentPath';
+import { useSession } from '@/session';
 
 type HeaderProps = {
   opened: boolean;
@@ -12,10 +12,7 @@ type HeaderProps = {
 };
 
 const Header = ({ opened, toggle }: HeaderProps) => {
-  const {
-    info: [user],
-    onLogout: [logout],
-  } = useAuth();
+  const { user, signOut } = useSession();
   const { toggleColorScheme, colorScheme } = useMantineColorScheme();
   const currentPath = useCurrentPath();
 
@@ -37,7 +34,7 @@ const Header = ({ opened, toggle }: HeaderProps) => {
             {colorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
           </ActionIcon>
           {user && (
-            <ActionIcon variant="light" size="lg" onClick={logout}>
+            <ActionIcon variant="light" size="lg" onClick={signOut}>
               <IconLogout size={20} />
             </ActionIcon>
           )}

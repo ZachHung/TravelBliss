@@ -5,8 +5,8 @@ import { ApolloClient, CombinedGraphQLErrors, from, HttpLink, InMemoryCache } fr
 import { ErrorLink } from '@apollo/client/link/error';
 import { ApolloProvider } from '@apollo/client/react';
 import { MantineProvider } from '@mantine/core';
-import { createAuthLink } from './authLink';
 import { Router } from './routes/Router';
+import { createSessionLink } from './session';
 import { theme } from './theme';
 
 const uri = import.meta.env.VITE_GRAPHQL_URI;
@@ -33,7 +33,7 @@ const errorLink = new ErrorLink(({ error }) => {
 
 const client = new ApolloClient({
   cache: new InMemoryCache(),
-  link: from([createAuthLink(uri), errorLink, httpLink]),
+  link: from([createSessionLink(uri), errorLink, httpLink]),
   defaultOptions: {
     watchQuery: {
       fetchPolicy: 'no-cache',

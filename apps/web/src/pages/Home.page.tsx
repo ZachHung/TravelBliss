@@ -1,10 +1,9 @@
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { Welcome } from '@/components/Welcome/Welcome';
-import useAuth from '@/hooks/useAuth';
+import { useSession } from '@/session';
 
 const HomePage = () => {
-  const { info } = useAuth();
-  const [user] = info;
+  const { user } = useSession();
   return (
     <>
       {user && <TextGradient> Hello {user.firstName}</TextGradient>}
