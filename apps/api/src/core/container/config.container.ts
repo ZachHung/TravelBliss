@@ -5,7 +5,6 @@ import redisClient from '../../config/redis';
 import { SessionModule } from '../../modules/session/session.module';
 import { UserModule } from '../../modules/user/user.module';
 import { CustomAuthChecker } from '../middlewares/auth-checker.middleware';
-import { ErrorLoggerMiddleware } from '../middlewares/error-logger.middleware';
 import TOKEN from './types.container';
 
 const container = new Container({ skipBaseClassChecks: true, defaultScope: 'Singleton' });
@@ -15,10 +14,6 @@ container.bind<DataSource>(TOKEN.DataSource.Postgres).toConstantValue(PostgresDa
 
 // Bind Middlewares
 container.bind<CustomAuthChecker>(CustomAuthChecker).to(CustomAuthChecker).inSingletonScope();
-container
-  .bind<ErrorLoggerMiddleware>(ErrorLoggerMiddleware)
-  .to(ErrorLoggerMiddleware)
-  .inSingletonScope();
 
 container.bind(TOKEN.Store.Redis).toConstantValue(redisClient);
 

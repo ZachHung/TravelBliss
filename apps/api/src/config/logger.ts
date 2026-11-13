@@ -1,61 +1,28 @@
-import dayjs from 'dayjs';
 import { createLogger, format, transports } from 'winston';
-import { getEnv } from '../utils/helpers';
+// Loads the root .env file first, so API_LOG_LEVEL and NODE_ENV are set below
+import '../utils/helpers';
 
-const configFormat = [
-  format.errors({ stack: true }),
-  format.metadata(),
-  format.timestamp({
-    format: () => dayjs().format('YYYY-MM-DD HH:mm:ss:SSS'),
-  }),
-  format.printf(({ timestamp, level, message }) => {
-    return `[${timestamp}] [${level}]: ${message}`;
-  }),
-];
+const isProduction = process.env.NODE_ENV === 'production';
+const env = (process.env.NODE_ENV ?? 'development').toUpperCase();
 
-const configFormatDev = [...configFormat, format.prettyPrint()];
-
-const logger = createLogger({
-  level: 'debug',
-  format: format.combine(...(getEnv('NODE_ENV') !== 'production' ? configFormat : configFormatDev)),
-  transports: [
-    new transports.File({
-      dirname: 'logs',
-      filename: `${dayjs().format('YYYY-MM-DD')}.log`,
-    }),
-  ],
+// Dev: one readable line, extra fields as JSON, stack on the following lines
+const devLine = format.printf(({ timestamp, level, message, stack, ...fields }) => {
+  const extra = Object.keys(fields).length ? ` ${JSON.stringify(fields)}` : '';
+  return `[${env}] ${timestamp} ${level}: ${message}${extra}${stack ? `\n${stack}` : ''}`;
 });
 
-const env = getEnv('NODE_ENV').toUpperCase();
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
-    new transports.Console({
-      level: 'debug',
-      format: format.combine(
-        format.metadata(),
+// Stdout only: Docker and hosting platforms collect it, while a file inside a container is lost with it
+const logger = createLogger({
+  level: process.env.API_LOG_LEVEL || (isProduction ? 'info' : 'debug'),
+  format: isProduction
+    ? format.combine(format.errors({ stack: true }), format.timestamp(), format.json())
+    : format.combine(
+        format.errors({ stack: true }),
+        format.timestamp({ format: 'HH:mm:ss' }),
         format.colorize(),
-        format.timestamp({
-          format: () => dayjs().format('HH:mm:ss'),
-        }),
-        format.printf(
-          ({
-            timestamp,
-            level,
-            message,
-            metadata: {
-              metadata: { stack },
-            },
-          }: Record<string, any>) => {
-            if (stack) {
-              return `[${env}] [${timestamp}] [${level}]: ${stack}`;
-            }
-            return `[${env}] [${timestamp}] [${level}]: ${message}`;
-          }
-        )
+        devLine
       ),
-    })
-  );
-}
+  transports: [new transports.Console()],
+});
 
 export default logger;

@@ -1,5 +1,6 @@
 import http from 'http';
 import { ApolloServer } from '@apollo/server';
+import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { ApolloServerPluginInlineTrace } from '@apollo/server/plugin/inlineTrace';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
@@ -12,14 +13,20 @@ import { PostgresDataSource } from './config/data-source';
 import logger from './config/logger';
 import container from './core/container/config.container';
 import TOKEN from './core/container/types.container';
+import {
+  assignCorrelationId,
+  CORRELATION_HEADER,
+  formatError,
+  loggingPlugin,
+} from './core/logging';
 import { CustomAuthChecker } from './core/middlewares/auth-checker.middleware';
-import { ErrorLoggerMiddleware } from './core/middlewares/error-logger.middleware';
 import { type SessionService } from './modules/session/session.service';
 import { resolvers } from './resolvers';
 import { type Context } from './types';
 import { getEnv } from './utils/helpers';
 
 export const bootstrap = async (): Promise<void> => {
+  const isProduction = getEnv('NODE_ENV') === 'production';
   const app = express();
   const httpServer = http.createServer(app);
   await PostgresDataSource.initialize();
@@ -27,7 +34,6 @@ export const bootstrap = async (): Promise<void> => {
     emitSchemaFile: true,
     validate: true,
     resolvers,
-    globalMiddlewares: [ErrorLoggerMiddleware],
     authChecker: CustomAuthChecker,
     container,
   });
@@ -36,25 +42,33 @@ export const bootstrap = async (): Promise<void> => {
     schema,
     csrfPrevention: true,
     cache: 'bounded',
+    formatError: formatError(isProduction),
     plugins: [
+      loggingPlugin,
       ApolloServerPluginInlineTrace(),
-      ApolloServerPluginLandingPageLocalDefault({
-        embed: { endpointIsEditable: false },
-        includeCookies: true,
-      }),
+      // Sandbox and introspection are for development only: in production they publish the whole schema
+      isProduction
+        ? ApolloServerPluginLandingPageDisabled()
+        : ApolloServerPluginLandingPageLocalDefault({
+            embed: { endpointIsEditable: false },
+            includeCookies: true,
+          }),
       ApolloServerPluginDrainHttpServer({ httpServer }),
     ],
-    introspection: true,
+    introspection: !isProduction,
   });
   await server.start();
-  app.set('trust proxy', getEnv('NODE_ENV') === 'production');
+  app.set('trust proxy', isProduction);
   app.use(cookieParser());
   app.use(
     '/',
     cors<cors.CorsRequest>({
       origin: process.env.API_CORS_ORIGIN || 'http://localhost:5173',
       credentials: true,
+      // Browsers hide non-standard response headers from JS unless they are listed here
+      exposedHeaders: [CORRELATION_HEADER],
     }),
+    assignCorrelationId,
 
     json(),
 

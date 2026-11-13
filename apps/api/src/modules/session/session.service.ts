@@ -119,7 +119,7 @@ export class SessionService {
       res.clearCookie(cookieName);
       return true;
     } catch (error) {
-      logger.error(error);
+      logger.error('Logout failed', error instanceof Error ? error : { error });
       return false;
     }
   }

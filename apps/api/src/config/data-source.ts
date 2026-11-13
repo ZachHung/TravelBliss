@@ -13,7 +13,9 @@ export const postgresConfig: DataSourceOptions = {
   password: getEnv('API_POSTGRES_PASSWORD'),
   database: getEnv('API_POSTGRES_DB'),
   synchronize: false,
-  logging: getEnv('NODE_ENV') === 'production',
+  // Off: it prints raw SQL with parameters (user emails, phones) outside our JSON log; DB errors reach
+  // the log through the Apollo logging plugin instead
+  logging: false,
   entities: [join(__dirname, '..', '/modules/**/*.entity.{ts,js}')],
   migrations: [join(__dirname, '..', '/migration/*.{js,ts}')],
   connectTimeoutMS: 10000,

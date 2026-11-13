@@ -92,6 +92,17 @@ Service tests run in Node with fakes for Redis and repositories. `apps/api/vites
 sets fixed test env values. Coverage thresholds in `apps/api/vite.config.ts` are set to the current numbers, so CI
 fails if coverage drops; raise them as tests are added.
 
+### Logging
+
+Logs go to stdout only: JSON lines in production, colorized lines in development, level from `API_LOG_LEVEL`. Each
+GraphQL operation logs one line (`operationName`, `durationMs`, `userId`, `outcome`, `correlationId`):
+
+- `warn` for expected errors (thrown on purpose, such as a wrong password)
+- `error` with the stack for anything else; in production clients only see `Internal server error`
+
+Every response has an `x-correlation-id` header and every GraphQL error carries `extensions.correlationId`: search the
+logs for it to find the real cause. See `docs/adr/0002-api-logging.md`.
+
 ### Docker
 
 `apps/api/infra/docker-compose.yml` reads the root `.env.local`. The API container is in the `serve` profile, so plain

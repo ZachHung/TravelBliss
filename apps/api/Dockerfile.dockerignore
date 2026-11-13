@@ -2,6 +2,5 @@
 **/dist
 **/generated
 **/.turbo
-**/logs
 **/.env*
 .git
