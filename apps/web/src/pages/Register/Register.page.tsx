@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { ErrorCode } from '@generated/codegen/enums';
 import { IconCalendar } from '@tabler/icons-react';
 import { zod4Resolver } from 'mantine-form-zod-resolver';
 import { useNavigate } from 'react-router';
@@ -20,7 +21,6 @@ import Form, { type FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
 import useRegister from '@/hooks/graphql/useRegister';
-import { ErrorsCodes } from '@/types';
 import createValidationSchema from '@/validations';
 
 const initialValues = {
@@ -59,7 +59,7 @@ const validationSchema = createValidationSchema<typeof initialValues>({
 const icon = <IconCalendar style={{ width: rem(18), height: rem(18) }} stroke={1.5} />;
 
 const formErrors: FormError<typeof initialValues> = {
-  [ErrorsCodes.USER_EXISTED]: [
+  [ErrorCode.USER_EXISTED]: [
     { fieldName: 'username', message: 'A user with this username already exist' },
     { fieldName: 'phoneNumber', message: 'A user with this phoneNumber already exist' },
     { fieldName: 'email', message: 'A user with this email already exist' },

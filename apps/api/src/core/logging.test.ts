@@ -2,6 +2,7 @@ import { ApolloServer } from '@apollo/server';
 import { type Request, type Response } from 'express';
 import logger from '@/config/logger';
 import { assignCorrelationId, formatError, loggingPlugin } from './logging';
+import { ErrorCode } from './shared/error-code';
 import { BaseException } from './shared/exception';
 
 const typeDefs = 'type Query { ok: String, expected: String, unexpected: String }';
@@ -9,7 +10,7 @@ const resolvers = {
   Query: {
     ok: () => 'yes',
     expected: () => {
-      throw new BaseException('Wrong password', 'WRONG_PASSWORD');
+      throw new BaseException('Wrong password', ErrorCode.WRONG_PASSWORD);
     },
     unexpected: () => {
       throw new Error('relation "user" does not exist');

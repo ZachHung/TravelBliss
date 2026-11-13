@@ -1,13 +1,13 @@
 import React, { useCallback } from 'react';
 import { CombinedGraphQLErrors } from '@apollo/client';
+import { type ErrorCode } from '@generated/codegen/enums';
 import isEmpty from 'lodash/isEmpty';
 import isFunction from 'lodash/isFunction';
 import { Box, Button, Center, Stack, type MantineStyleProps } from '@mantine/core';
 import { useForm, type UseFormInput, type UseFormReturnType } from '@mantine/form';
-import { type ErrorsCodes } from '@/types';
 
 export type FormError<V> = {
-  [key in ErrorsCodes]?: {
+  [key in ErrorCode]?: {
     message: string;
     fieldName: keyof V;
   }[];
@@ -43,7 +43,7 @@ const Form = <V extends Record<string, any>>({
       }
 
       const exceptions = error.errors.map((graphError) => ({
-        code: graphError.extensions?.code as ErrorsCodes,
+        code: graphError.extensions?.code as ErrorCode,
         where: graphError.extensions?.where as keyof V,
       }));
 

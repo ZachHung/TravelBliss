@@ -1,8 +1,8 @@
 import dayjs from 'dayjs';
 import { hash } from 'bcrypt';
 import { validate } from 'class-validator';
+import { ErrorCode } from '@/core/shared/error-code';
 import { User } from './user.entity';
-import { UserErrorCodes } from './user.exception';
 import { EditInfoInput } from './user.input';
 import { UserService } from './user.service';
 
@@ -32,10 +32,10 @@ describe('UserService', () => {
     ).resolves.toMatchObject({ id: 'u1' });
     await expect(
       service.authenticate({ usernameOrEmailOrPhone: 'x', password: 'nope' } as never)
-    ).rejects.toMatchObject({ extensions: { code: UserErrorCodes.WRONG_PASSWORD } });
+    ).rejects.toMatchObject({ extensions: { code: ErrorCode.WRONG_PASSWORD } });
     await expect(
       service.authenticate({ usernameOrEmailOrPhone: 'nobody', password: 'x' } as never)
-    ).rejects.toMatchObject({ extensions: { code: UserErrorCodes.USER_NOT_FOUND } });
+    ).rejects.toMatchObject({ extensions: { code: ErrorCode.USER_NOT_FOUND } });
   });
 
   it('turns a database unique violation into USER_EXISTED with the column', async () => {
@@ -53,7 +53,7 @@ describe('UserService', () => {
         password: 'secret123',
       } as never)
     ).rejects.toMatchObject({
-      extensions: { code: UserErrorCodes.USER_EXISTED, where: 'phoneNumber' },
+      extensions: { code: ErrorCode.USER_EXISTED, where: 'phoneNumber' },
     });
   });
 });

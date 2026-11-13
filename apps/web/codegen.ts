@@ -7,6 +7,14 @@ const config: CodegenConfig = {
   documents: 'src/graphql/**/*.tsx',
   ignoreNoDocuments: true,
   generates: {
+    // Every schema enum, including ErrorCode: the client preset only emits enums that operations use
+    'generated/codegen/enums.ts': {
+      plugins: ['typescript'],
+      config: { onlyEnums: true, namingConvention: { enumValues: 'keep' } },
+      hooks: {
+        afterOneFileWrite: ['prettier --write'],
+      },
+    },
     'generated/codegen/': {
       preset: 'client',
       plugins: [],

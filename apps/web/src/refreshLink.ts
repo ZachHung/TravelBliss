@@ -1,7 +1,7 @@
 import { CombinedGraphQLErrors } from '@apollo/client';
 import { ErrorLink } from '@apollo/client/link/error';
+import { ErrorCode } from '@generated/codegen/enums';
 import { from, mergeMap, throwError } from 'rxjs';
-import { ErrorsCodes } from '@/types';
 
 const REFRESH_QUERY = 'mutation RefreshToken { refreshToken { accessToken } }';
 
@@ -29,7 +29,7 @@ export const createRefreshLink = (uri: string | undefined) => {
   return new ErrorLink(({ error, operation, forward }) => {
     const expired =
       CombinedGraphQLErrors.is(error) &&
-      error.errors.some((e) => e.extensions?.code === ErrorsCodes.INVALID_TOKEN);
+      error.errors.some((e) => e.extensions?.code === ErrorCode.INVALID_TOKEN);
 
     // Never retry the refresh itself, and retry each operation only once.
     if (!expired || operation.operationName === 'RefreshToken' || operation.getContext().retried) {

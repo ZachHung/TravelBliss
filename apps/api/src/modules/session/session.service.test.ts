@@ -1,8 +1,8 @@
 import dayjs from 'dayjs';
 import { sign } from 'jsonwebtoken';
+import { ErrorCode } from '@/core/shared/error-code';
 import { UserNotFoundException } from '@/modules/user/user.exception';
 import { type Context } from '@/types';
-import { SessionErrorCodes } from './session.exception';
 import { SessionService } from './session.service';
 
 // Just enough Redis: keys with get/set/del/unlink and a scanStream that yields matching keys.
@@ -56,7 +56,7 @@ describe('SessionService', () => {
 
     // The old cookie is now a used token.
     await expect(service.refresh(ctx(fakeRes(), cookies))).rejects.toMatchObject({
-      extensions: { code: SessionErrorCodes.INVALID_TOKEN },
+      extensions: { code: ErrorCode.INVALID_TOKEN },
     });
     // ...and reuse revoked the new token as well.
     expect([...store.data.keys()].filter((key) => key.startsWith('refreshToken:'))).toEqual([]);
@@ -74,7 +74,7 @@ describe('SessionService', () => {
   it('refuses to refresh without a cookie, or for a user that no longer exists', async () => {
     const { service, users } = setup();
     await expect(service.refresh(ctx(fakeRes()))).rejects.toMatchObject({
-      extensions: { code: SessionErrorCodes.INVALID_COOKIES },
+      extensions: { code: ErrorCode.INVALID_COOKIES },
     });
 
     const startRes = fakeRes();

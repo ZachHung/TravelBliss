@@ -38,6 +38,7 @@
     "@chromatic-com/storybook": "^5.6.0",
     "@graphql-codegen/cli": "^8.0.0",
     "@graphql-codegen/client-preset": "^7.0.0",
+    "@graphql-codegen/typescript": "7.0.0",
     "@storybook/addon-docs": "10.6.6",
     "@storybook/addon-links": "^10.6.6",
     "@storybook/react": "^10.6.6",

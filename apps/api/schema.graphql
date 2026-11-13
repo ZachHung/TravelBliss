@@ -20,6 +20,20 @@ input EditInfoInput {
   username: String
 }
 
+"""Values of errors[].extensions.code"""
+enum ErrorCode {
+  BAD_USER_INPUT
+  INTERNAL_SERVER_ERROR
+  INVALID_COOKIES
+  INVALID_TOKEN
+  SOMETHING_WENT_WRONG
+  UNAUTHENTICATED
+  UNAUTHORIZED
+  USER_EXISTED
+  USER_NOT_FOUND
+  WRONG_PASSWORD
+}
+
 input LoginInput {
   hasRefresh: Boolean
   password: String!

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ErrorCode } from '@generated/codegen/enums';
 import { zod4Resolver } from 'mantine-form-zod-resolver';
 import { Link } from 'react-router';
 import { z } from 'zod';
@@ -17,7 +18,6 @@ import Form, { type FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';
-import { ErrorsCodes } from '@/types';
 
 import './SignIn.css';
 
@@ -30,8 +30,8 @@ const initialValues = {
 };
 
 const formErrors: FormError<typeof initialValues> = {
-  [ErrorsCodes.USER_NOT_FOUND]: [{ fieldName: 'phoneNumber', message: 'This user does not exist' }],
-  [ErrorsCodes.WRONG_PASSWORD]: [{ fieldName: 'password', message: 'Wrong password' }],
+  [ErrorCode.USER_NOT_FOUND]: [{ fieldName: 'phoneNumber', message: 'This user does not exist' }],
+  [ErrorCode.WRONG_PASSWORD]: [{ fieldName: 'password', message: 'Wrong password' }],
 };
 
 const validationSchema = createValidationSchema({

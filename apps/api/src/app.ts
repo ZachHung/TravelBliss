@@ -20,6 +20,7 @@ import {
   loggingPlugin,
 } from './core/logging';
 import { authChecker } from './core/middlewares/auth-checker.middleware';
+import { withErrorCodes } from './core/shared/error-code';
 import { type SessionService } from './modules/session/session.service';
 import { resolvers } from './resolvers';
 import { type Context } from './types';
@@ -30,13 +31,15 @@ export const bootstrap = async (): Promise<void> => {
   const app = express();
   const httpServer = http.createServer(app);
   await PostgresDataSource.initialize();
-  const schema = await buildSchema({
-    emitSchemaFile: true,
-    validate: true,
-    resolvers,
-    authChecker,
-    container,
-  });
+  // schema.graphql is written by `pnpm schema` (CI checks it is current), not on every start
+  const schema = withErrorCodes(
+    await buildSchema({
+      validate: true,
+      resolvers,
+      authChecker,
+      container,
+    })
+  );
 
   const server = new ApolloServer<Context>({
     schema,
