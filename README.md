@@ -22,7 +22,7 @@ pnpm --filter @travelbliss/api migration:up
 pnpm dev                           # API on :8000, web on :5173
 ```
 
-To run Postgres and Redis locally instead of hosted ones, put local values in `.env.local` and start them with
+To run Postgres and Redis locally instead of hosted ones, put local values in `.env.development.local` (it overrides `.env.development`) and start them with
 `pnpm --filter @travelbliss/api docker:local:up`.
 
 ### Environment variables

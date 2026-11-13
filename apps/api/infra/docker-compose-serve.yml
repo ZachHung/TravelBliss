@@ -11,7 +11,7 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: travel-bliss-app
     env_file:
-      - ../../../.env.local
+      - ../../../.env.development.local
     environment:
       NODE_ENV: development
       # Inside the compose network the services are reached by name, not localhost
@@ -19,10 +19,11 @@ services:
       API_REDIS_URI: redis://default:${API_REDIS_PASSWORD}@cache:6379
     ports:
       - 8000:8000
-    command: pnpm start
     depends_on:
-      - db
-      - cache
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
 
   db:
     image: postgres:16.6-alpine

@@ -15,4 +15,4 @@ RUN pnpm deploy --filter @travelbliss/api --prod --legacy /app
 FROM base
 COPY --from=build /app /app
 WORKDIR /app
-CMD ["pnpm", "start"]
+CMD ["node", "dist/index.js"]
