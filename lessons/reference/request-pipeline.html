@@ -79,19 +79,17 @@
         </tr>
         <tr>
           <td><code>@Authorized(Role.ADMIN)</code> (<code>allUser</code>)</td>
-          <td><code>UNAUTHORIZED</code></td>
+          <td><code>UNAUTHENTICATED</code></td>
           <td><code>UNAUTHORIZED</code></td>
           <td>data</td>
         </tr>
       </table>
       <p>
-        The error code follows the <b>field's</b> rule: roles listed → <code>UNAUTHORIZED</code>,
-        else
-        <code>UNAUTHENTICATED</code>
-        (<a
-          href="https://github.com/MichalLytek/type-graphql/blob/v2.0.0-beta.3/src/helpers/auth-middleware.ts"
-          >type-graphql source</a
-        >). Both arrive with HTTP 200 in <code>errors[].extensions.code</code>.
+        The code describes the <b>caller</b>: a guest is always <code>UNAUTHENTICATED</code> (our
+        checker throws); a known caller missing the role is <code>UNAUTHORIZED</code>. Before
+        <a href="https://github.com/ZachHung/TravelBliss/pull/115">#115</a> a guest on a role-gated
+        field got <code>UNAUTHORIZED</code>, because type-graphql picks the error by whether roles
+        are listed. Both arrive with HTTP 200 in <code>errors[].extensions.code</code>.
       </p>
 
       <h2>Code</h2>

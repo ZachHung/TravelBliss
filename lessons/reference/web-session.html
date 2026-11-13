@@ -76,7 +76,7 @@ link: from([createSessionLink(uri), errorLink, httpLink])         // App.tsx</co
         <code>exp</code>, delete <b>this device's</b> refresh key, clear cookie.
       </p>
 
-      <h2>Known gaps</h2>
+      <h2>Gaps found in lesson 4 (fixed in #115)</h2>
       <table>
         <tr>
           <th>Gap</th>
@@ -84,15 +84,18 @@ link: from([createSessionLink(uri), errorLink, httpLink])         // App.tsx</co
         </tr>
         <tr>
           <td>A</td>
-          <td>Sign-out ends one device; password change ends none.</td>
+          <td>Password change ended no other session → now ends all others (valid-from).</td>
         </tr>
         <tr>
           <td>B</td>
-          <td>Two tabs refreshing together look like reuse → every session revoked.</td>
+          <td>Two tabs refreshing together looked like reuse → now take turns (Web Lock).</td>
         </tr>
         <tr>
           <td>C</td>
-          <td>Expired token on a role-gated field → <code>UNAUTHORIZED</code> → no refresh.</td>
+          <td>
+            Guest on a role-gated field got <code>UNAUTHORIZED</code> → no refresh; now
+            <code>UNAUTHENTICATED</code>.
+          </td>
         </tr>
         <tr>
           <td>(hardening)</td>

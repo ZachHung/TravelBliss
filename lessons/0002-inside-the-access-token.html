@@ -25,8 +25,8 @@
       <h2>Warm-up, from memory</h2>
       <fieldset
         class="quiz"
-        data-answer="a"
-        data-why="Same rule as lesson 1, question 4: the error follows the field's rule. Roles are listed, so the denial is UNAUTHORIZED even though nobody is signed in."
+        data-answer="b"
+        data-why="Same rule as lesson 1, question 4: a guest is stopped by the checker with UNAUTHENTICATED, whatever roles the field lists. (Before #115 it was UNAUTHORIZED, because the error followed the field's rule.)"
       >
         <legend>
           A new mutation is added: <code>@Authorized(Role.ADMIN) deleteUser</code>. A guest calls

@@ -25,7 +25,10 @@
         <tr>
           <td>Lifetime</td>
           <td>5 min (<code>API_JWT_EXPIRED</code>)</td>
-          <td>token 6 months, cookie 30 days → <b>30 days</b> in practice</td>
+          <td>
+            30 days idle, at most 90 days from sign-in; cookie, token and Redis key expire together
+            (#116)
+          </td>
         </tr>
         <tr>
           <td>Secret</td>
@@ -79,9 +82,12 @@
           <td>production web app and API may be on different sites</td>
         </tr>
         <tr>
-          <td><code>Max-Age</code></td>
-          <td colspan="2">30 days</td>
-          <td>browser drops the cookie after this</td>
+          <td><code>Expires</code></td>
+          <td colspan="2">the token's <code>exp</code></td>
+          <td>
+            browser drops the cookie when the server stops accepting it (was a separate 30-day
+            Max-Age)
+          </td>
         </tr>
       </table>
 
