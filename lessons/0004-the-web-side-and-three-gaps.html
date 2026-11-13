@@ -230,9 +230,11 @@ setIsSignedOut(true);      // hide the cached user: the query still holds it</co
 
       <h2>Part 5 · Three gaps</h2>
       <p>
-        Each gap below is real in this code. Trigger it in the simulator, answer the prediction,
-        then <b>write down your own fix</b> before opening the nudge. We will design the real fixes
-        together afterwards.
+        Each gap below was real in this code at <code>ad727f6</code>, and the simulator models it as
+        it was then. Trigger it, answer the prediction, then <b>write down your own fix</b> before
+        opening the nudge. Each gap ends with how it was actually fixed, in
+        <a href="https://github.com/ZachHung/TravelBliss/pull/115">#115</a> (decisions in
+        <code>docs/adr/0003-session-revocation.md</code>).
       </p>
       <div class="session-sim" data-actors="laptop,phone" data-tabs="yes" data-password="yes"></div>
 
@@ -246,7 +248,9 @@ setIsSignedOut(true);      // hide the cached user: the query still holds it</co
         data-answer="a"
         data-why="<code>end</code> deletes only the key of the cookie it was sent; the phone's <code>refreshToken:u1:…</code> key is untouched. And <code>changePassword</code> stores a new hash and nothing else."
       >
-        <legend>After the laptop changes its password, can the attacker still refresh?</legend>
+        <legend>
+          Before #115: after the laptop changes its password, can the attacker still refresh?
+        </legend>
         <label><input type="radio" name="ga" value="a" /> Yes, nothing was revoked</label>
         <label><input type="radio" name="ga" value="b" /> No, sessions were revoked</label>
       </fieldset>
@@ -270,6 +274,15 @@ setIsSignedOut(true);      // hide the cached user: the query still holds it</co
           access tokens already out there stop working too?
         </p>
       </details>
+      <div class="callout">
+        <b>Fixed in #115.</b> Each user now has a
+        <a href="reference/glossary.html#valid-from">valid-from</a> time in Redis
+        (<code>sessionsValidFrom:&lt;userId&gt;</code>). Tokens issued before it no longer
+        authenticate or refresh. Changing the password sets it to now, deletes every refresh token,
+        and gives the current device fresh tokens (<code>changePasswordUser</code> now returns them,
+        like <code>login</code>). Signing out still ends only this device, which is the intended
+        meaning of “sign out”.
+      </div>
 
       <h3>Gap B · Two tabs refresh at once, and everyone is signed out</h3>
       <p>Try: laptop signs in; then “two tabs refresh at once”. Watch Redis.</p>
@@ -278,7 +291,7 @@ setIsSignedOut(true);      // hide the cached user: the query still holds it</co
         data-answer="b"
         data-why="Both tabs send the same cookie. Tab 1's DEL wins and rotates; tab 2's DEL returns 0, which is exactly what reuse looks like, so every refresh token is revoked, the phone's included. The <code>pending</code> guard from Part 2 cannot help: each tab has its own copy of that variable."
       >
-        <legend>What does tab 2's refresh cause?</legend>
+        <legend>Before #115: what does tab 2's refresh cause?</legend>
         <label><input type="radio" name="gb" value="a" /> Nothing; tab 1 already refreshed</label>
         <label
           ><input type="radio" name="gb" value="b" /> Reuse detection: everyone signed out</label
@@ -292,6 +305,13 @@ setIsSignedOut(true);      // hide the cached user: the query still holds it</co
           would that cost against a real thief?
         </p>
       </details>
+      <div class="callout">
+        <b>Fixed in #115, in the browser.</b> The refresh now runs inside a
+        <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API">Web Lock</a> shared
+        by every tab of the site, so tabs take turns: the second waits, then refreshes with the
+        cookie the first one received. A server-side grace window for reused tokens was rejected
+        because it would let a real thief through in that window.
+      </div>
 
       <h3>Gap C · An admin with an expired token sees “not allowed”</h3>
       <p>
@@ -304,7 +324,7 @@ setIsSignedOut(true);      // hide the cached user: the query still holds it</co
         data-answer="a"
         data-why="The expired token makes them a guest. A role-gated field denies a guest with UNAUTHORIZED (the field's rule, lesson 1). The retry link only reacts to UNAUTHENTICATED, so it never refreshes: a valid admin is told they are not allowed."
       >
-        <legend>What does the admin see?</legend>
+        <legend>Before #115: what does the admin see?</legend>
         <label><input type="radio" name="gc" value="a" /> UNAUTHORIZED, and no refresh</label>
         <label><input type="radio" name="gc" value="b" /> A refresh, then data</label>
       </fieldset>
@@ -316,6 +336,12 @@ setIsSignedOut(true);      // hide the cached user: the query still holds it</co
           cause rather than the symptom?
         </p>
       </details>
+      <div class="callout">
+        <b>Fixed in #115, in the API.</b> The auth checker throws <code>UNAUTHENTICATED</code> for
+        any guest, so the admin's request fails with the code the session link refreshes on, and is
+        retried with a new token. <code>UNAUTHORIZED</code> now only means a known caller without
+        the role. (This is why lesson 1's rule changed.)
+      </div>
 
       <h2>Practice</h2>
       <fieldset

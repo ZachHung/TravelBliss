@@ -70,7 +70,10 @@
         <tr>
           <td>Lifetime</td>
           <td>5 minutes</td>
-          <td>6 months (<code>API_REFRESH_EXPIRED</code>), but see Part 3</td>
+          <td>
+            30 days idle (<code>API_REFRESH_EXPIRED</code>), at most 90 days from sign-in
+            (<code>API_SESSION_MAX_AGE</code>); see Part 3
+          </td>
         </tr>
         <tr>
           <td>Signed with</td>
@@ -144,7 +147,7 @@ return { accessToken };</code></pre>
         >:
       </p>
       <pre><code>res.cookie(`${API_COOKIE_NAME}_rf`, this.aesEncrypt(refreshToken), {
-  maxAge: 1000 * 60 * 60 * 24 * 30,      // 30 days
+  expires: new Date(exp * 1000),         // the token's own exp (since #116; was maxAge: 30 days)
   httpOnly: true,
   sameSite: production ? 'none' : 'lax',
   secure: production,
@@ -171,16 +174,30 @@ return { accessToken };</code></pre>
           set”, which is why the two flip together.
         </li>
         <li>
-          <b><code>maxAge</code></b
-          >: “the number of seconds until the cookie expires” in the standard; Express takes
-          milliseconds, so this is 30 days.
+          <b><code>expires</code></b
+          >: the moment the browser deletes the cookie. It is the refresh token's <code>exp</code>,
+          the same moment its Redis key expires: one lifetime, three places.
         </li>
       </ul>
       <div class="callout">
-        <b>Which limit wins?</b> The cookie lasts 30 days; the refresh token inside it is signed for
-        6 months. The browser deletes the cookie first, so in practice “Remember Me” lasts 30 days,
-        and the extra five months of token life are never used. Worth knowing if you ever change
-        either number.
+        <b
+          >Which limit wins? (Fixed in
+          <a href="https://github.com/ZachHung/TravelBliss/pull/116">#116</a>.)</b
+        >
+        The cookie used to have its own <code>maxAge</code> of 30 days while the token inside was
+        signed for 6 months. The browser deleted the cookie first, so honest users got 30 days, but
+        a cookie <em>value</em> copied by an attacker is not bound by your browser's
+        <code>maxAge</code>: the server accepted it for the full 6 months. Now there is one
+        lifetime: the cookie, the token and its Redis key expire together, at the earlier of
+        <b>30 days</b> after the last refresh (idle timeout) and <b>90 days</b> after you signed in
+        (absolute timeout). The token carries the sign-in time as <code>auth_time</code> (<a
+          href="https://openid.net/specs/openid-connect-core-1_0.html#IDToken"
+          >OpenID Connect Core §2</a
+        >) through every rotation, so refreshing cannot extend a session past that cap. OWASP: an
+        absolute timeout “limits the amount of time an attacker can use a hijacked session.”
+        <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+          >[OWASP]</a
+        >
       </div>
       <h3>Why encrypt a cookie JavaScript cannot read?</h3>
       <p>
@@ -355,11 +372,21 @@ return { accessToken };</code></pre>
       <fieldset
         class="quiz"
         data-answer="b"
-        data-why="The browser drops the cookie after <code>maxAge</code>, 30 days. With no cookie, refresh fails with INVALID_COOKIES, whatever the token's own six months say."
+        data-why="The idle timeout: a refresh token lives 30 days after its last refresh. Forty-five quiet days later the token, its cookie and its Redis key have all expired. (Before #116 the cookie expired after 30 days while the token itself lived 6 months.)"
       >
         <legend>7. You ticked Remember Me, then come back after 45 days.</legend>
         <label><input type="radio" name="p7" value="a" /> Signed in: token still valid</label>
-        <label><input type="radio" name="p7" value="b" /> Signed out: cookie has expired</label>
+        <label><input type="radio" name="p7" value="b" /> Signed out: session went idle</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Each refresh keeps the original <code>auth_time</code>, and every new token's <code>exp</code> is capped at sign-in + 90 days. Daily use keeps the idle timeout away, but not the absolute one."
+      >
+        <legend>7b. You tick Remember Me and use the app every single day for 100 days.</legend>
+        <label><input type="radio" name="p7b" value="a" /> Signed out at day 90</label>
+        <label><input type="radio" name="p7b" value="b" /> Stays signed in for good</label>
       </fieldset>
 
       <fieldset

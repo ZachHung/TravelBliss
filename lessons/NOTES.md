@@ -10,3 +10,6 @@
   signatures, so it is a hardening point, not a live hole. Taught as such in lesson 4.
 - After lesson 4: grill-with-docs session on fixing gaps A (sign-out/password change scope), B (two-tab refresh race)
   and C (role-gated field + expired token → no refresh). Record decisions as ADRs / glossary terms.
+- 2026-11-14: lessons updated for #115 (gaps fixed; lesson 1's error rule changed: guests are always
+  UNAUTHENTICATED) and #116 (one session lifetime, 30-day idle / 90-day absolute). Learning records 0001-0003 describe
+  what the learner knew at the time and stay unchanged; lesson 1 Q4's answer flipped.

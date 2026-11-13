@@ -112,43 +112,48 @@ public async allUser(…)</code></pre>
         with the roles the decorator lists
         <a href="https://typegraphql.com/docs/authorization.html">[type-graphql docs]</a>:
       </p>
-      <pre><code>!!auth && (roles.length === 0 || roles.includes(auth.user.role))</code></pre>
+      <pre><code>if (!auth) throw new AuthenticationError();   // a guest, on any guarded field
+return roles.length === 0 || roles.includes(auth.user.role);</code></pre>
       <p>
         Read it aloud:
-        <i>someone is signed in, and either no role is required or they hold one of the roles.</i>
+        <i
+          >a guest is stopped straight away; a signed-in user passes if no role is required or they
+          hold one.</i
+        >
       </p>
 
       <h3>Which error comes back</h3>
-      <p>
-        When the checker says no, type-graphql picks the error by one thing only: did the decorator
-        list roles? From its
-        <a
-          href="https://github.com/MichalLytek/type-graphql/blob/v2.0.0-beta.3/src/helpers/auth-middleware.ts"
-          >source</a
-        >:
-      </p>
-      <pre><code>throw roles.length === 0 ? new AuthenticationError() : new AuthorizationError();</code></pre>
+      <p>Two different “no”s, so two codes:</p>
       <table>
         <tr>
-          <th>Decorator</th>
-          <th>Checker says no →</th>
+          <th>Caller</th>
+          <th>Who says no</th>
+          <th>Code</th>
           <th>Meaning</th>
         </tr>
         <tr>
-          <td><code>@Authorized()</code></td>
+          <td>guest, any guarded field</td>
+          <td>our checker throws</td>
           <td><code>UNAUTHENTICATED</code></td>
           <td>We don't know who you are.</td>
         </tr>
         <tr>
-          <td><code>@Authorized(Role.ADMIN)</code></td>
+          <td>signed in, missing the role</td>
+          <td>checker returns false; type-graphql throws</td>
           <td><code>UNAUTHORIZED</code></td>
-          <td>You may not do this.</td>
+          <td>We know you, and you may not do this.</td>
         </tr>
       </table>
       <div class="callout">
-        The surprise: a <b>guest</b> calling <code>allUser</code> gets <code>UNAUTHORIZED</code>,
-        not <code>UNAUTHENTICATED</code>, because the decorator lists a role. The error describes
-        the field's rule, not the caller.
+        <b>Changed in <a href="https://github.com/ZachHung/TravelBliss/pull/115">#115</a>.</b>
+        Before, the checker only returned false, and type-graphql picked the error by whether the
+        field lists roles (<a
+          href="https://github.com/MichalLytek/type-graphql/blob/v2.0.0-beta.3/src/helpers/auth-middleware.ts"
+          >its source</a
+        >: <code>roles.length === 0 ? AuthenticationError : AuthorizationError</code>). So a guest
+        on <code>allUser</code> got <code>UNAUTHORIZED</code>, which made the web app fail to
+        refresh an admin whose token had expired (lesson 4, Gap C). Now the code describes the
+        caller, not the field.
       </div>
       <span class="note"
         >Plain HTTP has the same split: 401 for missing or invalid credentials, 403 for valid but
@@ -178,7 +183,7 @@ public async allUser(…)</code></pre>
       <fieldset
         class="quiz"
         data-answer="c"
-        data-why="No token, so ctx.auth is undefined. <code>me</code> has <code>@Authorized()</code> with no roles, so the denial is UNAUTHENTICATED."
+        data-why="No token, so ctx.auth is undefined: the checker throws UNAUTHENTICATED for any guest."
       >
         <legend>2. A guest queries <code>me</code>.</legend>
         <label><input type="radio" name="q2" value="a" /> Returns the data</label>
@@ -201,8 +206,8 @@ public async allUser(…)</code></pre>
 
       <fieldset
         class="quiz"
-        data-answer="b"
-        data-why="The checker sees no user and says no, but the decorator lists ADMIN, so type-graphql throws AuthorizationError. The error follows the field's rule, not the caller."
+        data-answer="a"
+        data-why="A guest, so the checker throws UNAUTHENTICATED before any role is looked at. (Before #115 this was UNAUTHORIZED, because type-graphql chose the error by the field's rule: see the callout above.)"
       >
         <legend>4. A guest queries <code>allUser</code>.</legend>
         <label><input type="radio" name="q4" value="a" /> Fails with UNAUTHENTICATED</label>

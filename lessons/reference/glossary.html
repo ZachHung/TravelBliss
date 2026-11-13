@@ -137,6 +137,27 @@
             token makes a guest until it expires.
           </td>
         </tr>
+        <tr id="valid-from">
+          <td><b>Valid-from</b></td>
+          <td>
+            Per-user time in Redis before which every token of that user is revoked; set on password
+            change (#115).
+          </td>
+        </tr>
+        <tr id="idle-timeout">
+          <td><b>Idle timeout</b></td>
+          <td>
+            A remembered session ends 30 days after its last refresh
+            (<code>API_REFRESH_EXPIRED</code>).
+          </td>
+        </tr>
+        <tr id="absolute-timeout">
+          <td><b>Absolute timeout</b></td>
+          <td>
+            No session outlives 90 days from sign-in (<code>API_SESSION_MAX_AGE</code>, via
+            <code>auth_time</code>; #116).
+          </td>
+        </tr>
         <tr id="signed-in-user">
           <td><b>Signed-in user</b></td>
           <td>
@@ -178,13 +199,13 @@
         </tr>
         <tr id="unauthenticated">
           <td><code>UNAUTHENTICATED</code></td>
-          <td>Error code when a field with <code>@Authorized()</code> (no roles) is denied.</td>
+          <td>Error code for a guest on any guarded field: we don't know who you are.</td>
         </tr>
         <tr id="unauthorized">
           <td><code>UNAUTHORIZED</code></td>
           <td>
-            Error code when a field with <code>@Authorized(roles…)</code> is denied, even for a
-            guest.
+            Error code for a known caller missing the role a field requires. (Before #115 also sent
+            to guests on role-gated fields.)
           </td>
         </tr>
       </table>
