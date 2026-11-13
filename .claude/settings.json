@@ -9,6 +9,15 @@
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-npm.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash|Read|Edit|Write|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-env-read.py"
+          }
+        ]
       }
     ]
   }

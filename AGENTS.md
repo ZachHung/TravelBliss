@@ -9,15 +9,13 @@ Monorepo for TravelBliss, a passenger rail booking service. pnpm workspace + Tur
 
 - Package manager: pnpm. Run tasks from the root through turbo: `pnpm test` is the full gate (typecheck, lint, vitest, build, prettier). `pnpm typecheck` for a quick check.
 - One app only: `pnpm turbo run <task> --filter @travelbliss/<app>`.
-- Run locally against docker Postgres/Redis: `pnpm dev:local` (uses root `.env.local`).
+- Run locally against docker Postgres/Redis: `pnpm dev:local` (uses root `.env.local`). Stop every dev server you started with `pnpm dev:stop`.
 - Changing API resolvers or types regenerates `apps/api/schema.graphql`; commit it with the web changes it needs.
 
 ## Conventions
 
-- One root `eslint.config.js` and prettier config for both apps.
-- Imports: `@/…` (each app's `src`) for anything outside the current folder; ESLint rejects `../` imports.
-- Env vars live in root `.env.local` (docker, `pnpm dev:local`) and `.env.development` (hosted dev, `pnpm dev`): `VITE_*` for web, `API_*` for the API. Add new ones to `.env.example`.
-- The API relies on decorator metadata: never turn an import used in a decorated class into `import type`.
+- Env: variable names and which file is used when are in `.env.example`; add new variables there.
+- Code review: [CODING_STANDARDS.md](CODING_STANDARDS.md).
 
 ## Agent skills
 
