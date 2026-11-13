@@ -22,7 +22,7 @@ describe('SignIn page', () => {
   it('asks for the required fields', async () => {
     renderPage([getMeUnauthenticated]);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Sign In' }));
 
     expect(await screen.findAllByText('This field is required')).toHaveLength(2);
   });
@@ -38,7 +38,7 @@ describe('SignIn page', () => {
       },
     ]);
 
-    await userEvent.type(screen.getByLabelText(/phone number/i), '0123456789');
+    await userEvent.type(await screen.findByLabelText(/phone number/i), '0123456789');
     await userEvent.type(
       screen.getByLabelText(/^password/i, { selector: 'input' }),
       'wrong-password'

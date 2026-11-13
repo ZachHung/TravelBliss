@@ -7,9 +7,9 @@ import PublicRoute from './PublicRoute';
 
 const user = { id: '1', firstName: 'An' } as CurrentUser;
 
-const withUser = (current?: CurrentUser, isResolving = false) =>
+const withUser = (current?: CurrentUser) =>
   ({
-    info: [current, isResolving],
+    info: [current],
     onLogin: [],
     onLogout: [vi.fn()],
   }) as unknown as AuthContextValue;
@@ -25,11 +25,10 @@ const LocationState = () => {
 
 const renderRoutes = (
   current: CurrentUser | undefined,
-  route: string | { pathname: string; state: unknown },
-  isResolving = false
+  route: string | { pathname: string; state: unknown }
 ) =>
   render(
-    <AuthContext.Provider value={withUser(current, isResolving)}>
+    <AuthContext.Provider value={withUser(current)}>
       <Routes>
         <Route element={<PublicRoute />}>
           <Route path={ROUTES.SIGN_IN} element={<p>Sign in page</p>} />
@@ -48,13 +47,6 @@ describe('ProtectedRoute', () => {
     renderRoutes(user, ROUTES.PROTECTED);
 
     expect(screen.getByText('Secret page')).toBeInTheDocument();
-  });
-
-  it('waits for the session check instead of redirecting', () => {
-    renderRoutes(undefined, ROUTES.PROTECTED, true);
-
-    expect(screen.queryByText('Sign in page')).not.toBeInTheDocument();
-    expect(screen.queryByText('Secret page')).not.toBeInTheDocument();
   });
 
   it('redirects guests to the sign in page', () => {

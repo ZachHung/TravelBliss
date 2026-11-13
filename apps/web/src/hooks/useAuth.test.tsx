@@ -15,7 +15,7 @@ describe('useAuth', () => {
 
   it('returns the context value inside the provider', () => {
     const value = {
-      info: [undefined, false],
+      info: [undefined],
       onLogin: [],
       onLogout: [vi.fn()],
     } as unknown as AuthContextValue;

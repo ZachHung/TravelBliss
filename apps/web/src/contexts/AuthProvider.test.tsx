@@ -85,7 +85,7 @@ describe('AuthProvider', () => {
   it('logs in and fetches the user, leaving navigation to the route guards', async () => {
     renderProvider({ mocks: [getMeUnauthenticated, loginOk, getMeOk] });
 
-    await userEvent.click(screen.getByRole('button', { name: 'login' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'login' }));
 
     expect(await screen.findByText('Hello An')).toBeInTheDocument();
     expect(screen.getByText('path /sign-in')).toBeInTheDocument();
@@ -124,14 +124,26 @@ describe('AuthProvider', () => {
     expect(await screen.findByText('Secret page')).toBeInTheDocument();
   });
 
-  it('never shows the sign in page while restoring a session on reload', async () => {
+  it('never shows any guest UI while restoring a session on reload', async () => {
     const signInRendered = vi.fn();
     const SignInSpy = () => {
       signInRendered();
       return <p>Sign in page</p>;
     };
+    // Stands in for the header, which sits outside the route guards
+    const guestHeaderRendered = vi.fn();
+    const HeaderSpy = () => {
+      const {
+        info: [user],
+      } = useAuth();
+      if (!user) {
+        guestHeaderRendered();
+      }
+      return null;
+    };
     render(
       <AuthProvider>
+        <HeaderSpy />
         <Routes>
           <Route element={<PublicRoute />}>
             <Route path="/sign-in" element={<SignInSpy />} />
@@ -146,5 +158,6 @@ describe('AuthProvider', () => {
 
     expect(await screen.findByText('Secret page')).toBeInTheDocument();
     expect(signInRendered).not.toHaveBeenCalled();
+    expect(guestHeaderRendered).not.toHaveBeenCalled();
   });
 });
