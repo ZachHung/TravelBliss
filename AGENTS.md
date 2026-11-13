@@ -14,7 +14,7 @@ Monorepo for TravelBliss, a passenger rail booking service. pnpm workspace + Tur
 ## Conventions
 
 - One root `eslint.config.js` and prettier config for both apps.
-- Env vars live in root `.env*` files: `VITE_*` for web, `API_*` for the API. Add new ones to `.env.example`.
+- Env vars live in root `.env.local` (docker, `pnpm dev:local`) and `.env.development` (hosted dev, `pnpm dev`): `VITE_*` for web, `API_*` for the API. Add new ones to `.env.example`.
 - The API relies on decorator metadata: never turn an import used in a decorated class into `import type`.
 
 ## Agent skills

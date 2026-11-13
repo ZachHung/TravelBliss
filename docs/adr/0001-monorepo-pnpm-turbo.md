@@ -17,8 +17,9 @@ TS 5.9 vs 6, two prettier configs, two env conventions, the API had no CI).
   `@travelbliss/web#codegen` depends on it. The schema stays committed; CI fails when it is stale.
 - One ESLint flat config, one prettier config and one TypeScript version for both apps. Runtime dependencies stay
   per app (for example graphql 16 in the API and 17 in web) until upgraded deliberately.
-- One set of root env files with Vite's precedence, read by both apps. Web variables use `VITE_`, API variables
-  use `API_`.
+- One root env file per environment, read by both apps: `.env.local` for docker on the developer's machine,
+  `.env.development` for the hosted dev environment. The API loads only `.env.${NODE_ENV}`, so values never mix
+  across environments. Web variables use `VITE_`, API variables use `API_`.
 - Deploys stay independent. The API image is built from the repo root with `pnpm deploy`. The deploy target is
   still open.
 - CI caches `.turbo` with `actions/cache` instead of a remote cache, so no account or secret is needed.

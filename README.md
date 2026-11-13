@@ -17,34 +17,41 @@ Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10 (`corepack enable` picks the
 
 ```sh
 pnpm install
-cp .env.example .env.development   # fill in Postgres, Redis and secrets
+cp .env.example .env.development   # hosted dev values (or .env.local, see below)
 pnpm --filter @travelbliss/api migration:up
 pnpm dev                           # API on :8000, web on :5173
 ```
 
-To run Postgres and Redis in docker instead of hosted ones, put the local values in `.env.development.local`
-(it overrides `.env.development`), then run `pnpm dev:docker`. It starts both containers, waits until they are
-healthy, applies migrations and runs `pnpm dev`. Stop the containers with `pnpm dev:docker:down` (data is kept).
+To run against Postgres and Redis in docker on your machine instead, fill in `.env.local` and run `pnpm dev:local`.
+It starts both containers, waits until they are healthy, applies migrations and runs the apps with that file. Stop
+the containers with `pnpm dev:local:down` (data is kept).
 
 ### Environment variables
 
-Both apps read one set of env files at the repo root, with Vite's precedence:
-`.env.[mode].local` > `.env.[mode]` > `.env.local` > `.env`. Only `.env.example` is committed, and it lists every
-variable. Web variables start with `VITE_` (the only ones that reach the browser). API variables start with `API_`.
+Env files live at the repo root, one per environment, and only `.env.example` is committed (it lists every
+variable):
+
+| File               | Used by                                                    |
+| ------------------ | ---------------------------------------------------------- |
+| `.env.local`       | `pnpm dev:local` and the compose files in `apps/api/infra` |
+| `.env.development` | `pnpm dev`, against the hosted dev environment             |
+
+The API loads exactly `.env.${NODE_ENV}`. Web variables start with `VITE_` (the only ones that reach the browser).
+API variables start with `API_`.
 
 ## Scripts
 
 Run from the repo root. Turbo caches every task except `dev` and `format:check`.
 
-| Script            | Description                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| `pnpm dev`        | Start the API and the Vite dev server.                                                |
-| `pnpm dev:docker` | Same, against Postgres and Redis in docker (see above). `dev:docker:down` stops them. |
-| `pnpm test`       | Everything CI runs: typecheck, lint, tests, build and the prettier check.             |
-| `pnpm build`      | Build both apps into their `dist/`.                                                   |
-| `pnpm typecheck`  | Run `tsc --noEmit` in both apps.                                                      |
-| `pnpm lint`       | Run ESLint (and Stylelint for web).                                                   |
-| `pnpm format`     | Fix formatting and auto-fixable lint problems.                                        |
+| Script           | Description                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| `pnpm dev`       | Start the API and the Vite dev server.                                                      |
+| `pnpm dev:local` | Same, against Postgres and Redis in docker using `.env.local`. `dev:local:down` stops them. |
+| `pnpm test`      | Everything CI runs: typecheck, lint, tests, build and the prettier check.                   |
+| `pnpm build`     | Build both apps into their `dist/`.                                                         |
+| `pnpm typecheck` | Run `tsc --noEmit` in both apps.                                                            |
+| `pnpm lint`      | Run ESLint (and Stylelint for web).                                                         |
+| `pnpm format`    | Fix formatting and auto-fixable lint problems.                                              |
 
 Per-app scripts run with `pnpm --filter <package> <script>`, for example `pnpm --filter @travelbliss/web storybook`
 or `pnpm --filter @travelbliss/api migration:generate`.

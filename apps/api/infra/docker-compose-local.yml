@@ -1,3 +1,4 @@
+# Env comes from the repo root .env.local: run through `pnpm dev:local` or `pnpm --filter @travelbliss/api docker:local:up`.
 volumes:
   redis_data:
     driver: local

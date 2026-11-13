@@ -1,3 +1,4 @@
+# Env comes from the repo root .env.local: run through `pnpm --filter @travelbliss/api docker:serve:up`.
 volumes:
   redis_data:
     driver: local
@@ -11,9 +12,9 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: travel-bliss-app
     env_file:
-      - ../../../.env.development.local
+      - ../../../.env.local
     environment:
-      NODE_ENV: development
+      NODE_ENV: local
       # Inside the compose network the services are reached by name, not localhost
       API_POSTGRES_HOST: db
       API_REDIS_URI: redis://default:${API_REDIS_PASSWORD}@cache:6379

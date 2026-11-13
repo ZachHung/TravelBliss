@@ -2,17 +2,10 @@ import { resolve } from 'path';
 import { config } from 'dotenv';
 import { type DeleteResult, type InsertResult, type UpdateResult } from 'typeorm';
 
-// Same files and precedence as Vite, read from the repo root (src/utils and dist/utils are both 4 levels deep).
-// Missing files are skipped, so deploys can rely on real env vars alone.
-const root = resolve(__dirname, '../../../..');
+// One file per environment at the repo root: .env.local (docker on this machine), .env.development (hosted dev).
+// src/utils and dist/utils are both 4 levels deep. A missing file is skipped, so deploys can use real env vars.
 process.env.NODE_ENV ||= 'development';
-const mode = process.env.NODE_ENV;
-config({
-  path: [`.env.${mode}.local`, `.env.${mode}`, '.env.local', '.env'].map((file) =>
-    resolve(root, file)
-  ),
-  quiet: true,
-});
+config({ path: resolve(__dirname, '../../../..', `.env.${process.env.NODE_ENV}`), quiet: true });
 
 export const getEnv = (name: string): string => {
   const value = process.env[name];
