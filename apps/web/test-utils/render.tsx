@@ -24,7 +24,9 @@ export function render(ui: ReactNode, { mocks = [], route }: RenderOptions = {})
 
       return (
         <MockedProvider mocks={mocks}>
-          <MantineProvider theme={theme}>{content}</MantineProvider>
+          <MantineProvider theme={theme} env="test">
+            {content}
+          </MantineProvider>
         </MockedProvider>
       );
     },

@@ -30,8 +30,12 @@ const initialValues = {
   email: '',
   password: '',
   confirmPassword: '',
-  birthday: new Date(),
+  // Mantine dates hold 'YYYY-MM-DD' strings; null until picked
+  birthday: null as string | null,
 };
+
+// Latest birthday that is 18 today
+const maxBirthday = dayjs().subtract(18, 'year').format('YYYY-MM-DD');
 
 const phoneRegex = /^(?:\+84|0084|0)[35789]\d{8}$/;
 
@@ -41,9 +45,9 @@ const validationSchema = createValidationSchema<typeof initialValues>({
   phoneNumber: z.string().trim().regex(phoneRegex, 'Invalid phone number'),
   email: z.string().trim().email('Invalid email'),
   password: z.string().trim().min(8, 'Password should have at least 8 character'),
-  birthday: z
-    .date()
-    .max(dayjs().subtract(18, 'year').toDate(), 'User need to be 18 or older to register'),
+  birthday: z.iso
+    .date({ error: 'Please pick your birthday' })
+    .refine((date) => date <= maxBirthday, 'You need to be 18 or older to register'),
   confirmPassword: z.string().trim().min(1, 'This field is required'),
 })
   .required()
@@ -115,7 +119,14 @@ const RegisterFields = ({ form }: { form: UseFormReturnType<typeof initialValues
         leftSection={icon}
         leftSectionPointerEvents="none"
         label="Birthday"
+        description="You need to be 18 or older"
         placeholder="Pick your birthday"
+        valueFormat="DD MMMM YYYY"
+        // Start at the year grid around the latest allowed year: fewer clicks than paging months
+        defaultLevel="decade"
+        defaultDate={maxBirthday}
+        maxDate={maxBirthday}
+        minDate="1900-01-01"
         key={form.key('birthday')}
         {...form.getInputProps('birthday')}
       />
@@ -150,8 +161,11 @@ const RegisterPage = () => {
     result: { loading },
   } = useRegister({});
 
-  const handleSubmit = async ({ confirmPassword, ...rest }: typeof initialValues) => {
-    await register({ variables: { input: rest } });
+  const handleSubmit = async ({ confirmPassword, birthday, ...rest }: typeof initialValues) => {
+    // The API's DateTimeISO needs a full timestamp; a date-only string parses as UTC midnight, so no day shift
+    await register({
+      variables: { input: { ...rest, birthday: new Date(birthday as string).toISOString() } },
+    });
     navigate(ROUTES.SIGN_IN);
   };
 
