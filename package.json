@@ -14,7 +14,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "test": "turbo run typecheck lint test build format:check --concurrency=1",
+    "test": "turbo run typecheck lint test build format:check --concurrency=1 --ui=stream",
     "format:check": "prettier --check \"**/*.{ts,tsx,css,json,md,yml,yaml}\"",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,md,yml,yaml}\" && turbo run lint -- --fix",
     "prepare": "husky",

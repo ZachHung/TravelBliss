@@ -41,7 +41,9 @@ API variables start with `API_`.
 
 ## Scripts
 
-Run from the repo root. Turbo caches every task except `dev` and `format:check`.
+Run from the repo root. Turbo caches every task except `dev` and `format:check`. In a terminal, turbo opens its TUI (one pane per task:
+arrow keys to switch, `/` to search); without one (CI, piped output) it prints plain logs. `pnpm test` always prints
+plain logs so a failure stays in your scrollback.
 
 | Script           | Description                                                                                 |
 | ---------------- | ------------------------------------------------------------------------------------------- |
