@@ -15,8 +15,9 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "test": "turbo run typecheck lint test build format:check --concurrency=1 --ui=stream",
+    "test": "turbo run typecheck lint test build format:check knip --concurrency=1 --ui=stream",
     "format:check": "prettier --check \"**/*.{ts,tsx,css,json,md,yml,yaml}\"",
+    "knip": "knip",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,md,yml,yaml}\" && turbo run lint -- --fix",
     "prepare": "husky",
     "preinstall": "npx only-allow pnpm"
@@ -30,6 +31,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "husky": "^9.1.7",
+    "knip": "6.44.0",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
     "turbo": "2.11.10",

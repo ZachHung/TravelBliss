@@ -45,6 +45,9 @@
     },
     "//#format:check": {
       "cache": false
+    },
+    "//#knip": {
+      "cache": false
     }
   }
 }

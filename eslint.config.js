@@ -60,6 +60,12 @@ export default tseslint.config(
       'max-nested-callbacks': ['error', 5],
       'max-params': ['error', 5],
       complexity: ['error', { max: 10 }],
+    },
+  },
+  {
+    // App code imports through @/; tool config (e.g. .storybook) sits outside src and may reach into it
+    files: ['apps/*/src/**', 'apps/*/test-utils/**'],
+    rules: {
       'no-restricted-imports': [
         'error',
         {

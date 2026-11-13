@@ -6,5 +6,3 @@ export interface Context {
   res: Response;
   auth?: AuthContext;
 }
-
-export type Constructor<T> = new () => T;

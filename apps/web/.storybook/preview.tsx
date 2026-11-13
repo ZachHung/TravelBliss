@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { DARK_MODE_EVENT_NAME } from 'storybook-dark-mode';
 import { addons } from 'storybook/preview-api';
 import { MantineProvider, useMantineColorScheme } from '@mantine/core';
-import { theme } from '@/theme';
+import { theme } from '../src/theme';
 
 const channel = addons.getChannel();
 

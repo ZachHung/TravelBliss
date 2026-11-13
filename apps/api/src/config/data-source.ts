@@ -5,7 +5,7 @@ import 'reflect-metadata';
 import { DataSource, type DataSourceOptions } from 'typeorm';
 import { getEnv } from '@/utils/helpers';
 
-export const postgresConfig: DataSourceOptions = {
+const postgresConfig: DataSourceOptions = {
   type: 'postgres',
   host: getEnv('API_POSTGRES_HOST'),
   port: +getEnv('API_POSTGRES_PORT'),
