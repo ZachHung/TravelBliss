@@ -45,15 +45,19 @@ Run from the repo root. Turbo caches every task except `dev` and `format:check`.
 arrow keys to switch, `/` to search); without one (CI, piped output) it prints plain logs. `pnpm test` always prints
 plain logs so a failure stays in your scrollback.
 
-| Script           | Description                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| `pnpm dev`       | Start the API and the Vite dev server.                                                      |
-| `pnpm dev:local` | Same, against Postgres and Redis in docker using `.env.local`. `dev:local:down` stops them. |
-| `pnpm test`      | Everything CI runs: typecheck, lint, tests, build and prettier, one task at a time.         |
-| `pnpm build`     | Build both apps into their `dist/`.                                                         |
-| `pnpm typecheck` | Run `tsc --noEmit` in both apps.                                                            |
-| `pnpm lint`      | Run ESLint (and Stylelint for web).                                                         |
-| `pnpm format`    | Fix formatting and auto-fixable lint problems.                                              |
+| Script           | Description                                                                                     |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| `pnpm dev`       | Start the API and the Vite dev server.                                                          |
+| `pnpm dev:local` | Same, against Postgres and Redis in docker using `.env.local`. `dev:local:down` stops them.     |
+| `pnpm test`      | Everything CI runs: typecheck, lint, tests, build and prettier, one task at a time.             |
+| `pnpm e2e`       | Browser test (Playwright): register, sign in, reload, sign out. Starts `pnpm dev:local` itself. |
+| `pnpm build`     | Build both apps into their `dist/`.                                                             |
+| `pnpm typecheck` | Run `tsc --noEmit` in both apps.                                                                |
+| `pnpm lint`      | Run ESLint (and Stylelint for web).                                                             |
+| `pnpm format`    | Fix formatting and auto-fixable lint problems.                                                  |
+
+First e2e run on a machine: `pnpm --filter @travelbliss/web exec playwright install --with-deps chromium` (the
+system libraries need `sudo`).
 
 Per-app scripts run with `pnpm --filter <package> <script>`, for example `pnpm --filter @travelbliss/web storybook`
 or `pnpm --filter @travelbliss/api migration:generate`.

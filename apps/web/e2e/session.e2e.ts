@@ -21,7 +21,7 @@ test.beforeAll(async ({ request }) => {
 
 const signIn = async (page: Page, remember: boolean) => {
   await page.getByLabel('Phone Number').fill(user.phone);
-  await page.getByLabel('Password', { exact: true }).fill(user.password);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(user.password);
   if (remember) {
     await page.getByLabel('Remember Me').check();
   }
@@ -41,7 +41,7 @@ test('register, sign in, survive a reload, sign out, and return to the page you 
     await page.getByRole('button', { name: '2000' }).click();
     await page.getByRole('button', { name: 'Mar' }).click();
     await page.getByRole('button', { name: '12 March 2000' }).click();
-    await page.getByLabel('Password', { exact: true }).fill(user.password);
+    await page.getByRole('textbox', { name: 'Password', exact: true }).fill(user.password);
     await page.getByLabel('Confirm password').fill(user.password);
     await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page).toHaveURL(/\/sign-in$/);
