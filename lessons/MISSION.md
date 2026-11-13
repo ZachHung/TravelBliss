@@ -3,7 +3,7 @@
 ## Why
 
 Own the sign-in code of TravelBliss: change it and debug it with confidence, without relying on an agent to explain
-it. _Provisional: written from the session context; confirm or correct._
+it.
 
 ## Success looks like
 

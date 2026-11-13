@@ -7,6 +7,9 @@
       ...
     </fieldset>
 
+  Typed answers: put <label><input type="text" /></label> in the fieldset instead of radios; data-answer is
+  compared case-insensitively.
+
   Feedback is immediate: picking an option marks it right or wrong and reveals the reason. A running score
   appears in any element with id="quiz-score".
 */
@@ -35,11 +38,42 @@
     }
   };
 
+  const record = (isRight) => {
+    answered += 1;
+    correct += isRight ? 1 : 0;
+    render();
+  };
+
   for (const quiz of quizzes) {
     const why = document.createElement('p');
     why.className = 'why';
     why.innerHTML = quiz.dataset.why ?? '';
     quiz.append(why);
+
+    // Typed answer: <fieldset class="quiz" data-answer="300"><input type="text" /> …; checked on Enter or Check
+    const typed = quiz.querySelector('input[type="text"]');
+    if (typed) {
+      const check = Object.assign(document.createElement('button'), {
+        type: 'button',
+        textContent: 'Check',
+      });
+      typed.after(check);
+      const submit = () => {
+        if (quiz.classList.contains('answered') || !typed.value.trim()) {
+          return;
+        }
+        const isRight = typed.value.trim().toLowerCase() === quiz.dataset.answer.toLowerCase();
+        quiz.classList.add('answered');
+        typed.closest('label').classList.add(isRight ? 'right' : 'wrong');
+        typed.disabled = true;
+        check.disabled = true;
+        why.innerHTML = `${isRight ? '' : `Answer: <b>${quiz.dataset.answer}</b>. `}${quiz.dataset.why ?? ''}`;
+        record(isRight);
+      };
+      check.addEventListener('click', submit);
+      typed.addEventListener('keydown', (event) => event.key === 'Enter' && submit());
+      continue;
+    }
 
     quiz.addEventListener('change', (event) => {
       if (quiz.classList.contains('answered')) {
@@ -55,9 +89,7 @@
         .closest('label')
         .classList.add('right');
       quiz.querySelectorAll('input').forEach((input) => (input.disabled = true));
-      answered += 1;
-      correct += isRight ? 1 : 0;
-      render();
+      record(isRight);
     });
   }
 

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access token: TravelBliss sign-in course</title>
+    <link rel="stylesheet" href="../assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course · <a href="../0002-inside-the-access-token.html">Lesson 2</a> ·
+        <a href="glossary.html">Glossary</a> · <a href="request-pipeline.html">Request pipeline</a>
+      </nav>
+      <p class="kicker">Reference</p>
+      <h1>The access token</h1>
+
+      <pre><code><span style="color:#b42318">header</span>.<span style="color:#6f42c1">payload</span>.<span style="color:#0f6b5c">signature</span>   (each part base64url)</code></pre>
+      <table>
+        <tr>
+          <th>Part</th>
+          <th>TravelBliss contents</th>
+          <th>Readable by</th>
+        </tr>
+        <tr>
+          <td>Header</td>
+          <td><code>{ "alg": "HS256", "typ": "JWT" }</code></td>
+          <td>anyone</td>
+        </tr>
+        <tr>
+          <td>Payload</td>
+          <td>
+            <code>{ userId, iat, exp }</code>: seconds since 1970; <code>exp − iat</code> =
+            <code>API_JWT_EXPIRED</code>
+          </td>
+          <td>anyone</td>
+        </tr>
+        <tr>
+          <td>Signature</td>
+          <td>HMAC-SHA256 of header + payload with <code>API_SECRET_JWT</code> (32 bytes)</td>
+          <td>meaningful only to the API</td>
+        </tr>
+      </table>
+
+      <h2>Issue and check</h2>
+      <pre><code>// createTokens, at sign-in
+sign({ userId }, API_SECRET_JWT, { expiresIn: API_JWT_EXPIRED })
+
+// verifyToken, on every request
+verify(token, API_SECRET_JWT)   // throws on any problem → caller is a guest</code></pre>
+      <table>
+        <tr>
+          <th>Token</th>
+          <th><code>verify</code></th>
+          <th>Caller</th>
+        </tr>
+        <tr>
+          <td>as issued, before <code>exp</code></td>
+          <td>returns the payload</td>
+          <td>signed-in user</td>
+        </tr>
+        <tr>
+          <td>any byte of header or payload edited</td>
+          <td><code>invalid signature</code></td>
+          <td>guest</td>
+        </tr>
+        <tr>
+          <td>signed with another secret</td>
+          <td><code>invalid signature</code></td>
+          <td>guest</td>
+        </tr>
+        <tr>
+          <td>past <code>exp</code></td>
+          <td><code>jwt expired</code></td>
+          <td>guest</td>
+        </tr>
+      </table>
+
+      <h2>Rules</h2>
+      <ul>
+        <li>Reading a token needs nothing; minting one the API accepts needs the secret.</li>
+        <li>The payload is public: an id, never a password or anything private.</li>
+        <li>
+          <code>decode</code> reads without checking; only <code>verify</code> decides trust (<a
+            href="https://github.com/auth0/node-jsonwebtoken#readme"
+            >jsonwebtoken</a
+          >).
+        </li>
+      </ul>
+
+      <h2>Sources</h2>
+      <ul>
+        <li>
+          <a href="https://www.rfc-editor.org/rfc/rfc7519">RFC 7519</a>: format (§3),
+          <code>exp</code> / <code>iat</code> (§4.1), NumericDate (§2)
+        </li>
+        <li>
+          <a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html"
+            >OWASP JSON Web Token Cheat Sheet</a
+          >: “Signed JWTs are not confidential”
+        </li>
+        <li>
+          Code:
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L150-L160"
+            >createTokens</a
+          >,
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L26-L36"
+            >verifyToken</a
+          >
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>
