@@ -1,9 +1,7 @@
 import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { type GetMeQuery, type LoginMutation } from '@generated/codegen/graphql';
-import { useLocation, useNavigate } from 'react-router';
 import { setAccessToken } from '@/authLink';
-import { ROUTES } from '@/constants';
 import { LOGOUT } from '@/graphql/mutations/logout';
 import useGetMe from '@/hooks/graphql/useGetMe';
 import useLogin from '@/hooks/graphql/useLogin';
@@ -14,6 +12,8 @@ export type AuthContextValue = {
   info: readonly [
     CurrentUser | undefined,
     React.Dispatch<React.SetStateAction<CurrentUser | undefined>>,
+    /** True until the first "who am I" request settles; guards must not redirect before that. */
+    boolean,
   ];
   onLogin: readonly [
     (phoneNumber: string, password: string, hasRefresh?: boolean) => Promise<void>,
@@ -26,10 +26,9 @@ export type AuthContextValue = {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [user, setUser] = useState<CurrentUser>();
-  const { data: me, refetch: refetchGetUserInfo } = useGetMe();
+  const { data: me, refetch: refetchGetUserInfo, isLoading, isRefetching } = useGetMe();
+  const isResolving = isLoading && !isRefetching;
 
   useEffect(() => {
     if (me) {
@@ -38,11 +37,10 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [me]);
 
   const { login, result } = useLogin({
+    // No navigate here: once the user loads, PublicRoute sends them back where they came from
     onCompleted: (data) => {
       setAccessToken(data.login.accessToken);
-      const origin = location.state?.from?.pathname || ROUTES.ROOT;
       refetchGetUserInfo();
-      navigate(origin);
     },
   });
 
@@ -65,11 +63,11 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      info: [user, setUser],
+      info: [user, setUser, isResolving],
       onLogin: [onLogin, result, refetchGetUserInfo],
       onLogout: [onLogout],
     }),
-    [user, result, refetchGetUserInfo]
+    [user, isResolving, result, refetchGetUserInfo]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

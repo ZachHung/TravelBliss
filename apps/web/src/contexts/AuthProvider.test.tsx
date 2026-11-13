@@ -5,6 +5,8 @@ import { LOGIN } from '@/graphql/mutations/login';
 import { LOGOUT } from '@/graphql/mutations/logout';
 import { GET_ME } from '@/graphql/queries/me';
 import useAuth from '@/hooks/useAuth';
+import ProtectedRoute from '@/routes/ProtectedRoute';
+import PublicRoute from '@/routes/PublicRoute';
 import AuthProvider from './AuthProvider';
 
 const me = {
@@ -80,13 +82,13 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByText('Guest')).toBeInTheDocument());
   });
 
-  it('logs in, fetches the user and navigates home', async () => {
+  it('logs in and fetches the user, leaving navigation to the route guards', async () => {
     renderProvider({ mocks: [getMeUnauthenticated, loginOk, getMeOk] });
 
     await userEvent.click(screen.getByRole('button', { name: 'login' }));
 
     expect(await screen.findByText('Hello An')).toBeInTheDocument();
-    expect(screen.getByText('path /')).toBeInTheDocument();
+    expect(screen.getByText('path /sign-in')).toBeInTheDocument();
   });
 
   it('clears the user on logout', async () => {
@@ -98,5 +100,27 @@ describe('AuthProvider', () => {
     await userEvent.click(screen.getByRole('button', { name: 'logout' }));
 
     expect(await screen.findByText('Guest')).toBeInTheDocument();
+  });
+
+  it('returns to the protected page it came from after login', async () => {
+    render(
+      <AuthProvider>
+        <Routes>
+          <Route element={<PublicRoute />}>
+            <Route path="/sign-in" element={<Consumer />} />
+          </Route>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/protected" element={<p>Secret page</p>} />
+          </Route>
+          <Route path="*" element={<Consumer />} />
+        </Routes>
+      </AuthProvider>,
+      // The user query answers after login does, as it does over the network
+      { route: '/protected', mocks: [getMeUnauthenticated, loginOk, { ...getMeOk, delay: 50 }] }
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'login' }));
+
+    expect(await screen.findByText('Secret page')).toBeInTheDocument();
   });
 });
