@@ -1,4 +1,4 @@
-import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useMemo, useState, type ReactNode } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { type GetMeQuery, type LoginMutation } from '@generated/codegen/graphql';
 import { setAccessToken } from '@/authLink';
@@ -11,7 +11,6 @@ export type CurrentUser = GetMeQuery['me'];
 export type AuthContextValue = {
   info: readonly [
     CurrentUser | undefined,
-    React.Dispatch<React.SetStateAction<CurrentUser | undefined>>,
     /** True until the first "who am I" request settles; guards must not redirect before that. */
     boolean,
   ];
@@ -26,28 +25,27 @@ export type AuthContextValue = {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<CurrentUser>();
   const { data: me, refetch: refetchGetUserInfo, isLoading, isRefetching } = useGetMe();
   const isResolving = isLoading && !isRefetching;
-
-  useEffect(() => {
-    if (me) {
-      setUser((prev) => ({ ...prev, ...me.me }));
-    }
-  }, [me]);
+  // The query keeps the last user after logout, so a flag hides it until the next login
+  const [isSignedOut, setIsSignedOut] = useState(false);
+  // Derived, not copied in an effect: a copy lags one render, and guards redirect in that gap
+  const user = isSignedOut ? undefined : me?.me;
 
   const { login, result } = useLogin({
     // No navigate here: once the user loads, PublicRoute sends them back where they came from
-    onCompleted: (data) => {
+    onCompleted: async (data) => {
       setAccessToken(data.login.accessToken);
-      refetchGetUserInfo();
+      // Unhide only once the new user is loaded, so the previous user's data never flashes
+      await refetchGetUserInfo();
+      setIsSignedOut(false);
     },
   });
 
   const [logout] = useMutation(LOGOUT, {
     onCompleted: () => {
       setAccessToken(null);
-      setUser(undefined);
+      setIsSignedOut(true);
     },
   });
 
@@ -63,7 +61,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      info: [user, setUser, isResolving],
+      info: [user, isResolving],
       onLogin: [onLogin, result, refetchGetUserInfo],
       onLogout: [onLogout],
     }),

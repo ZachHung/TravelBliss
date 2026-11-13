@@ -6,7 +6,7 @@ import useAuth from '@/hooks/useAuth';
 
 const PublicRoute = ({ children }: { children?: ReactNode }) => {
   const {
-    info: [user, , isResolving],
+    info: [user, isResolving],
   } = useAuth();
   const location = useLocation();
 

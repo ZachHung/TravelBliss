@@ -6,7 +6,7 @@ import useAuth from '@/hooks/useAuth';
 
 const ProtectedRoute = ({ children }: { children?: ReactNode }) => {
   const {
-    info: [user, , isResolving],
+    info: [user, isResolving],
   } = useAuth();
 
   const location = useLocation();

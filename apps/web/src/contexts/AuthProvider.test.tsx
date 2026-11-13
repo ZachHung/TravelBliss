@@ -123,4 +123,28 @@ describe('AuthProvider', () => {
 
     expect(await screen.findByText('Secret page')).toBeInTheDocument();
   });
+
+  it('never shows the sign in page while restoring a session on reload', async () => {
+    const signInRendered = vi.fn();
+    const SignInSpy = () => {
+      signInRendered();
+      return <p>Sign in page</p>;
+    };
+    render(
+      <AuthProvider>
+        <Routes>
+          <Route element={<PublicRoute />}>
+            <Route path="/sign-in" element={<SignInSpy />} />
+          </Route>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/protected" element={<p>Secret page</p>} />
+          </Route>
+        </Routes>
+      </AuthProvider>,
+      { route: '/protected', mocks: [{ ...getMeOk, delay: 50 }] }
+    );
+
+    expect(await screen.findByText('Secret page')).toBeInTheDocument();
+    expect(signInRendered).not.toHaveBeenCalled();
+  });
 });

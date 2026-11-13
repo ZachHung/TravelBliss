@@ -9,7 +9,7 @@ const user = { id: '1', firstName: 'An' } as CurrentUser;
 
 const withUser = (current?: CurrentUser, isResolving = false) =>
   ({
-    info: [current, vi.fn(), isResolving],
+    info: [current, isResolving],
     onLogin: [],
     onLogout: [vi.fn()],
   }) as unknown as AuthContextValue;
