@@ -41,7 +41,7 @@ input LoginInput {
 }
 
 type Mutation {
-  changePasswordUser(input: ChangePasswordInput!): User!
+  changePasswordUser(input: ChangePasswordInput!): UserTokens!
   editInfoUser(input: EditInfoInput!): User!
   login(input: LoginInput!): UserTokens!
   logout: Boolean!

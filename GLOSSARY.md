@@ -22,3 +22,9 @@ Someone without a valid session. Route guards send guests from protected pages t
 A value of `errors[].extensions.code`, defined once in the API's `ErrorCode` enum and published in `schema.graphql`.
 The web imports the generated `ErrorCode` and maps codes to form fields. Expected errors carry one of these codes;
 see `docs/adr/0002-api-logging.md` for how expected and unexpected errors are logged.
+
+## Valid-from
+
+The per-user time (`sessionsValidFrom:<userId>` in Redis) before which every token of that user is revoked. Set when
+the user's other sessions must end, e.g. after a password change. See `docs/adr/0003-session-revocation.md`.
+_Avoid_: token version, logout-all timestamp.

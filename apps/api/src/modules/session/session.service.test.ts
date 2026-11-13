@@ -5,12 +5,13 @@ import { UserNotFoundException } from '@/modules/user/user.exception';
 import { type Context } from '@/types';
 import { SessionService } from './session.service';
 
-// Just enough Redis: keys with get/set/del/unlink and a scanStream that yields matching keys.
+// Just enough Redis: keys with get/mget/set/del/unlink and a scanStream that yields matching keys.
 const fakeRedis = () => {
   const data = new Map<string, string>();
   return {
     data,
     get: async (key: string) => data.get(key) ?? null,
+    mget: async (...keys: string[]) => keys.map((key) => data.get(key) ?? null),
     set: async (key: string, value: string) => data.set(key, value),
     del: async (key: string) => Number(data.delete(key)),
     unlink: async (...keys: string[]) => keys.forEach((key) => data.delete(key)),
@@ -138,5 +139,58 @@ describe('SessionService', () => {
 
     expect(ok).toBe(true);
     expect(store.data.has('blacklist:access-token')).toBe(true);
+  });
+
+  describe('endOtherSessions', () => {
+    // Token times have one-second resolution, so the clock moves between "before" and "after"
+    beforeEach(() => vi.useFakeTimers({ now: new Date('2026-11-14T10:00:00Z') }));
+    afterEach(() => vi.useRealTimers());
+
+    const signIn = async (service: SessionService) => {
+      const res = fakeRes();
+      const { accessToken } = await service.start('u1', { remember: true }, ctx(res));
+      return { accessToken, cookies: res.cookies };
+    };
+
+    it('revokes every other device, access and refresh tokens alike, and keeps this one signed in', async () => {
+      const { service } = setup();
+      const phone = await signIn(service);
+      const laptop = await signIn(service);
+      vi.advanceTimersByTime(2000);
+
+      const laptopRes = fakeRes();
+      const fresh = await service.endOtherSessions({
+        ...ctx(laptopRes, laptop.cookies),
+        auth: { user: { id: 'u1' }, token: laptop.accessToken, exp: 0 },
+      } as never);
+
+      // The phone: its unexpired access token stops working, and so does its refresh cookie
+      expect(await service.authenticate(`Bearer ${phone.accessToken}`)).toBeUndefined();
+      await expect(service.refresh(ctx(fakeRes(), phone.cookies))).rejects.toMatchObject({
+        extensions: { code: ErrorCode.INVALID_TOKEN },
+      });
+      // The laptop's old token too; the fresh pair works, and the refresh cookie was re-issued
+      expect(await service.authenticate(`Bearer ${laptop.accessToken}`)).toBeUndefined();
+      expect(await service.authenticate(`Bearer ${fresh.accessToken}`)).toMatchObject({
+        user: { id: 'u1' },
+      });
+      await expect(service.refresh(ctx(fakeRes(), laptopRes.cookies))).resolves.toMatchObject({
+        accessToken: expect.any(String),
+      });
+    });
+
+    it('re-issues no refresh cookie when this device was not remembered', async () => {
+      const { service } = setup();
+      const { accessToken } = await service.start('u1', { remember: false }, ctx(fakeRes()));
+      vi.advanceTimersByTime(2000);
+
+      const res = fakeRes();
+      await service.endOtherSessions({
+        ...ctx(res),
+        auth: { user: { id: 'u1' }, token: accessToken, exp: 0 },
+      } as never);
+
+      expect(res.cookies).toEqual({});
+    });
   });
 });

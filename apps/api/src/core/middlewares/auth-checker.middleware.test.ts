@@ -11,8 +11,12 @@ const check = (user: Partial<User> | undefined, roles: string[] = []) =>
   );
 
 describe('authChecker', () => {
-  it('denies guests', () => {
-    expect(check(undefined)).toBe(false);
+  it('tells a guest UNAUTHENTICATED, even on a role-gated field, so the web app refreshes', () => {
+    for (const roles of [[], [Role.ADMIN]]) {
+      expect(() => check(undefined, roles)).toThrow(
+        expect.objectContaining({ extensions: { code: 'UNAUTHENTICATED' } })
+      );
+    }
   });
 
   it('allows any signed-in user when the field needs no role', () => {
