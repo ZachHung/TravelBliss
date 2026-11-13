@@ -17,6 +17,14 @@
 - The TravelBliss code itself (`apps/api/src/modules/session`, `apps/web/src/session`) and
   `docs/adr/0002-api-logging.md`. Use for: every lesson; the course teaches this system, not auth in general.
 
+- [RFC 7519: JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519)
+  The JWT format (§3), `exp`/`iat` claims (§4.1), NumericDate (§2). Use for: lesson 2, exact token semantics.
+- [OWASP JSON Web Token Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html)
+  Signed JWTs are not confidential; `alg: none`; denylists. Use for: lesson 2, and lesson 6 (its warning against
+  keying a denylist on the raw token applies to TravelBliss's blacklist).
+- [jsonwebtoken README](https://github.com/auth0/node-jsonwebtoken#readme)
+  `sign` defaults (HS256, adds `iat`), `verify` errors, `decode` does not verify. Use for: what our code calls.
+
 ## Wisdom (Communities)
 
 - [OWASP Slack](https://owasp.org/slack/invite) (`#cheatsheets` and general channels)
@@ -24,6 +32,4 @@
 
 ## Gaps
 
-- JWT structure and validation (lesson 2): use RFC 7519 and the OWASP JSON Web Token cheat sheet, still to be
-  read and added.
 - Refresh tokens and cookies (lesson 3): RFC 6749 §1.5, MDN `Set-Cookie`, OWASP Session Management cheat sheet.

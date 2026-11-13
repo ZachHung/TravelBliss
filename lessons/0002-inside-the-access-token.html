@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lesson 2: Inside the access token</title>
+    <link rel="stylesheet" href="assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course ·
+        <a href="0001-who-are-you-and-what-may-you-do.html">Lesson 1</a> ·
+        <a href="reference/glossary.html">Glossary</a> ·
+        <a href="reference/access-token.html">Access token reference</a>
+      </nav>
+
+      <p class="kicker">Lesson 2 · about 12 minutes</p>
+      <h1>Inside the access token</h1>
+      <p class="lede">
+        Lesson 1 treated the access token as a sealed pass. Today you open it: read what it says,
+        and see why the API can trust a string the browser hands it. <span id="quiz-score"></span>
+      </p>
+
+      <h2>Warm-up, from memory</h2>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Same rule as lesson 1, question 4: the error follows the field's rule. Roles are listed, so the denial is UNAUTHORIZED even though nobody is signed in."
+      >
+        <legend>
+          A new mutation is added: <code>@Authorized(Role.ADMIN) deleteUser</code>. A guest calls
+          it. What comes back?
+        </legend>
+        <label><input type="radio" name="w1" value="a" /> Fails with UNAUTHORIZED</label>
+        <label><input type="radio" name="w1" value="b" /> Fails with UNAUTHENTICATED</label>
+        <label><input type="radio" name="w1" value="c" /> Returns the data</label>
+      </fieldset>
+
+      <h2>Three parts, separated by dots</h2>
+      <p>
+        The access token is a <a href="reference/glossary.html#jwt">JWT</a> (JSON Web Token): “a
+        compact, URL-safe means of representing claims”, written as “a sequence of URL-safe parts
+        separated by period ('.') characters.”
+        <a href="https://www.rfc-editor.org/rfc/rfc7519#section-3">[RFC 7519 §3]</a>
+      </p>
+      <pre><code><span style="color:#b42318">header</span>.<span style="color:#6f42c1">payload</span>.<span style="color:#0f6b5c">signature</span></code></pre>
+      <ul>
+        <li><b>Header</b>: which algorithm signed it.</li>
+        <li>
+          <b>Payload</b>: the <a href="reference/glossary.html#claim">claims</a>, facts about the
+          bearer.
+        </li>
+        <li><b>Signature</b>: proof the first two parts came from the API, unchanged.</li>
+      </ul>
+      <p>
+        The header and payload are only <i>encoded</i> (base64url), not encrypted. OWASP is blunt:
+        “anyone who obtains the token can read every claim.”
+        <a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html"
+          >[OWASP JWT Cheat Sheet]</a
+        >
+      </p>
+
+      <h2>Open one yourself</h2>
+      <p>
+        This is a real token, made with the same library and the same call the API uses, but signed
+        with a course-only secret. Read it below; then try deleting one character and watch decoding
+        break.
+      </p>
+      <div
+        class="token-inspector"
+        data-token="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlNGU2MWNiZC01NDU0LTQzZjktOGQyMC02OTg0MjQ5YmVkMTQiLCJpYXQiOjE3OTQ1ODc1ODcsImV4cCI6MTc5NDU4Nzg4N30.zt1yf-HOrIR0v3aEQBD8PZaeQtcItY-865RVslg5Ihk"
+      ></div>
+
+      <fieldset
+        class="quiz"
+        data-answer="300"
+        data-why="<code>exp − iat</code> = 1794587887 − 1794587587 = 300 seconds: five minutes, the value of <code>API_JWT_EXPIRED</code>."
+      >
+        <legend>How many seconds does that token live? (Use the payload.)</legend>
+        <label><input type="text" inputmode="numeric" aria-label="Lifetime in seconds" /></label>
+      </fieldset>
+
+      <h2>Where those claims come from</h2>
+      <p>
+        At sign-in,
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L150-L160"
+          ><code>createTokens</code></a
+        >
+        makes the token:
+      </p>
+      <pre><code>sign({ userId }, getEnv('API_SECRET_JWT'), {
+  expiresIn: getEnv('API_JWT_EXPIRED'),   // "5minutes" in .env.example
+});</code></pre>
+      <p>
+        We only put <code>userId</code> in. The library adds <code>iat</code> (issued at)
+        automatically, turns <code>expiresIn</code> into <code>exp</code>, and signs with HS256 by
+        default. <a href="https://github.com/auth0/node-jsonwebtoken#readme">[jsonwebtoken]</a> Both
+        times are seconds since 1970.
+        <a href="https://www.rfc-editor.org/rfc/rfc7519#section-2">[RFC 7519 §2]</a>
+      </p>
+      <span class="note"
+        >Since the payload is readable, it carries only an id. Never a password, and nothing you
+        would mind a stranger seeing.</span
+      >
+
+      <h2>Why the API trusts it</h2>
+      <p>
+        The signature is a keyed hash (HMAC) of the header and payload, computed with
+        <code>API_SECRET_JWT</code>, a secret only the API holds. On every request,
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L26-L36"
+          ><code>verifyToken</code></a
+        >
+        calls <code>verify</code>, which recomputes the signature and checks <code>exp</code>. These
+        are the library's real answers for our sample token:
+      </p>
+      <table>
+        <tr>
+          <th>Try</th>
+          <th><code>verify</code> says</th>
+        </tr>
+        <tr>
+          <td>the token as issued</td>
+          <td>valid: returns the payload</td>
+        </tr>
+        <tr>
+          <td>change <code>userId</code> in the payload, keep the signature</td>
+          <td><code>JsonWebTokenError: invalid signature</code></td>
+        </tr>
+        <tr>
+          <td>verify with a different secret</td>
+          <td><code>JsonWebTokenError: invalid signature</code></td>
+        </tr>
+        <tr>
+          <td>a token past its <code>exp</code></td>
+          <td><code>TokenExpiredError: jwt expired</code></td>
+        </tr>
+      </table>
+      <p>
+        <code>verifyToken</code> catches every one of these and returns <code>undefined</code>, and
+        from lesson 1 you know what that makes the caller: a
+        <a href="reference/glossary.html#guest">guest</a>.
+      </p>
+      <div class="callout">
+        Reading needs nothing. <b>Writing</b> a token the API accepts needs the secret. That
+        asymmetry is the whole trick: the inspector above can decode, but it can never tell you
+        whether a signature is genuine.
+      </div>
+
+      <h2>Practice</h2>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="The payload is base64url-encoded, not encrypted. Anyone holding the token, or a log line that captured it, can read the claims."
+      >
+        <legend>1. Who can read the <code>userId</code> inside a TravelBliss access token?</legend>
+        <label><input type="radio" name="p1" value="a" /> Only the API server</label>
+        <label><input type="radio" name="p1" value="b" /> Anyone holding the token</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="The signature was computed over the original payload. <code>verify</code> recomputes it over the edited one, they differ, <code>verifyToken</code> returns undefined: a guest."
+      >
+        <legend>
+          2. An attacker changes the <code>userId</code> in their own token to someone else's and
+          sends it.
+        </legend>
+        <label><input type="radio" name="p2" value="a" /> Treated as a guest</label>
+        <label><input type="radio" name="p2" value="b" /> Becomes the other user</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Decoding still works fine: it is just base64. Only the signature, recomputed with the secret, exposes the edit."
+      >
+        <legend>3. What lets the API detect that edit?</legend>
+        <label><input type="radio" name="p3" value="a" /> The payload fails to decode</label>
+        <label><input type="radio" name="p3" value="b" /> The signature no longer matches</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="With <code>API_JWT_EXPIRED=5minutes</code>, <code>exp</code> is 5 minutes after <code>iat</code>. At 6 minutes, <code>verify</code> throws TokenExpiredError. (Lesson 3: why the web app then quietly gets a new one.)"
+      >
+        <legend>
+          4. A token issued 6 minutes ago arrives, with <code>API_JWT_EXPIRED=5minutes</code>.
+        </legend>
+        <label><input type="radio" name="p4" value="a" /> verify rejects it as expired</label>
+        <label><input type="radio" name="p4" value="b" /> verify accepts it as valid</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Everything in the payload is public to whoever holds the token. An id is fine; a password hash would hand attackers something to crack."
+      >
+        <legend>5. Which is safe to put in the payload?</legend>
+        <label><input type="radio" name="p5" value="a" /> The user's password hash</label>
+        <label><input type="radio" name="p5" value="b" /> The user's database id</label>
+      </fieldset>
+
+      <div class="source">
+        <p>
+          <b>Read next:</b> the “Signed JWTs are not confidential” and “Unsecured JWTs” sections of
+          the
+          <a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html"
+            >OWASP JSON Web Token Cheat Sheet</a
+          >, then section 3 of
+          <a href="https://www.rfc-editor.org/rfc/rfc7519#section-3">RFC 7519</a> for the exact
+          format.
+        </p>
+        <p>
+          <b>Stuck, or curious?</b> Ask me anything: why HMAC and not encryption, what “base64url”
+          changes, what an attacker could do with a stolen token. Questions are the fastest way
+          through.
+        </p>
+        <p>
+          <b>Next:</b> lesson 3. If this token dies after five minutes, why don't you get signed out
+          every five minutes? Enter the refresh token and the <code>_rf</code> cookie.
+        </p>
+      </div>
+    </main>
+    <script src="assets/quiz.js"></script>
+    <script src="assets/token-inspector.js"></script>
+  </body>
+</html>

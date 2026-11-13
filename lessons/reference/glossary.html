@@ -11,6 +11,7 @@
       <nav class="course">
         TravelBliss sign-in course ·
         <a href="../0001-who-are-you-and-what-may-you-do.html">Lesson 1</a> ·
+        <a href="../0002-inside-the-access-token.html">Lesson 2</a> ·
         <a href="request-pipeline.html">Request pipeline reference</a>
       </nav>
       <p class="kicker">Reference</p>
@@ -57,6 +58,31 @@
             <a href="https://www.rfc-editor.org/rfc/rfc6750#section-1.2">[RFC 6750 §1.2]</a> The
             access token is one.
           </td>
+        </tr>
+        <tr id="jwt">
+          <td><b>JWT</b> (JSON Web Token)</td>
+          <td>
+            The access token's format: <code>header.payload.signature</code>, each part base64url.
+            <a href="https://www.rfc-editor.org/rfc/rfc7519#section-3">[RFC 7519 §3]</a>
+          </td>
+        </tr>
+        <tr id="claim">
+          <td><b>Claim</b></td>
+          <td>
+            One fact in the payload: <code>userId</code>, <code>iat</code> (issued at),
+            <code>exp</code> (expires). Readable by anyone.
+          </td>
+        </tr>
+        <tr id="signature">
+          <td><b>Signature</b></td>
+          <td>
+            HMAC of header + payload with the secret. Any edit, or another secret, makes it fail to
+            verify.
+          </td>
+        </tr>
+        <tr id="secret">
+          <td><b>Secret</b> (<code>API_SECRET_JWT</code>)</td>
+          <td>Key only the API holds. Needed to mint a valid token, not to read one.</td>
         </tr>
         <tr id="signed-in-user">
           <td><b>Signed-in user</b></td>
