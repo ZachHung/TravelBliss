@@ -13,6 +13,7 @@
         <a href="../0001-who-are-you-and-what-may-you-do.html">Lesson 1</a> ·
         <a href="../0002-inside-the-access-token.html">Lesson 2</a> ·
         <a href="../0003-refresh-tokens-rotation-and-reuse.html">Lesson 3</a> ·
+        <a href="../0004-the-web-side-and-three-gaps.html">Lesson 4</a> ·
         <a href="request-pipeline.html">Request pipeline reference</a>
       </nav>
       <p class="kicker">Reference</p>
@@ -113,6 +114,27 @@
           <td>
             Cookie attribute controlling cross-site sending: <code>Lax</code> locally,
             <code>None</code> (+ <code>Secure</code>) in production.
+          </td>
+        </tr>
+        <tr id="use-session">
+          <td><code>useSession()</code></td>
+          <td>
+            The web app's only view of the session:
+            <code>{ user, signIn, signOut, isSigningIn }</code>.
+          </td>
+        </tr>
+        <tr id="session-link">
+          <td><b>Session link</b></td>
+          <td>
+            <code>createSessionLink</code>: adds the Bearer header to every request and, on
+            <code>UNAUTHENTICATED</code>, refreshes once and resends.
+          </td>
+        </tr>
+        <tr id="blacklist">
+          <td><b>Blacklist</b></td>
+          <td>
+            Redis keys <code>blacklist:&lt;access token&gt;</code> written at sign-out, so that
+            token makes a guest until it expires.
           </td>
         </tr>
         <tr id="signed-in-user">

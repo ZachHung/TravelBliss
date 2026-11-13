@@ -32,12 +32,12 @@
 - [MDN: Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)
   `HttpOnly`, `Secure`, `SameSite`, `Max-Age`. Use for: the `_rf` cookie's attributes.
 
+- [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+  Server-side logout, renewing sessions after a password change, simultaneous logons. Use for: lesson 4's gaps.
+- [Apollo Client: Advanced HTTP networking](https://www.apollographql.com/docs/react/networking/advanced-http-networking)
+  How links chain and forward operations, adding an auth header. Use for: `createSessionLink`.
+
 ## Wisdom (Communities)
 
 - [OWASP Slack](https://owasp.org/slack/invite) (`#cheatsheets` and general channels)
   Practitioners who write the cheat sheets. Use for: "is this design safe?" questions after lesson 3.
-
-## Gaps
-
-- Web-side session handling (lesson 4): Apollo Client link docs (`ErrorLink`, `SetContextLink`), React Router
-  docs on navigation and redirects.

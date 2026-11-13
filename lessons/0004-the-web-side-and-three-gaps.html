@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lesson 4: The web side, sign-out, and three gaps</title>
+    <link rel="stylesheet" href="assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course · <a href="0001-who-are-you-and-what-may-you-do.html">1</a> ·
+        <a href="0002-inside-the-access-token.html">2</a> ·
+        <a href="0003-refresh-tokens-rotation-and-reuse.html">3</a> ·
+        <a href="reference/glossary.html">Glossary</a> ·
+        <a href="reference/web-session.html">Web session reference</a>
+      </nav>
+
+      <p class="kicker">Lesson 4 · about 30 minutes · web side</p>
+      <h1>The web side, sign-out, and three gaps</h1>
+      <p class="lede">
+        Lessons 1–3 were the API. This one is the browser: how the web app attaches the token,
+        refreshes it without you noticing, survives a reload, and signs out. It ends with three real
+        gaps in this code, which you will trigger yourself. <span id="quiz-score"></span>
+      </p>
+
+      <h2>Warm-up, from memory</h2>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Without Remember Me there is no refresh cookie and no Redis key (lesson 3, Part 2). The access token lived in page memory, which a reload wipes."
+      >
+        <legend>1. You signed in <b>without</b> Remember Me and reload the page.</legend>
+        <label><input type="radio" name="w1" value="a" /> Signed in: refreshed from cookie</label>
+        <label><input type="radio" name="w1" value="b" /> Signed out: nothing to refresh</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="The attacker spent the token first, so its key is gone: your refresh is reuse, and every refresh token of yours is revoked (lesson 3, Part 5)."
+      >
+        <legend>2. An attacker spends your stolen refresh cookie first; then you refresh.</legend>
+        <label><input type="radio" name="w2" value="a" /> Rejected, every session revoked</label>
+        <label><input type="radio" name="w2" value="b" /> Accepted, with fresh tokens</label>
+      </fieldset>
+
+      <h2>Part 1 · Two things the browser holds</h2>
+      <table>
+        <tr>
+          <th></th>
+          <th>Where</th>
+          <th>Survives a reload?</th>
+        </tr>
+        <tr>
+          <td>Access token</td>
+          <td>
+            a plain variable in
+            <a
+              href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/session/link.ts#L8-L14"
+              ><code>session/link.ts</code></a
+            >
+          </td>
+          <td>no</td>
+        </tr>
+        <tr>
+          <td>Refresh token</td>
+          <td>the <code>travelBliss_rf</code> HttpOnly cookie (lesson 3)</td>
+          <td>yes, 30 days</td>
+        </tr>
+      </table>
+      <p>
+        The access token is never written to <code>localStorage</code> or a cookie. A reload loses
+        it on purpose and gets a new one through the refresh cookie (Part 3). Everything else in the
+        app sees only <a href="reference/glossary.html#use-session"><code>useSession()</code></a
+        >:
+      </p>
+      <pre><code>const { user, signIn, signOut, isSigningIn } = useSession();</code></pre>
+
+      <h2>Part 2 · Every request: attach, and on failure refresh once</h2>
+      <p>
+        Apollo Client sends each GraphQL operation through a chain of <i>links</i> that “execute in
+        sequence”; each can change the operation and pass it on with
+        <code>forward(operation)</code>.
+        <a href="https://www.apollographql.com/docs/react/networking/advanced-http-networking"
+          >[Apollo docs]</a
+        >
+        TravelBliss's chain, in
+        <a href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/App.tsx#L36"
+          ><code>App.tsx</code></a
+        >:
+      </p>
+      <pre><code>link: from([createSessionLink(uri), errorLink, httpLink])</code></pre>
+      <p>
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/session/link.ts#L19-L73"
+          ><code>createSessionLink</code></a
+        >
+        is two links in one:
+      </p>
+      <ol>
+        <li>
+          <b>Attach</b> (<a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/session/link.ts#L40-L42"
+            >L40</a
+          >): if there is an access token, add <code>Authorization: Bearer …</code>.
+        </li>
+        <li>
+          <b>Retry</b> (<a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/session/link.ts#L44-L70"
+            >L44</a
+          >): if the response has an <code>UNAUTHENTICATED</code> error, call
+          <code>refreshToken</code>, store the new access token, and send the original operation
+          again with it. Three guards keep this from looping:
+          <ul>
+            <li>only <code>UNAUTHENTICATED</code> triggers it (remember this for Gap C);</li>
+            <li>the <code>RefreshToken</code> operation itself is never retried;</li>
+            <li>
+              each operation retries once, marked <code>retried</code>; a second failure reaches the
+              page.
+            </li>
+          </ul>
+        </li>
+      </ol>
+      <p>
+        One more detail. If five queries fail together, they must not send five refreshes: with
+        rotation, the second would be reuse and revoke everything (lesson 3). So the refresh request
+        is shared:
+      </p>
+      <pre><code>let pending: Promise&lt;string | null&gt; | null = null;
+const refresh = () => (pending ??= fetch(… RefreshToken …) … .finally(() => { pending = null; }));</code></pre>
+      <p>
+        The first failure starts the request; the other four wait on the same promise.
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/session/link.ts#L20-L38"
+          >[L20–38]</a
+        >
+        Keep in mind where that variable lives: in <em>this page's</em> JavaScript.
+      </p>
+
+      <h2>Part 3 · A reload, and why it no longer flashes</h2>
+      <p>
+        On reload the access-token variable is <code>null</code>. Follow the request that rebuilds
+        the session:
+      </p>
+      <ol>
+        <li>
+          <code>SessionProvider</code> runs the <code>GetMe</code> query with no Bearer header.
+        </li>
+        <li>
+          <code>me</code> is <code>@Authorized()</code>, the caller is a guest →
+          <code>UNAUTHENTICATED</code> (lesson 1).
+        </li>
+        <li>
+          The retry link calls <code>refreshToken</code>; the browser attaches the cookie → new
+          access token (lesson 3).
+        </li>
+        <li><code>GetMe</code> is retried with the new token → the user.</li>
+      </ol>
+      <p>
+        Until step 4 finishes,
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/session/SessionProvider.tsx#L28-L63"
+          ><code>SessionProvider</code></a
+        >
+        renders only a full-screen loader, so no part of the app can show signed-out UI to a
+        signed-in user. Then the route guards decide:
+      </p>
+      <ul>
+        <li>
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/routes/ProtectedRoute.tsx#L6-L20"
+            ><code>ProtectedRoute</code></a
+          >: no user → <code>Navigate</code> to <code>/sign-in</code>, remembering where you were
+          (<code>state.from</code>).
+        </li>
+        <li>
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/web/src/routes/PublicRoute.tsx#L6-L20"
+            ><code>PublicRoute</code></a
+          >: a user on <code>/sign-in</code> → <code>Navigate</code> back to
+          <code>state.from</code>, or home.
+        </li>
+      </ul>
+      <div class="callout">
+        <b>The flash you saw.</b> Earlier, the provider copied the query result into state with
+        <code>useEffect</code>. For one render the query was done but <code>user</code> was still
+        empty; the guard redirected to sign-in in that gap, and the header (outside the guards)
+        showed “Sign In”. The fix was two rules now in <code>CODING_STANDARDS.md</code>:
+        <i>derive, don't copy</i> (<code>user</code> is computed from the query in render), and hold
+        everything behind the loader until the first check settles.
+      </div>
+
+      <h2>Part 4 · Signing out</h2>
+      <p>
+        <code>signOut()</code> calls the <code>logout</code> mutation, then forgets the token
+        locally:
+      </p>
+      <pre><code>await logout();            // server side, below
+setAccessToken(null);      // drop the in-memory token
+setIsSignedOut(true);      // hide the cached user: the query still holds it</code></pre>
+      <p>
+        On the API,
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L117-L142"
+          ><code>SessionService.end</code></a
+        >
+        does three things: blacklists the access token in Redis until its <code>exp</code>, deletes
+        <em>this device's</em> refresh key, and clears the cookie. That server-side part is the
+        point. OWASP: logout “must invalidate the session at least on server side”, because
+        “deleting a cookie alone does not invalidate a stolen copy.”
+        <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+          >[OWASP Session Management]</a
+        >
+      </p>
+      <h3>A hardening note on the blacklist</h3>
+      <p>
+        The blacklist key is the raw token string: <code>blacklist:&lt;token&gt;</code>. OWASP's JWT
+        cheat sheet warns that keying a denylist on the raw token is unsafe because JWTs are
+        malleable: one token can sometimes be re-spelled as a different string that still verifies.
+        <a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html"
+          >[OWASP JWT]</a
+        >
+        I tested the classic trick against our library: the last character of an HS256 signature
+        carries two unused bits, so four spellings decode to the same bytes.
+        <code>jsonwebtoken</code> rejected all three re-spellings with
+        <code>invalid signature</code>, because it compares the signature as a string. So it is not
+        exploitable here today; keying on a claim inside the token (a unique <code>jti</code>) would
+        make that independent of the library's internals.
+      </p>
+
+      <h2>Part 5 · Three gaps</h2>
+      <p>
+        Each gap below is real in this code. Trigger it in the simulator, answer the prediction,
+        then <b>write down your own fix</b> before opening the nudge. We will design the real fixes
+        together afterwards.
+      </p>
+      <div class="session-sim" data-actors="laptop,phone" data-tabs="yes" data-password="yes"></div>
+
+      <h3>Gap A · Signing out one device, or changing your password, ends nothing else</h3>
+      <p>
+        Try: laptop and phone both sign in; laptop signs out. Then: both sign in, attacker steals
+        the laptop's cookie, laptop changes password, attacker refreshes.
+      </p>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="<code>end</code> deletes only the key of the cookie it was sent; the phone's <code>refreshToken:u1:…</code> key is untouched. And <code>changePassword</code> stores a new hash and nothing else."
+      >
+        <legend>After the laptop changes its password, can the attacker still refresh?</legend>
+        <label><input type="radio" name="ga" value="a" /> Yes, nothing was revoked</label>
+        <label><input type="radio" name="ga" value="b" /> No, sessions were revoked</label>
+      </fieldset>
+      <p>
+        OWASP says sessions should be renewed after any privilege change, password changes included,
+        and recommends letting users “remotely terminate sessions manually.”
+        <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+          >[OWASP]</a
+        >
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/user/user.service.ts#L87-L97"
+          ><code>changePassword</code></a
+        >
+        does neither.
+      </p>
+      <details>
+        <summary>A nudge (after you have written your fix)</summary>
+        <p>
+          Lesson 3 already contains a line that ends every remembered session of a user. Where is
+          it, and what else would you need so the <em>current</em> device stays signed in, and so
+          access tokens already out there stop working too?
+        </p>
+      </details>
+
+      <h3>Gap B · Two tabs refresh at once, and everyone is signed out</h3>
+      <p>Try: laptop signs in; then “two tabs refresh at once”. Watch Redis.</p>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Both tabs send the same cookie. Tab 1's DEL wins and rotates; tab 2's DEL returns 0, which is exactly what reuse looks like, so every refresh token is revoked, the phone's included. The <code>pending</code> guard from Part 2 cannot help: each tab has its own copy of that variable."
+      >
+        <legend>What does tab 2's refresh cause?</legend>
+        <label><input type="radio" name="gb" value="a" /> Nothing; tab 1 already refreshed</label>
+        <label
+          ><input type="radio" name="gb" value="b" /> Reuse detection: everyone signed out</label
+        >
+      </fieldset>
+      <details>
+        <summary>A nudge</summary>
+        <p>
+          The server cannot tell a second tab from a thief. Could the tabs coordinate in the
+          browser? Or could the server tolerate a token reused within a second or two, and what
+          would that cost against a real thief?
+        </p>
+      </details>
+
+      <h3>Gap C · An admin with an expired token sees “not allowed”</h3>
+      <p>
+        No simulator needed, just lesson 1. An admin's five-minute token expires; they open a page
+        that queries
+        <code>allUser</code> (<code>@Authorized(Role.ADMIN)</code>).
+      </p>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="The expired token makes them a guest. A role-gated field denies a guest with UNAUTHORIZED (the field's rule, lesson 1). The retry link only reacts to UNAUTHENTICATED, so it never refreshes: a valid admin is told they are not allowed."
+      >
+        <legend>What does the admin see?</legend>
+        <label><input type="radio" name="gc" value="a" /> UNAUTHORIZED, and no refresh</label>
+        <label><input type="radio" name="gc" value="b" /> A refresh, then data</label>
+      </fieldset>
+      <details>
+        <summary>A nudge</summary>
+        <p>
+          Two places could change: the API (what should a role-gated field say to a caller it cannot
+          identify?) or the web link (which codes should trigger a refresh?). Which one fixes the
+          cause rather than the symptom?
+        </p>
+      </details>
+
+      <h2>Practice</h2>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="A plain variable in <code>session/link.ts</code>: never persisted, gone on reload, refreshed from the cookie."
+      >
+        <legend>1. Where does the web app keep the access token?</legend>
+        <label><input type="radio" name="p1" value="a" /> In a module variable</label>
+        <label><input type="radio" name="p1" value="b" /> In a browser cookie</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Nothing refreshes ahead of time. The first request after expiry (or after a reload) fails with UNAUTHENTICATED, and the retry link refreshes and resends it."
+      >
+        <legend>2. What gets a new access token when the old one has expired?</legend>
+        <label><input type="radio" name="p2" value="a" /> A scheduled timer before expiry</label>
+        <label><input type="radio" name="p2" value="b" /> The retry after an UNAUTHENTICATED</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="The <code>pending</code> promise is shared: the first failure starts the refresh, the others await it."
+      >
+        <legend>
+          3. Five queries in one tab fail with UNAUTHENTICATED together. How many refreshes?
+        </legend>
+        <label><input type="radio" name="p3" value="a" /> Exactly one, shared by all</label>
+        <label><input type="radio" name="p3" value="b" /> Five, one per failed request</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Each operation retries once (<code>retried: true</code>). A second UNAUTHENTICATED is passed on to the page instead of looping."
+      >
+        <legend>4. A retried query fails with UNAUTHENTICATED again.</legend>
+        <label><input type="radio" name="p4" value="a" /> It refreshes and retries again</label>
+        <label><input type="radio" name="p4" value="b" /> The page receives the error</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Sign-out deletes only the laptop's refresh key and blacklists only the laptop's access token. The phone's session is untouched (Gap A)."
+      >
+        <legend>5. You sign out on your laptop. What happens to your phone?</legend>
+        <label><input type="radio" name="p5" value="a" /> Gets signed out as well</label>
+        <label><input type="radio" name="p5" value="b" /> Stays signed in normally</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="The query still holds the last user after sign-out; <code>isSignedOut</code> hides it until the next sign-in has loaded the new user."
+      >
+        <legend>
+          6. Why does <code>SessionProvider</code> keep an <code>isSignedOut</code> flag?
+        </legend>
+        <label><input type="radio" name="p6" value="a" /> The query keeps the old user</label>
+        <label
+          ><input type="radio" name="p6" value="b" /> The refresh cookie outlives sign-out</label
+        >
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="unauthenticated"
+        data-why="Only <code>UNAUTHENTICATED</code> triggers a refresh, which is why Gap C exists."
+      >
+        <legend>7. Which error code makes the retry link refresh? (one word)</legend>
+        <label><input type="text" aria-label="Error code" /></label>
+      </fieldset>
+
+      <div class="source">
+        <p>
+          <b>Read next:</b> the “Logout Button”, “Renew the Session ID After Any Privilege Level
+          Change” and “Simultaneous Session Logons” sections of the
+          <a
+            href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+            >OWASP Session Management Cheat Sheet</a
+          >. They are the yardstick for the three gaps.
+        </p>
+        <p>
+          <b>Stuck, or curious?</b> Ask me anything, especially about your fixes for the gaps: that
+          is where we go next, designing the real changes together.
+        </p>
+        <p>
+          <b>Course map:</b> you have now traced every part of TravelBliss sign-in: who you are (1),
+          the token (2), staying signed in (3), and the browser (4). The
+          <a href="reference/request-pipeline.html">reference sheets</a>
+          are the compressed version for later.
+        </p>
+      </div>
+    </main>
+    <script src="assets/quiz.js"></script>
+    <script src="assets/session-sim.js"></script>
+  </body>
+</html>
