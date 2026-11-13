@@ -8,6 +8,7 @@ const TOKEN = {
 
   Services: {
     User: Symbol.for('UserService'),
+    Session: Symbol.for('SessionService'),
   },
 
   Store: {

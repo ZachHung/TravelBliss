@@ -1,19 +1,24 @@
 import { Arg, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
 
 import TOKEN from '../../core/container/types.container';
-import { Context } from '../../types';
 import { Role } from '../../types/enums';
 import { Inject, Injectable } from '../../types/inversify';
+import { SessionService } from '../session/session.service';
+import { UserTokens } from '../session/session.type';
 
 import { User } from './user.entity';
 import { ChangePasswordInput, EditInfoInput, LoginInput, RegisterInput } from './user.input';
 import { UserService } from './user.service';
-import { UserTokens } from './user.type';
+
+import type { Context } from '../../types';
 
 @Injectable()
 @Resolver((_type) => User)
 export class UserResolver {
-  constructor(@Inject(TOKEN.Services.User) private readonly userService: UserService) {}
+  constructor(
+    @Inject(TOKEN.Services.User) private readonly userService: UserService,
+    @Inject(TOKEN.Services.Session) private readonly sessionService: SessionService,
+  ) {}
 
   @Authorized()
   @Query((_type) => User)
@@ -37,21 +42,19 @@ export class UserResolver {
 
   @Mutation((_type) => UserTokens)
   public async login(@Arg('input') input: LoginInput, @Ctx() ctx: Context): Promise<UserTokens> {
-    const response = await this.userService.login(input, ctx);
-    return response;
+    const user = await this.userService.authenticate(input);
+    return this.sessionService.start(user.id, { remember: !!input.hasRefresh }, ctx);
   }
 
   @Mutation((_type) => UserTokens)
   public async refreshToken(@Ctx() ctx: Context): Promise<UserTokens> {
-    const response = await this.userService.refreshToken(ctx);
-    return response;
+    return this.sessionService.refresh(ctx);
   }
 
   @Authorized()
   @Mutation(() => Boolean)
   public async logout(@Ctx() ctx: Required<Context>): Promise<boolean> {
-    const shouldResolve = await this.userService.logout(ctx);
-    return shouldResolve;
+    return this.sessionService.end(ctx);
   }
 
   @Authorized()

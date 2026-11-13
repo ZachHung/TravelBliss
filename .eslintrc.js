@@ -11,7 +11,6 @@ module.exports = {
   env: {
     es6: true,
     node: true,
-    jest: true,
   },
   extends: [
     'plugin:@typescript-eslint/eslint-recommended',
@@ -191,7 +190,7 @@ module.exports = {
   ],
   ignorePatterns: [
     'dist/',
-    'jest.config.ts',
+    'vite.config.ts',
     'src/migration',
     'old',
     '**/config/**/*.js',

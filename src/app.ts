@@ -13,11 +13,13 @@ import { buildSchema } from 'type-graphql';
 import { PostgresDataSource } from './config/data-source';
 import logger from './config/logger';
 import container from './core/container/config.container';
+import TOKEN from './core/container/types.container';
 import { CustomAuthChecker } from './core/middlewares/auth-checker.middleware';
 import { ErrorLoggerMiddleware } from './core/middlewares/error-logger.middleware';
+import { SessionService } from './modules/session/session.service';
 import { resolvers } from './resolvers';
 import { Context } from './types';
-import { getEnv, verifyToken } from './utils/helpers';
+import { getEnv } from './utils/helpers';
 
 export const bootstrap = async (): Promise<void> => {
   const app = express();
@@ -60,18 +62,10 @@ export const bootstrap = async (): Promise<void> => {
 
     expressMiddleware(server, {
       context: async ({ req, res }): Promise<Context> => {
-        const authHeader = req.headers.authorization;
-        let token = '';
-        if (authHeader?.startsWith('Bearer ')) {
-          token = authHeader.substring(7, authHeader.length);
-        }
-
-        const auth = await verifyToken(token);
-        return {
-          req,
-          res,
-          auth,
-        };
+        const auth = await container
+          .get<SessionService>(TOKEN.Services.Session)
+          .authenticate(req.headers.authorization);
+        return { req, res, auth };
       },
     }),
   );
