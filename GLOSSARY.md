@@ -28,3 +28,9 @@ see `docs/adr/0002-api-logging.md` for how expected and unexpected errors are lo
 The per-user time (`sessionsValidFrom:<userId>` in Redis) before which every token of that user is revoked. Set when
 the user's other sessions must end, e.g. after a password change. See `docs/adr/0003-session-revocation.md`.
 _Avoid_: token version, logout-all timestamp.
+
+## Idle timeout / absolute timeout
+
+The two limits on a remembered session. Idle (`API_REFRESH_EXPIRED`): ends after that long without a refresh. Absolute
+(`API_SESSION_MAX_AGE`): ends that long after sign-in (`auth_time`), however active. The refresh cookie, token and
+Redis key all expire at the earlier of the two. See `docs/adr/0004-session-lifetime.md`.

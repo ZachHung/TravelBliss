@@ -12,7 +12,13 @@ const fakeRedis = () => {
     data,
     get: async (key: string) => data.get(key) ?? null,
     mget: async (...keys: string[]) => keys.map((key) => data.get(key) ?? null),
-    set: async (key: string, value: string) => data.set(key, value),
+    expiresAt: new Map<string, number>(),
+    async set(key: string, value: string, mode?: string, at?: number) {
+      if (mode === 'EXAT' && at) {
+        this.expiresAt.set(key, at);
+      }
+      return data.set(key, value);
+    },
     del: async (key: string) => Number(data.delete(key)),
     unlink: async (...keys: string[]) => keys.forEach((key) => data.delete(key)),
     scanStream: ({ match }: { match: string }) =>
@@ -36,7 +42,11 @@ const fakeRes = () => {
     string,
     unknown
   > & { cookies: Record<string, string>; cleared: string[] };
-  res.cookie = (name: string, value: string) => (res.cookies[name] = value);
+  res.options = {} as Record<string, { expires?: Date }>;
+  res.cookie = (name: string, value: string, options: { expires?: Date }) => {
+    (res.options as Record<string, { expires?: Date }>)[name] = options;
+    res.cookies[name] = value;
+  };
   res.clearCookie = (name: string) => res.cleared.push(name);
   return res;
 };
@@ -191,6 +201,66 @@ describe('SessionService', () => {
       } as never);
 
       expect(res.cookies).toEqual({});
+    });
+  });
+
+  describe('session lifetime (idle 7d, absolute cap 20d in tests)', () => {
+    // (idle timeout) nothing for longer than 7 days: the refresh token has expired
+    it('ends an idle session after 7 days without a refresh', async () => {
+      const { service } = setup();
+      const res = fakeRes();
+      await service.start('u1', { remember: true }, ctx(res));
+
+      vi.setSystemTime(start.getTime() + 8 * day);
+      await expect(service.refresh(ctx(fakeRes(), res.cookies))).rejects.toMatchObject({
+        extensions: { code: ErrorCode.INVALID_TOKEN },
+      });
+    });
+
+    const day = 24 * 60 * 60 * 1000;
+    const start = new Date('2026-11-14T10:00:00Z');
+    beforeEach(() => vi.useFakeTimers({ now: start }));
+    afterEach(() => vi.useRealTimers());
+
+    const cookieExpiry = (res: ReturnType<typeof fakeRes>) =>
+      (res.options as Record<string, { expires: Date }>).tb_rf.expires.getTime();
+    const refreshKeyExpiry = (store: ReturnType<typeof setup>['store']) =>
+      [...store.expiresAt].find(([key]) => key.startsWith('refreshToken:'))![1] * 1000;
+
+    it('expires the cookie, the refresh token and its Redis key together', async () => {
+      const { service, store } = setup();
+      const res = fakeRes();
+      await service.start('u1', { remember: true }, ctx(res));
+
+      expect(cookieExpiry(res)).toBe(start.getTime() + 7 * day);
+      expect(refreshKeyExpiry(store)).toBe(cookieExpiry(res));
+    });
+
+    it('slides with activity but never past 20 days from the original sign-in', async () => {
+      const { service } = setup();
+      const first = fakeRes();
+      await service.start('u1', { remember: true }, ctx(first));
+
+      vi.setSystemTime(start.getTime() + 5 * day);
+      const second = fakeRes();
+      await service.refresh(ctx(second, first.cookies));
+      expect(cookieExpiry(second)).toBe(start.getTime() + 12 * day);
+
+      vi.setSystemTime(start.getTime() + 10 * day);
+      const later = fakeRes();
+      await service.refresh(ctx(later, second.cookies));
+      expect(cookieExpiry(later)).toBe(start.getTime() + 17 * day);
+
+      vi.setSystemTime(start.getTime() + 16 * day);
+      const third = fakeRes();
+      await service.refresh(ctx(third, later.cookies));
+      // Idle would give day 23; the cap from the day-0 sign-in wins
+      expect(cookieExpiry(third)).toBe(start.getTime() + 20 * day);
+
+      vi.setSystemTime(start.getTime() + 21 * day);
+      await expect(service.refresh(ctx(fakeRes(), third.cookies))).rejects.toMatchObject({
+        extensions: { code: ErrorCode.INVALID_TOKEN },
+      });
     });
   });
 });

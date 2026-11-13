@@ -8,6 +8,7 @@ Object.assign(process.env, {
   API_JWT_EXPIRED: '15m',
   API_SECRET_REFRESH: 'refresh-secret',
   API_REFRESH_EXPIRED: '7d',
+  API_SESSION_MAX_AGE: '20d',
   API_COOKIE_NAME: 'tb',
   API_ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef',
 });
