@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [react()],
   // One env file set for the whole repo; only VITE_* reaches the browser.
   envDir: '../..',
+  server: {
+    // Test reports are .html files, and Vite full-reloads the page on any .html change
+    watch: { ignored: ['**/generated/test/**', '**/.vitest/**'] },
+  },
   resolve: {
     tsconfigPaths: true,
     alias: {
