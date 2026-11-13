@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'crypt
 import { Request, Response } from 'express';
 import { Redis } from 'ioredis';
 import { JwtPayload, sign, SignOptions, verify } from 'jsonwebtoken';
+import ms from 'ms';
 import logger from '@/config/logger';
 import TOKEN from '@/core/container/types.container';
 import { UserNotFoundException } from '@/modules/user/user.exception';
@@ -23,15 +24,32 @@ const refreshCookieName = (): string => `${getEnv('API_COOKIE_NAME')}_rf`; // ':
 const refreshKey = (userId: string, token: string): string =>
   `${REDIS_KEY.REFRESH_TOKEN}${userId}:${token}`;
 
-type TokenClaims = { userId: string; token: string; iat: number; exp: number };
+// authTime: when the user actually signed in (OpenID Connect's auth_time), carried through every rotation
+type TokenClaims = { userId: string; token: string; iat: number; exp: number; authTime: number };
+
+const nowInSeconds = () => Math.floor(Date.now() / 1000);
+
+/** A duration env var such as "30d" in seconds; a typo fails loudly instead of meaning "expired". */
+const durationInSeconds = (name: string): number => {
+  const millis = ms(getEnv(name) as ms.StringValue);
+  if (!Number.isFinite(millis)) {
+    throw new Error(`Invalid duration in ${name}: '${getEnv(name)}'`);
+  }
+  return Math.floor(millis / 1000);
+};
 
 const verifyToken = (token: string, secret: string): TokenClaims | undefined => {
   if (!token) {
     return;
   }
   try {
-    const { userId, iat, exp } = verify(token, secret) as Required<JwtPayload> & { userId: string };
-    return { userId, iat, exp, token };
+    const claims = verify(token, secret) as Required<JwtPayload> & {
+      userId: string;
+      auth_time?: number;
+    };
+    const { userId, iat, exp } = claims;
+    // Tokens issued before auth_time existed count from their own issue time
+    return { userId, iat, exp, token, authTime: claims.auth_time ?? iat };
   } catch {
     // Invalid or expired token: treat as unauthenticated
   }
@@ -105,7 +123,7 @@ export class SessionService {
     if (!refreshTokenAuth) {
       throw new InvalidTokenException();
     }
-    const { userId, iat } = refreshTokenAuth;
+    const { userId, iat, authTime } = refreshTokenAuth;
     await this.users.findById(userId);
     if (iat < Number((await this.store.get(REDIS_KEY.VALID_FROM + userId)) ?? 0)) {
       throw new InvalidTokenException();
@@ -119,7 +137,7 @@ export class SessionService {
       throw new InvalidTokenException();
     }
 
-    const { accessToken, refreshToken: newRefreshToken } = this.createTokens(userId);
+    const { accessToken, refreshToken: newRefreshToken } = this.createTokens(userId, authTime);
     await this.storeRefreshToken(userId, newRefreshToken, res);
     return { accessToken };
   }
@@ -161,7 +179,7 @@ export class SessionService {
   public async endOtherSessions(ctx: Required<Context>): Promise<UserTokens> {
     const userId = ctx.auth.user.id;
     const remember = !!this.readCookie(ctx.req, refreshCookieName());
-    await this.store.set(REDIS_KEY.VALID_FROM + userId, String(Math.floor(Date.now() / 1000)));
+    await this.store.set(REDIS_KEY.VALID_FROM + userId, String(nowInSeconds()));
     await this.deleteByPattern(`${REDIS_KEY.REFRESH_TOKEN}${userId}:*`);
     return this.start(userId, { remember }, ctx);
   }
@@ -169,15 +187,25 @@ export class SessionService {
   private async storeRefreshToken(userId: string, refreshToken: string, res: Response) {
     const { exp } = verifyToken(refreshToken, getEnv('API_SECRET_REFRESH')) as TokenClaims;
     await this.store.set(refreshKey(userId, refreshToken), refreshToken, 'EXAT', exp);
-    this.setRefreshCookie(res, refreshToken);
+    this.setRefreshCookie(res, refreshToken, exp);
   }
 
-  private createTokens(userId: string): UserTokens & { refreshToken: string } {
+  /**
+   * The refresh token lives for the idle limit (API_REFRESH_EXPIRED) from now, but never past the absolute limit
+   * (API_SESSION_MAX_AGE) from the original sign-in, so refreshing can extend a session only up to that cap.
+   */
+  private createTokens(
+    userId: string,
+    authTime = nowInSeconds()
+  ): UserTokens & { refreshToken: string } {
     const accessToken = sign({ userId }, getEnv('API_SECRET_JWT'), {
       expiresIn: getEnv('API_JWT_EXPIRED') as SignOptions['expiresIn'],
     });
-    const refreshToken = sign({ userId }, getEnv('API_SECRET_REFRESH'), {
-      expiresIn: getEnv('API_REFRESH_EXPIRED') as SignOptions['expiresIn'],
+    const exp = Math.min(
+      nowInSeconds() + durationInSeconds('API_REFRESH_EXPIRED'),
+      authTime + durationInSeconds('API_SESSION_MAX_AGE')
+    );
+    const refreshToken = sign({ userId, auth_time: authTime, exp }, getEnv('API_SECRET_REFRESH'), {
       // Unique id: two tokens signed in the same second must still differ for rotation to work.
       jwtid: randomUUID(),
     });
@@ -185,9 +213,10 @@ export class SessionService {
     return { accessToken, refreshToken };
   }
 
-  private setRefreshCookie(res: Response, value: string): void {
+  // The cookie expires with the token inside it: one lifetime, enforced by the server, mirrored by the browser
+  private setRefreshCookie(res: Response, value: string, exp: number): void {
     res.cookie(refreshCookieName(), this.aesEncrypt(value), {
-      maxAge: 1000 * 60 * 60 * 24 * 30,
+      expires: new Date(exp * 1000),
       httpOnly: true,
       sameSite: getEnv('NODE_ENV') === 'production' ? 'none' : 'lax',
       secure: getEnv('NODE_ENV') === 'production',

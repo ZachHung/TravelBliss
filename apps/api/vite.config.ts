@@ -51,10 +51,10 @@ export default defineConfig({
       provider: 'v8',
       // Today's numbers: raise them as tests are added, never lower them
       thresholds: {
-        lines: 63,
-        branches: 65,
-        functions: 57,
-        statements: 63,
+        lines: 64,
+        branches: 67,
+        functions: 58,
+        statements: 64,
       },
     },
     exclude: ['dist/**', 'node_modules/**'],
