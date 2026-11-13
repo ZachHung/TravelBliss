@@ -20,6 +20,8 @@ test.beforeAll(async ({ request }) => {
 });
 
 const signIn = async (page: Page, remember: boolean) => {
+  // The URL changes before the lazy page renders (router transitions keep the old page up), so wait for the form
+  await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
   await page.getByLabel('Phone Number').fill(user.phone);
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(user.password);
   if (remember) {
