@@ -1,36 +1,35 @@
-# Glossary
+# TravelBliss
 
-Terms used in code, issues and reviews. Prefer these over synonyms.
+A passenger rail booking service: a web app where travellers sign in, and the API behind it.
 
-## Session
+## Language
 
-Who is signed in, for one browser. On the web it is the `src/session/` module (`useSession()`); on the API it is
-`SessionService`, which turns an `Authorization: Bearer` header into the **signed-in user** once per request.
-_Avoid_: auth, auth context, login state.
+### Sessions
 
-## Signed-in user
+**Session**:
+The fact that one browser is signed in as one user, from sign-in until sign-out or expiry.
+_Avoid_: auth, auth context, login state
 
-The `User` a request or a page acts as. The API loads it once per request in `SessionService.authenticate` and puts it
-on the context (`ctx.auth.user`); the web exposes it as `useSession().user`. Undefined means a **guest**.
+**Signed-in user**:
+The user a request or a page acts as, for the length of a session.
+_Avoid_: current user, me, principal
 
-## Guest
+**Guest**:
+Someone with no valid session: a visitor who is not signed in, or whose session has ended.
+_Avoid_: anonymous, logged-out user
 
-Someone without a valid session. Route guards send guests from protected pages to sign-in.
+**Remembered session**:
+A session the user asked to keep across browser restarts ("Remember Me"). It ends after a stretch without use, or at a
+maximum age since sign-in, whichever comes first.
+_Avoid_: persistent login, long session
 
-## Error code
+**Ending other sessions**:
+Signing a user out on every browser except the current one, as happens when they change their password.
+_Avoid_: logout-all, revoke all, global sign-out
 
-A value of `errors[].extensions.code`, defined once in the API's `ErrorCode` enum and published in `schema.graphql`.
-The web imports the generated `ErrorCode` and maps codes to form fields. Expected errors carry one of these codes;
-see `docs/adr/0002-api-logging.md` for how expected and unexpected errors are logged.
+### Errors
 
-## Valid-from
-
-The per-user time (`sessionsValidFrom:<userId>` in Redis) before which every token of that user is revoked. Set when
-the user's other sessions must end, e.g. after a password change. See `docs/adr/0003-session-revocation.md`.
-_Avoid_: token version, logout-all timestamp.
-
-## Idle timeout / absolute timeout
-
-The two limits on a remembered session. Idle (`API_REFRESH_EXPIRED`): ends after that long without a refresh. Absolute
-(`API_SESSION_MAX_AGE`): ends that long after sign-in (`auth_time`), however active. The refresh cookie, token and
-Redis key all expire at the earlier of the two. See `docs/adr/0004-session-lifetime.md`.
+**Error code**:
+The machine-readable reason attached to an expected error, shared by the API and the web app so a form can show the
+right message next to the right field.
+_Avoid_: error type, status
