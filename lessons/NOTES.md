@@ -6,5 +6,7 @@
   topics rather than splitting them.
 - Plan from lesson 3 on: 3 refresh token, `_rf` cookie, rotation and reuse detection (API side) · 4 the web side:
   `useSession`, `createSessionLink` retry, sign-out and the blacklist, route guards and the reload flash.
-- Lesson 4 topic to raise (sign-out): `SessionService.end` blacklists the raw access token string; OWASP's JWT cheat sheet warns
-  that raw-token (or its hash) denylist keys are unsafe because JWTs are malleable. Real finding, not yet fixed.
+- Blacklist keyed on the raw token (OWASP JWT warning): tested 2026-11-14, `jsonwebtoken` rejects re-spelled HS256
+  signatures, so it is a hardening point, not a live hole. Taught as such in lesson 4.
+- After lesson 4: grill-with-docs session on fixing gaps A (sign-out/password change scope), B (two-tab refresh race)
+  and C (role-gated field + expired token → no refresh). Record decisions as ADRs / glossary terms.
