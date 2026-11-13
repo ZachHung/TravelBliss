@@ -1,0 +1,38 @@
+volumes:
+  redis_data:
+    driver: local
+  pg_data:
+    driver: local
+
+services:
+  db:
+    image: postgres:16.6-alpine
+    container_name: travel-bliss-postgres
+    ports:
+      - 5432:5432
+    env_file:
+      - local/postgres.env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER']
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  cache:
+    image: redis:7.4.1-alpine
+    container_name: travel-bliss-redis
+    ports:
+      - '6379:6379'
+    env_file:
+      - local/redis.env
+    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'redis-cli --no-auth-warning -a $$REDIS_PASSWORD ping | grep PONG || exit 1']
+      interval: 1s
+      timeout: 3s
+      retries: 5
