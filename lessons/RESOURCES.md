@@ -25,6 +25,13 @@
 - [jsonwebtoken README](https://github.com/auth0/node-jsonwebtoken#readme)
   `sign` defaults (HS256, adds `iat`), `verify` errors, `decode` does not verify. Use for: what our code calls.
 
+- [RFC 6749 §1.5: Refresh Token](https://www.rfc-editor.org/rfc/rfc6749#section-1.5)
+  What a refresh token is and that it never goes to resource servers. Use for: why there are two tokens.
+- [RFC 9700: OAuth 2.0 Security Best Current Practice, §4.14](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14)
+  Refresh token rotation and reuse detection. Use for: lesson 3, any change to `SessionService.refresh`.
+- [MDN: Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)
+  `HttpOnly`, `Secure`, `SameSite`, `Max-Age`. Use for: the `_rf` cookie's attributes.
+
 ## Wisdom (Communities)
 
 - [OWASP Slack](https://owasp.org/slack/invite) (`#cheatsheets` and general channels)
@@ -32,4 +39,5 @@
 
 ## Gaps
 
-- Refresh tokens and cookies (lesson 3): RFC 6749 §1.5, MDN `Set-Cookie`, OWASP Session Management cheat sheet.
+- Web-side session handling (lesson 4): Apollo Client link docs (`ErrorLink`, `SetContextLink`), React Router
+  docs on navigation and redirects.

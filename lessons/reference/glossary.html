@@ -12,6 +12,7 @@
         TravelBliss sign-in course ·
         <a href="../0001-who-are-you-and-what-may-you-do.html">Lesson 1</a> ·
         <a href="../0002-inside-the-access-token.html">Lesson 2</a> ·
+        <a href="../0003-refresh-tokens-rotation-and-reuse.html">Lesson 3</a> ·
         <a href="request-pipeline.html">Request pipeline reference</a>
       </nav>
       <p class="kicker">Reference</p>
@@ -83,6 +84,36 @@
         <tr id="secret">
           <td><b>Secret</b> (<code>API_SECRET_JWT</code>)</td>
           <td>Key only the API holds. Needed to mint a valid token, not to read one.</td>
+        </tr>
+        <tr id="refresh-token">
+          <td><b>Refresh token</b></td>
+          <td>
+            Long-lived token whose only job is getting new access tokens. Kept in the
+            <code>travelBliss_rf</code> cookie and in Redis; only with Remember Me.
+            <a href="https://www.rfc-editor.org/rfc/rfc6749#section-1.5">[RFC 6749 §1.5]</a>
+          </td>
+        </tr>
+        <tr id="rotation">
+          <td><b>Rotation</b></td>
+          <td>Every refresh spends the refresh token and issues a new one, so each works once.</td>
+        </tr>
+        <tr id="reuse-detection">
+          <td><b>Reuse detection</b></td>
+          <td>
+            A spent refresh token presented again means a copy exists: revoke all of that user's
+            refresh tokens.
+          </td>
+        </tr>
+        <tr id="httponly">
+          <td><b>HttpOnly</b></td>
+          <td>Cookie attribute: JavaScript cannot read the cookie; the browser still sends it.</td>
+        </tr>
+        <tr id="samesite">
+          <td><b>SameSite</b></td>
+          <td>
+            Cookie attribute controlling cross-site sending: <code>Lax</code> locally,
+            <code>None</code> (+ <code>Secure</code>) in production.
+          </td>
         </tr>
         <tr id="signed-in-user">
           <td><b>Signed-in user</b></td>

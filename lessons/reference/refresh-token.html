@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Refresh token: TravelBliss sign-in course</title>
+    <link rel="stylesheet" href="../assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course ·
+        <a href="../0003-refresh-tokens-rotation-and-reuse.html">Lesson 3</a> ·
+        <a href="glossary.html">Glossary</a> · <a href="access-token.html">Access token</a>
+      </nav>
+      <p class="kicker">Reference</p>
+      <h1>The refresh token</h1>
+
+      <table>
+        <tr>
+          <th></th>
+          <th>Access token</th>
+          <th>Refresh token</th>
+        </tr>
+        <tr>
+          <td>Lifetime</td>
+          <td>5 min (<code>API_JWT_EXPIRED</code>)</td>
+          <td>token 6 months, cookie 30 days → <b>30 days</b> in practice</td>
+        </tr>
+        <tr>
+          <td>Secret</td>
+          <td><code>API_SECRET_JWT</code></td>
+          <td><code>API_SECRET_REFRESH</code></td>
+        </tr>
+        <tr>
+          <td>Browser keeps it in</td>
+          <td>page memory</td>
+          <td>cookie <code>travelBliss_rf</code>: HttpOnly, AES-encrypted</td>
+        </tr>
+        <tr>
+          <td>Server keeps</td>
+          <td>blacklist entry after sign-out</td>
+          <td>
+            Redis <code>refreshToken:&lt;userId&gt;:&lt;token&gt;</code>, expiring at
+            <code>exp</code>
+          </td>
+        </tr>
+        <tr>
+          <td>Exists only if</td>
+          <td>signed in</td>
+          <td>signed in with <b>Remember Me</b> (<code>hasRefresh</code>)</td>
+        </tr>
+      </table>
+
+      <h2>Cookie attributes</h2>
+      <table>
+        <tr>
+          <th>Attribute</th>
+          <th>Local</th>
+          <th>Production</th>
+          <th>Why</th>
+        </tr>
+        <tr>
+          <td><code>HttpOnly</code></td>
+          <td>yes</td>
+          <td>yes</td>
+          <td>no JavaScript (or injected script) can read it</td>
+        </tr>
+        <tr>
+          <td><code>Secure</code></td>
+          <td>no</td>
+          <td>yes</td>
+          <td>HTTPS only; required by <code>SameSite=None</code></td>
+        </tr>
+        <tr>
+          <td><code>SameSite</code></td>
+          <td><code>Lax</code></td>
+          <td><code>None</code></td>
+          <td>production web app and API may be on different sites</td>
+        </tr>
+        <tr>
+          <td><code>Max-Age</code></td>
+          <td colspan="2">30 days</td>
+          <td>browser drops the cookie after this</td>
+        </tr>
+      </table>
+
+      <h2>Refresh, step by step</h2>
+      <ol>
+        <li>cookie missing or won't decrypt → <code>INVALID_COOKIES</code></li>
+        <li>token fails <code>verify(…, API_SECRET_REFRESH)</code> → <code>INVALID_TOKEN</code></li>
+        <li>user deleted → <code>USER_NOT_FOUND</code></li>
+        <li>
+          <code>DEL refreshToken:&lt;userId&gt;:&lt;token&gt;</code> (atomic; returns keys removed)
+        </li>
+        <li>removed 1 → <b>rotate</b>: new access + refresh token, new key, new cookie</li>
+        <li>
+          removed 0 → <b>reuse</b>: delete every <code>refreshToken:&lt;userId&gt;:*</code> →
+          <code>INVALID_TOKEN</code>
+        </li>
+      </ol>
+      <p>
+        Stolen cookie: whichever of you and the attacker refreshes <b>second</b> trips reuse
+        detection, and every remembered session of that user ends.
+      </p>
+
+      <h2>Sources</h2>
+      <ul>
+        <li>
+          <a href="https://www.rfc-editor.org/rfc/rfc6749#section-1.5">RFC 6749 §1.5</a>: what a
+          refresh token is
+        </li>
+        <li>
+          <a href="https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14.2">RFC 9700 §4.14.2</a>:
+          rotation and reuse
+        </li>
+        <li>
+          <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie"
+            >MDN Set-Cookie</a
+          >: cookie attributes
+        </li>
+        <li>
+          Code:
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L75-L115"
+            >start, refresh</a
+          >,
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L144-L170"
+            >storeRefreshToken, setRefreshCookie</a
+          >
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>
