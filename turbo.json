@@ -1,0 +1,54 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "dev": {
+      "dependsOn": ["codegen"],
+      "persistent": true,
+      "cache": false,
+      "passThroughEnv": ["NODE_ENV"]
+    },
+    "build": {
+      "dependsOn": ["codegen"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.env*"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["codegen"]
+    },
+    "lint": {
+      "dependsOn": ["codegen"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/eslint.config.js"]
+    },
+    "test": {
+      "dependsOn": ["codegen"],
+      "outputs": ["generated/test/**"]
+    },
+    "codegen": {
+      "outputs": ["generated/codegen/**"]
+    },
+    "@travelbliss/web#build": {
+      "dependsOn": ["codegen"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.env*"],
+      "env": ["VITE_*"],
+      "outputs": ["dist/**"]
+    },
+    "@travelbliss/web#codegen": {
+      "dependsOn": ["@travelbliss/api#schema"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/api/schema.graphql"],
+      "env": ["GRAPHQL_SCHEMA"],
+      "outputs": ["generated/codegen/**"]
+    },
+    "@travelbliss/api#schema": {
+      "dependsOn": ["build"],
+      "outputs": ["schema.graphql"]
+    },
+    "//#format:check": {
+      "cache": false
+    },
+    "//#knip": {
+      "dependsOn": ["@travelbliss/web#codegen"],
+      "cache": false
+    }
+  }
+}

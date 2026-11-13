@@ -8,6 +8,10 @@ on:
     branches:
       - '**'
 
+# Every job only reads the repo; caches and artifacts use the Actions runtime token, not GITHUB_TOKEN
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
   cancel-in-progress: true
@@ -24,7 +28,108 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
+      - name: Turbo cache
+        uses: actions/cache@v6
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Run test
         run: pnpm test
+      - name: Check schema.graphql is up to date
+        run: git diff --exit-code apps/api/schema.graphql
+
+  # Builds the API image and boots it against real Postgres and Redis: `pnpm test` never touches the Dockerfile
+  api_image:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.6-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: travelbliss
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d travelbliss" --health-interval 2s --health-timeout 5s --health-retries 15
+      redis:
+        image: redis:7.4.1-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s --health-timeout 5s --health-retries 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the API image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          tags: travelbliss-api:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Boot it and answer a query
+        run: |
+          docker run -d --name api --network host \
+            -e NODE_ENV=production -e API_PORT=8000 \
+            -e API_POSTGRES_HOST=localhost -e API_POSTGRES_PORT=5432 -e API_POSTGRES_USER=ci \
+            -e API_POSTGRES_PASSWORD=ci -e API_POSTGRES_DB=travelbliss -e API_POSTGRES_SSL=false \
+            -e API_REDIS_URI=redis://localhost:6379 -e API_SALT_ROUND=4 \
+            -e API_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef \
+            -e API_SECRET_JWT=ci -e API_JWT_EXPIRED=5m -e API_SECRET_REFRESH=ci -e API_REFRESH_EXPIRED=1d \
+            -e API_COOKIE_NAME=ci travelbliss-api:ci
+          timeout 60 sh -c 'until docker logs api 2>&1 | grep -q "Server running"; do sleep 1; done' || { docker logs api; exit 1; }
+          curl -sf localhost:8000/ -H 'content-type: application/json' -d '{"query":"{ __typename }"}' | grep -q '"Query"' \
+            || { docker logs api; exit 1; }
+
+  # Drives a real browser through register / sign in / reload / sign out against `pnpm dev:local`
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter @travelbliss/web exec playwright install --with-deps chromium
+      - name: Local env for docker Postgres and Redis (CI-only values)
+        run: |
+          cat > .env.local <<'ENV'
+          VITE_GRAPHQL_URI=http://localhost:8000
+          API_PORT=8000
+          API_POSTGRES_HOST=localhost
+          API_POSTGRES_PORT=5432
+          API_POSTGRES_USER=ci
+          API_POSTGRES_PASSWORD=ci
+          API_POSTGRES_DB=travelbliss
+          API_POSTGRES_SSL=false
+          API_REDIS_PASSWORD=ci
+          API_REDIS_URI=redis://default:ci@localhost:6379
+          API_SALT_ROUND=4
+          API_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          API_SECRET_JWT=ci
+          API_JWT_EXPIRED=5m
+          API_SECRET_REFRESH=ci
+          API_REFRESH_EXPIRED=1d
+          API_COOKIE_NAME=travelBliss
+          ENV
+      - name: Run e2e
+        run: pnpm e2e
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: apps/web/test-results
+          retention-days: 7
