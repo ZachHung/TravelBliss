@@ -11,29 +11,17 @@ export class CustomAuthChecker implements AuthCheckerInterface<Context> {
     { context: { auth } }: ResolverData<Context>,
     roles: string[]
   ): Promise<boolean> {
-    try {
-      if (!auth || !auth.userId) {
-        return false;
-      }
-
-      const userId = auth.userId;
-      if (!userId) {
-        return false;
-      }
-
-      const user = await this.userRepo.findOne({ where: { id: userId } });
-
-      if (!user) {
-        return false;
-      }
-
-      if (!roles.includes(user.role) && roles.length !== 0) {
-        return false;
-      }
-
-      return true;
-    } catch {
+    if (!auth?.userId) {
       return false;
     }
+
+    // No try/catch: a database failure is an outage to log, not "access denied"
+    const user = await this.userRepo.findOne({ where: { id: auth.userId } });
+
+    if (!user) {
+      return false;
+    }
+
+    return roles.length === 0 || roles.includes(user.role);
   }
 }
