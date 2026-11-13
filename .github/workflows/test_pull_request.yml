@@ -38,3 +38,47 @@ jobs:
         run: pnpm test
       - name: Check schema.graphql is up to date
         run: git diff --exit-code apps/api/schema.graphql
+
+  # Builds the API image and boots it against real Postgres and Redis: `pnpm test` never touches the Dockerfile
+  api_image:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.6-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: travelbliss
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d travelbliss" --health-interval 2s --health-timeout 5s --health-retries 15
+      redis:
+        image: redis:7.4.1-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s --health-timeout 5s --health-retries 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the API image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          tags: travelbliss-api:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Boot it and answer a query
+        run: |
+          docker run -d --name api --network host \
+            -e NODE_ENV=production -e API_PORT=8000 \
+            -e API_POSTGRES_HOST=localhost -e API_POSTGRES_PORT=5432 -e API_POSTGRES_USER=ci \
+            -e API_POSTGRES_PASSWORD=ci -e API_POSTGRES_DB=travelbliss -e API_POSTGRES_SSL=false \
+            -e API_REDIS_URI=redis://localhost:6379 -e API_SALT_ROUND=4 \
+            -e API_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef \
+            -e API_SECRET_JWT=ci -e API_JWT_EXPIRED=5m -e API_SECRET_REFRESH=ci -e API_REFRESH_EXPIRED=1d \
+            -e API_COOKIE_NAME=ci travelbliss-api:ci
+          timeout 60 sh -c 'until docker logs api 2>&1 | grep -q "Server running"; do sleep 1; done' || { docker logs api; exit 1; }
+          curl -sf localhost:8000/ -H 'content-type: application/json' -d '{"query":"{ __typename }"}' | grep -q '"Query"' \
+            || { docker logs api; exit 1; }
