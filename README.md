@@ -22,8 +22,9 @@ pnpm --filter @travelbliss/api migration:up
 pnpm dev                           # API on :8000, web on :5173
 ```
 
-To run Postgres and Redis locally instead of hosted ones, put local values in `.env.development.local` (it overrides `.env.development`) and start them with
-`pnpm --filter @travelbliss/api docker:local:up`.
+To run Postgres and Redis in docker instead of hosted ones, put the local values in `.env.development.local`
+(it overrides `.env.development`), then run `pnpm dev:docker`. It starts both containers, waits until they are
+healthy, applies migrations and runs `pnpm dev`. Stop the containers with `pnpm dev:docker:down` (data is kept).
 
 ### Environment variables
 
@@ -35,14 +36,15 @@ variable. Web variables start with `VITE_` (the only ones that reach the browser
 
 Run from the repo root. Turbo caches every task except `dev` and `format:check`.
 
-| Script           | Description                                                               |
-| ---------------- | ------------------------------------------------------------------------- |
-| `pnpm dev`       | Start the API and the Vite dev server.                                    |
-| `pnpm test`      | Everything CI runs: typecheck, lint, tests, build and the prettier check. |
-| `pnpm build`     | Build both apps into their `dist/`.                                       |
-| `pnpm typecheck` | Run `tsc --noEmit` in both apps.                                          |
-| `pnpm lint`      | Run ESLint (and Stylelint for web).                                       |
-| `pnpm format`    | Fix formatting and auto-fixable lint problems.                            |
+| Script            | Description                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `pnpm dev`        | Start the API and the Vite dev server.                                                |
+| `pnpm dev:docker` | Same, against Postgres and Redis in docker (see above). `dev:docker:down` stops them. |
+| `pnpm test`       | Everything CI runs: typecheck, lint, tests, build and the prettier check.             |
+| `pnpm build`      | Build both apps into their `dist/`.                                                   |
+| `pnpm typecheck`  | Run `tsc --noEmit` in both apps.                                                      |
+| `pnpm lint`       | Run ESLint (and Stylelint for web).                                                   |
+| `pnpm format`     | Fix formatting and auto-fixable lint problems.                                        |
 
 Per-app scripts run with `pnpm --filter <package> <script>`, for example `pnpm --filter @travelbliss/web storybook`
 or `pnpm --filter @travelbliss/api migration:generate`.

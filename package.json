@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:docker": "grep -q '^API_POSTGRES_HOST=' .env.development.local 2>/dev/null || { echo 'Uncomment the docker values in .env.development.local first (see .env.example).' >&2; exit 1; } && pnpm --filter @travelbliss/api docker:local:up -d --wait && turbo run build --filter @travelbliss/api && pnpm --filter @travelbliss/api migration:up && turbo run dev",
+    "dev:docker:down": "pnpm --filter @travelbliss/api docker:local:down",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
