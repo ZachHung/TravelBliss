@@ -1,5 +1,3 @@
-import 'reflect-metadata';
-
 import dayjs from 'dayjs';
 import { hash } from 'bcrypt';
 import { validate } from 'class-validator';
@@ -7,10 +5,6 @@ import { User } from './user.entity';
 import { UserErrorCodes } from './user.exception';
 import { EditInfoInput } from './user.input';
 import { UserService } from './user.service';
-
-Object.assign(process.env, {
-  API_SALT_ROUND: '4',
-});
 
 const setup = async () => {
   const user = { id: 'u1', username: 'x', password: await hash('secret123', 4) } as User;
