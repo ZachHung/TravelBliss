@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lesson 1: Who are you, and what may you do?</title>
+    <link rel="stylesheet" href="assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course · <a href="reference/glossary.html">Glossary</a> ·
+        <a href="reference/request-pipeline.html">Request pipeline reference</a>
+      </nav>
+
+      <p class="kicker">Lesson 1 · about 10 minutes</p>
+      <h1>Who are you, and what may you do?</h1>
+      <p class="lede">
+        Every request to the TravelBliss API is asked two questions, in order. By the end of this
+        lesson you will predict, for any request, which question stops it and what error comes back.
+      </p>
+
+      <h2>Two questions, two names</h2>
+      <p>
+        <b>Authentication</b> answers <i>who are you?</i> <b>Authorization</b> answers
+        <i>what may you do?</i> OWASP puts it in one line: authorization is “the process of
+        verifying that a requested action or service is approved for a specific entity”, and it is
+        “distinct from authentication which is the process of verifying an entity's identity.”
+        <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html"
+          >[OWASP]</a
+        >
+      </p>
+      <p>
+        The order matters: you cannot decide what someone may do until you know who they are.
+        Someone the API cannot identify is a <a href="reference/glossary.html#guest">guest</a>.
+      </p>
+
+      <h2>How a request says who it is</h2>
+      <p>
+        After signing in, the web app holds an
+        <a href="reference/glossary.html#access-token">access token</a>, a long string the API
+        issued. It sends that token with every request in one HTTP header:
+      </p>
+      <pre><code>Authorization: Bearer eyJhbGciOiJIUzI1NiIs…</code></pre>
+      <p>
+        “Bearer” is a standard scheme. Its defining property: “any party in possession of the token”
+        can use it “in any way that any other party in possession of it can.”
+        <a href="https://www.rfc-editor.org/rfc/rfc6750#section-1.2">[RFC 6750 §1.2]</a> Whoever
+        holds the token <em>is</em> you, as far as the API knows. That is why the web app keeps it
+        in memory only; lesson 3 covers why.
+      </p>
+      <span class="note"
+        >What is inside the token, and how the API knows it was not forged, is lesson 2. For now it
+        is a sealed pass.</span
+      >
+
+      <h2>The pipeline: one request, three stops</h2>
+      <div class="pipeline">
+        <div class="stage">
+          <b>1 · Authenticate</b>Turn the header into a
+          <a href="reference/glossary.html#signed-in-user">signed-in user</a>, or nobody.
+        </div>
+        <span class="arrow">→</span>
+        <div class="stage"><b>2 · Authorize</b>Does this field allow this caller?</div>
+        <span class="arrow">→</span>
+        <div class="stage"><b>3 · Resolve</b>Run the code and return data.</div>
+      </div>
+
+      <h3>Stop 1: authenticate, once per request</h3>
+      <p>
+        Before any GraphQL field runs, the API builds the request's <i>context</i> by calling
+        <a href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/app.ts#L80-L83"
+          ><code>SessionService.authenticate</code></a
+        >
+        with the header. It
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L54-L73"
+          >returns a user or <code>undefined</code></a
+        >:
+      </p>
+      <ul>
+        <li>no header, or not <code>Bearer …</code> → guest</li>
+        <li>token forged or expired → guest</li>
+        <li>token on the logout blacklist → guest</li>
+        <li>user since deleted → guest</li>
+        <li>otherwise → <code>ctx.auth = { user, token, exp }</code></li>
+      </ul>
+      <p>
+        Being a guest is not an error yet. Some fields are open to everyone: <code>login</code> and
+        <code>register</code> have to be, or nobody could ever sign in.
+      </p>
+
+      <h3>Stop 2: authorize, per field</h3>
+      <p>
+        Protected fields carry a decorator. In
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/user/user.resolver.ts#L20-L31"
+          ><code>user.resolver.ts</code></a
+        >:
+      </p>
+      <pre><code>@Authorized()            // any signed-in user
+public me(…)
+
+@Authorized(Role.ADMIN)  // signed-in AND role ADMIN
+public async allUser(…)</code></pre>
+      <p>
+        For each decorated field, type-graphql calls our
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/core/middlewares/auth-checker.middleware.ts#L5-L6"
+          ><code>authChecker</code></a
+        >
+        with the roles the decorator lists
+        <a href="https://typegraphql.com/docs/authorization.html">[type-graphql docs]</a>:
+      </p>
+      <pre><code>!!auth && (roles.length === 0 || roles.includes(auth.user.role))</code></pre>
+      <p>
+        Read it aloud:
+        <i>someone is signed in, and either no role is required or they hold one of the roles.</i>
+      </p>
+
+      <h3>Which error comes back</h3>
+      <p>
+        When the checker says no, type-graphql picks the error by one thing only: did the decorator
+        list roles? From its
+        <a
+          href="https://github.com/MichalLytek/type-graphql/blob/v2.0.0-beta.3/src/helpers/auth-middleware.ts"
+          >source</a
+        >:
+      </p>
+      <pre><code>throw roles.length === 0 ? new AuthenticationError() : new AuthorizationError();</code></pre>
+      <table>
+        <tr>
+          <th>Decorator</th>
+          <th>Checker says no →</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td><code>@Authorized()</code></td>
+          <td><code>UNAUTHENTICATED</code></td>
+          <td>We don't know who you are.</td>
+        </tr>
+        <tr>
+          <td><code>@Authorized(Role.ADMIN)</code></td>
+          <td><code>UNAUTHORIZED</code></td>
+          <td>You may not do this.</td>
+        </tr>
+      </table>
+      <div class="callout">
+        The surprise: a <b>guest</b> calling <code>allUser</code> gets <code>UNAUTHORIZED</code>,
+        not <code>UNAUTHENTICATED</code>, because the decorator lists a role. The error describes
+        the field's rule, not the caller.
+      </div>
+      <span class="note"
+        >Plain HTTP has the same split: 401 for missing or invalid credentials, 403 for valid but
+        insufficient ones.
+        <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Authentication">[MDN]</a>
+        GraphQL returns HTTP 200 and puts the code in
+        <code>errors[].extensions.code</code> instead.</span
+      >
+
+      <h2>Practice: predict the outcome</h2>
+      <p>
+        Answer from memory first, then check the table only if stuck. <span id="quiz-score"></span>
+      </p>
+
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Authentication runs first and answers identity only. Whether this caller may run the field is the authChecker's job, at stop 2."
+      >
+        <legend>1. <code>SessionService.authenticate</code> answers which question?</legend>
+        <label><input type="radio" name="q1" value="a" /> May this caller run this field?</label>
+        <label
+          ><input type="radio" name="q1" value="b" /> Who is sending this request, exactly?</label
+        >
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="c"
+        data-why="No token, so ctx.auth is undefined. <code>me</code> has <code>@Authorized()</code> with no roles, so the denial is UNAUTHENTICATED."
+      >
+        <legend>2. A guest queries <code>me</code>.</legend>
+        <label><input type="radio" name="q2" value="a" /> Returns the data</label>
+        <label><input type="radio" name="q2" value="b" /> Fails with UNAUTHORIZED</label>
+        <label><input type="radio" name="q2" value="c" /> Fails with UNAUTHENTICATED</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Signed in, but <code>allUser</code> requires ADMIN and their role is USER. Roles were listed, so: UNAUTHORIZED."
+      >
+        <legend>
+          3. A signed-in user with role <code>USER</code> queries <code>allUser</code>.
+        </legend>
+        <label><input type="radio" name="q3" value="a" /> Fails with UNAUTHORIZED</label>
+        <label><input type="radio" name="q3" value="b" /> Fails with UNAUTHENTICATED</label>
+        <label><input type="radio" name="q3" value="c" /> Returns the data</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="The checker sees no user and says no, but the decorator lists ADMIN, so type-graphql throws AuthorizationError. The error follows the field's rule, not the caller."
+      >
+        <legend>4. A guest queries <code>allUser</code>.</legend>
+        <label><input type="radio" name="q4" value="a" /> Fails with UNAUTHENTICATED</label>
+        <label><input type="radio" name="q4" value="b" /> Fails with UNAUTHORIZED</label>
+        <label><input type="radio" name="q4" value="c" /> Returns the data</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="c"
+        data-why="A valid token and no roles required: the checker says yes and the resolver returns the signed-in user from the context."
+      >
+        <legend>5. A signed-in user with role <code>USER</code> queries <code>me</code>.</legend>
+        <label><input type="radio" name="q5" value="a" /> Fails with UNAUTHENTICATED</label>
+        <label><input type="radio" name="q5" value="b" /> Fails with UNAUTHORIZED</label>
+        <label><input type="radio" name="q5" value="c" /> Returns the data</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Logout puts the token on a blacklist. <code>authenticate</code> checks it and treats the caller as a guest, so <code>me</code> fails as in question 2."
+      >
+        <legend>
+          6. A user signs out, then sends the same token again to query <code>me</code>.
+        </legend>
+        <label><input type="radio" name="q6" value="a" /> Fails with UNAUTHENTICATED</label>
+        <label><input type="radio" name="q6" value="b" /> Returns the data</label>
+        <label><input type="radio" name="q6" value="c" /> Fails with UNAUTHORIZED</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="<code>login</code> has no <code>@Authorized</code>: stop 2 never runs for it. It has to be open, or nobody could get a token in the first place."
+      >
+        <legend>7. A guest calls the <code>login</code> mutation with the right password.</legend>
+        <label><input type="radio" name="q7" value="a" /> Fails with UNAUTHORIZED</label>
+        <label><input type="radio" name="q7" value="b" /> Returns the data</label>
+        <label><input type="radio" name="q7" value="c" /> Fails with UNAUTHENTICATED</label>
+      </fieldset>
+
+      <h2>Try it on the real API</h2>
+      <p>With <code>pnpm dev:local</code> running, see questions 2 and 4 for yourself:</p>
+      <pre><code>curl -s localhost:8000/ -H 'content-type: application/json' \
+  -d '{"query":"{ me { username } }"}'
+
+curl -s localhost:8000/ -H 'content-type: application/json' \
+  -d '{"query":"{ allUser { id } }"}'</code></pre>
+      <p>
+        Look for <code>"code"</code> in each response, then stop the servers with
+        <code>pnpm dev:stop</code>.
+      </p>
+
+      <div class="source">
+        <p>
+          <b>Read next:</b> the introduction and “Enforce Least Privileges” / “Deny by Default”
+          sections of the
+          <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html"
+            >OWASP Authorization Cheat Sheet</a
+          >. It is the clearest high-trust statement of the rules this pipeline follows.
+        </p>
+        <p>
+          <b>Stuck, or curious?</b> Ask me anything about this lesson: why a step exists, what would
+          break without it, or how it differs from what you have seen elsewhere. Questions are the
+          fastest way through.
+        </p>
+        <p>
+          <b>Next:</b> lesson 2, what is inside the access token and how the API knows it is
+          genuine.
+        </p>
+      </div>
+    </main>
+    <script src="assets/quiz.js"></script>
+  </body>
+</html>

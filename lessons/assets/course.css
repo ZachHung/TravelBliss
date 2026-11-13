@@ -1,0 +1,204 @@
+/* Shared stylesheet for every lesson and reference page: one course, one look. Prints cleanly. */
+:root {
+  --ink: #1f2328;
+  --muted: #59636e;
+  --rule: #d8dee4;
+  --paper: #fffff8;
+  --accent: #0f6b5c;
+  --warn: #9a6700;
+  --bad: #b42318;
+  --good: #1a7f37;
+  --code-bg: #f4f1e8;
+  font-size: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  line-height: 1.55;
+}
+
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 5rem;
+}
+
+h1 {
+  font-weight: 400;
+  font-size: 2.2rem;
+  line-height: 1.15;
+  margin: 0.2rem 0 0.4rem;
+}
+
+h2 {
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.45rem;
+  margin: 2.6rem 0 0.6rem;
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 1.6rem 0 0.4rem;
+}
+
+.kicker {
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.lede {
+  font-size: 1.15rem;
+  color: var(--muted);
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.82em;
+}
+
+code {
+  background: var(--code-bg);
+  padding: 0.05em 0.3em;
+  border-radius: 3px;
+}
+
+pre {
+  background: var(--code-bg);
+  padding: 0.9rem 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  line-height: 1.45;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Tufte-style side notes: inline on narrow screens, in the margin on wide ones */
+.note {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--muted);
+  border-left: 2px solid var(--rule);
+  padding-left: 0.7rem;
+  margin: 0.4rem 0 1rem;
+}
+
+@media (min-width: 72rem) {
+  main {
+    position: relative;
+  }
+
+  .note {
+    position: absolute;
+    right: -17rem;
+    width: 15rem;
+    margin-top: -2.2rem;
+  }
+}
+
+.callout {
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--warn);
+  padding: 0.7rem 1rem;
+  margin: 1.2rem 0;
+  background: #fffdf2;
+}
+
+.source {
+  border-top: 1px solid var(--rule);
+  margin-top: 3rem;
+  padding-top: 1rem;
+  font-size: 0.92rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  margin: 1rem 0;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+th {
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Pipeline diagram: stages as boxes joined by arrows, stacked on narrow screens */
+.pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.4rem;
+  margin: 1.2rem 0;
+}
+
+.stage {
+  flex: 1 1 9rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.6rem 0.7rem;
+  background: #fff;
+  font-size: 0.85rem;
+}
+
+.stage b {
+  display: block;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  font-weight: 400;
+}
+
+.arrow {
+  align-self: center;
+  color: var(--muted);
+}
+
+nav.course {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .quiz button,
+  nav.course {
+    display: none;
+  }
+
+  .note {
+    position: static;
+    width: auto;
+  }
+}

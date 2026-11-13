@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Request pipeline: TravelBliss sign-in course</title>
+    <link rel="stylesheet" href="../assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course ·
+        <a href="../0001-who-are-you-and-what-may-you-do.html">Lesson 1</a> ·
+        <a href="glossary.html">Glossary</a>
+      </nav>
+      <p class="kicker">Reference</p>
+      <h1>The request pipeline</h1>
+
+      <div class="pipeline">
+        <div class="stage">
+          <b>1 · Authenticate</b><code>SessionService.authenticate(header)</code> →
+          <code>ctx.auth</code> or guest
+        </div>
+        <span class="arrow">→</span>
+        <div class="stage">
+          <b>2 · Authorize</b><code>@Authorized</code> → <code>authChecker(ctx, roles)</code>
+        </div>
+        <span class="arrow">→</span>
+        <div class="stage"><b>3 · Resolve</b>resolver runs, reads <code>ctx.auth.user</code></div>
+      </div>
+
+      <h2>Stop 1: who becomes a guest</h2>
+      <table>
+        <tr>
+          <th>Header / token</th>
+          <th>Result</th>
+        </tr>
+        <tr>
+          <td>missing, or not <code>Bearer …</code></td>
+          <td>guest</td>
+        </tr>
+        <tr>
+          <td>forged or expired</td>
+          <td>guest</td>
+        </tr>
+        <tr>
+          <td>on the logout blacklist</td>
+          <td>guest</td>
+        </tr>
+        <tr>
+          <td>user deleted</td>
+          <td>guest</td>
+        </tr>
+        <tr>
+          <td>valid</td>
+          <td><code>ctx.auth = { user, token, exp }</code> (one database read)</td>
+        </tr>
+      </table>
+
+      <h2>Stop 2: the decision table</h2>
+      <table>
+        <tr>
+          <th>Field</th>
+          <th>Guest</th>
+          <th>USER</th>
+          <th>ADMIN</th>
+        </tr>
+        <tr>
+          <td>no decorator (<code>login</code>, <code>register</code>)</td>
+          <td>data</td>
+          <td>data</td>
+          <td>data</td>
+        </tr>
+        <tr>
+          <td><code>@Authorized()</code> (<code>me</code>, <code>logout</code>)</td>
+          <td><code>UNAUTHENTICATED</code></td>
+          <td>data</td>
+          <td>data</td>
+        </tr>
+        <tr>
+          <td><code>@Authorized(Role.ADMIN)</code> (<code>allUser</code>)</td>
+          <td><code>UNAUTHORIZED</code></td>
+          <td><code>UNAUTHORIZED</code></td>
+          <td>data</td>
+        </tr>
+      </table>
+      <p>
+        The error code follows the <b>field's</b> rule: roles listed → <code>UNAUTHORIZED</code>,
+        else
+        <code>UNAUTHENTICATED</code>
+        (<a
+          href="https://github.com/MichalLytek/type-graphql/blob/v2.0.0-beta.3/src/helpers/auth-middleware.ts"
+          >type-graphql source</a
+        >). Both arrive with HTTP 200 in <code>errors[].extensions.code</code>.
+      </p>
+
+      <h2>Code</h2>
+      <ul>
+        <li>
+          <a href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/app.ts#L80-L83"
+            >app.ts</a
+          >: context built per request
+        </li>
+        <li>
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L54-L73"
+            >session.service.ts</a
+          >: <code>authenticate</code>
+        </li>
+        <li>
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/core/middlewares/auth-checker.middleware.ts"
+            >auth-checker.middleware.ts</a
+          >: <code>authChecker</code>
+        </li>
+        <li>
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/user/user.resolver.ts"
+            >user.resolver.ts</a
+          >: which fields are guarded
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

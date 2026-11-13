@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Glossary: TravelBliss sign-in course</title>
+    <link rel="stylesheet" href="../assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course ·
+        <a href="../0001-who-are-you-and-what-may-you-do.html">Lesson 1</a> ·
+        <a href="request-pipeline.html">Request pipeline reference</a>
+      </nav>
+      <p class="kicker">Reference</p>
+      <h1>Glossary</h1>
+      <p class="lede">
+        Every lesson uses these words exactly. Repo-wide terms also live in the root
+        <code>GLOSSARY.md</code>.
+      </p>
+
+      <table>
+        <tr>
+          <th>Term</th>
+          <th>Meaning in TravelBliss</th>
+        </tr>
+        <tr id="authentication">
+          <td><b>Authentication</b></td>
+          <td>
+            Answering <i>who are you?</i> Done once per request by
+            <code>SessionService.authenticate</code>.
+            <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html"
+              >[OWASP]</a
+            >
+          </td>
+        </tr>
+        <tr id="authorization">
+          <td><b>Authorization</b></td>
+          <td>
+            Answering <i>what may you do?</i> Done per field by <code>@Authorized</code> and the
+            <code>authChecker</code>. Always after authentication.
+          </td>
+        </tr>
+        <tr id="access-token">
+          <td><b>Access token</b></td>
+          <td>
+            The short-lived string the API issues at sign-in. The web app sends it on every request
+            as
+            <code>Authorization: Bearer &lt;token&gt;</code>.
+          </td>
+        </tr>
+        <tr id="bearer-token">
+          <td><b>Bearer token</b></td>
+          <td>
+            A token anyone holding it can use, with no further proof.
+            <a href="https://www.rfc-editor.org/rfc/rfc6750#section-1.2">[RFC 6750 §1.2]</a> The
+            access token is one.
+          </td>
+        </tr>
+        <tr id="signed-in-user">
+          <td><b>Signed-in user</b></td>
+          <td>
+            The <code>User</code> a request acts as: <code>ctx.auth.user</code> on the API,
+            <code>useSession().user</code> on the web.
+          </td>
+        </tr>
+        <tr id="guest">
+          <td><b>Guest</b></td>
+          <td>A caller with no valid session: <code>ctx.auth</code> is <code>undefined</code>.</td>
+        </tr>
+        <tr id="role">
+          <td><b>Role</b></td>
+          <td>
+            <code>USER</code> or <code>ADMIN</code>, stored on the user. Only checked when a
+            decorator lists roles.
+          </td>
+        </tr>
+        <tr id="context">
+          <td><b>Context</b> (<code>ctx</code>)</td>
+          <td>
+            Per-request object every resolver receives: <code>{ req, res, auth }</code>. Built
+            before any field runs.
+          </td>
+        </tr>
+        <tr id="authorized">
+          <td><code>@Authorized</code></td>
+          <td>
+            type-graphql decorator that guards a field. Empty means any signed-in user; with roles,
+            one of those roles.
+          </td>
+        </tr>
+        <tr id="auth-checker">
+          <td><code>authChecker</code></td>
+          <td>
+            Our function type-graphql calls for each guarded field. Returns true or false; never
+            touches the database.
+          </td>
+        </tr>
+        <tr id="unauthenticated">
+          <td><code>UNAUTHENTICATED</code></td>
+          <td>Error code when a field with <code>@Authorized()</code> (no roles) is denied.</td>
+        </tr>
+        <tr id="unauthorized">
+          <td><code>UNAUTHORIZED</code></td>
+          <td>
+            Error code when a field with <code>@Authorized(roles…)</code> is denied, even for a
+            guest.
+          </td>
+        </tr>
+      </table>
+    </main>
+  </body>
+</html>
