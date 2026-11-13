@@ -1,4 +1,4 @@
-import { BaseEntity } from '../../core/shared/entity';
+import { type BaseEntity } from '../../core/shared/entity';
 import { BaseException } from '../../core/shared/exception';
 
 export enum SessionErrorCodes {

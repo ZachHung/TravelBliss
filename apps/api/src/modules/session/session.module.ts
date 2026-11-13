@@ -1,7 +1,5 @@
 import { ContainerModule } from 'inversify';
-
 import TOKEN from '../../core/container/types.container';
-
 import { SessionService } from './session.service';
 
 export class SessionModule extends ContainerModule {

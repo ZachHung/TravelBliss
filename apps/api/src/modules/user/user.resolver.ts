@@ -1,23 +1,20 @@
 import { Arg, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
-
 import TOKEN from '../../core/container/types.container';
+import type { Context } from '../../types';
 import { Role } from '../../types/enums';
 import { Inject, Injectable } from '../../types/inversify';
 import { SessionService } from '../session/session.service';
 import { UserTokens } from '../session/session.type';
-
 import { User } from './user.entity';
 import { ChangePasswordInput, EditInfoInput, LoginInput, RegisterInput } from './user.input';
 import { UserService } from './user.service';
-
-import type { Context } from '../../types';
 
 @Injectable()
 @Resolver((_type) => User)
 export class UserResolver {
   constructor(
     @Inject(TOKEN.Services.User) private readonly userService: UserService,
-    @Inject(TOKEN.Services.Session) private readonly sessionService: SessionService,
+    @Inject(TOKEN.Services.Session) private readonly sessionService: SessionService
   ) {}
 
   @Authorized()
@@ -61,7 +58,7 @@ export class UserResolver {
   @Mutation((_type) => User)
   public async editInfoUser(
     @Arg('input') input: EditInfoInput,
-    @Ctx() { auth: { userId } }: Required<Context>,
+    @Ctx() { auth: { userId } }: Required<Context>
   ): Promise<User> {
     const response = await this.userService.editInfo(input, userId);
     return response;
@@ -71,7 +68,7 @@ export class UserResolver {
   @Mutation((_type) => User)
   public async changePasswordUser(
     @Arg('input') input: ChangePasswordInput,
-    @Ctx() { auth: { userId } }: Required<Context>,
+    @Ctx() { auth: { userId } }: Required<Context>
   ): Promise<User> {
     const response = await this.userService.changePassword(input, userId);
     return response;

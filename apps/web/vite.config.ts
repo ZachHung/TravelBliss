@@ -4,6 +4,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
+  // One env file set for the whole repo; only VITE_* reaches the browser.
+  envDir: '../..',
   resolve: {
     tsconfigPaths: true,
     alias: {

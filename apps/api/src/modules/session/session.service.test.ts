@@ -2,19 +2,17 @@ import 'reflect-metadata';
 
 import dayjs from 'dayjs';
 import { sign } from 'jsonwebtoken';
-
-import { Context } from '../../types';
-
+import { type Context } from '../../types';
 import { SessionErrorCodes } from './session.exception';
 import { SessionService } from './session.service';
 
 Object.assign(process.env, {
-  SECRET_JWT: 'jwt-secret',
-  JWT_EXPIRED: '15m',
-  SECRET_REFRESH: 'refresh-secret',
-  REFRESH_EXPIRED: '7d',
-  COOKIE_NAME: 'tb',
-  ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef',
+  API_SECRET_JWT: 'jwt-secret',
+  API_JWT_EXPIRED: '15m',
+  API_SECRET_REFRESH: 'refresh-secret',
+  API_REFRESH_EXPIRED: '7d',
+  API_COOKIE_NAME: 'tb',
+  API_ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef',
 });
 
 // Just enough Redis: keys with get/set/del/unlink and a scanStream that yields matching keys.

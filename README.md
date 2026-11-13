@@ -1,63 +1,71 @@
 # TravelBliss
 
-Web client for TravelBliss, a passenger rail booking service. Built with React, Vite and Mantine, talking to the
-[TravelBliss API](https://github.com/ZachHung/TravelBliss-API) over GraphQL.
+TravelBliss is a passenger rail booking service. This monorepo holds both halves, managed with a
+[pnpm workspace](https://pnpm.io/workspaces) and [Turborepo](https://turborepo.com/):
 
-## Stack
+| Package            | Path       | Stack                                                                   |
+| ------------------ | ---------- | ----------------------------------------------------------------------- |
+| `@travelbliss/web` | `apps/web` | React 19, React Router 8, Mantine 9, Apollo Client 4, Vite 8, Storybook |
+| `@travelbliss/api` | `apps/api` | Apollo Server 5, type-graphql, TypeORM (Postgres), Redis, inversify     |
 
-- [React 19](https://react.dev/) and [React Router 8](https://reactrouter.com/) (data router, lazy routes)
-- [Mantine 9](https://mantine.dev/) UI with CSS modules and [PostCSS preset](https://mantine.dev/styles/postcss-preset)
-- [Apollo Client 4](https://www.apollographql.com/docs/react) with [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) typed documents
-- Forms with `@mantine/form` and [zod 4](https://zod.dev/) validation
-- [Vite 8](https://vite.dev/), TypeScript, [pnpm](https://pnpm.io/)
-- Tests with [Vitest](https://vitest.dev/) and Testing Library, components in [Storybook 10](https://storybook.js.org/)
-- ESLint, Stylelint and Prettier, run on commit through Husky and lint-staged
+The web app talks to the API over GraphQL. `apps/api/schema.graphql` is generated from the API's resolvers and
+feeds the web app's typed documents, so a schema change and its client fix land in the same PR.
 
 ## Getting started
 
-Requirements: Node.js 22 or newer (see `.nvmrc`) and pnpm 10 (`corepack enable` picks the right version).
+Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10 (`corepack enable` picks the right version).
 
 ```sh
-pnpm install            # also runs `pnpm codegen`
-cp .env.example .env    # then point VITE_GRAPHQL_URI at a running API
-pnpm start:dev
+pnpm install
+cp .env.example .env.development   # fill in Postgres, Redis and secrets
+pnpm --filter @travelbliss/api migration:up
+pnpm dev                           # API on :8000, web on :5173
 ```
+
+To run Postgres and Redis locally instead of hosted ones, put local values in `.env.local` and start them with
+`pnpm --filter @travelbliss/api docker:local:up`.
 
 ### Environment variables
 
-| Name               | Description                  |
-| ------------------ | ---------------------------- |
-| `VITE_GRAPHQL_URI` | URL of the GraphQL endpoint. |
-
-### GraphQL types
-
-Operations live in `src/graphql/**` and are typed by `pnpm codegen`, which writes to `generated/` (git-ignored) and
-runs after every install. The schema is fetched from the API repository. To work offline or against another branch,
-point `GRAPHQL_SCHEMA` at a local file or URL:
-
-```sh
-GRAPHQL_SCHEMA=../TravelBliss-API/schema.graphql pnpm codegen
-```
+Both apps read one set of env files at the repo root, with Vite's precedence:
+`.env.[mode].local` > `.env.[mode]` > `.env.local` > `.env`. Only `.env.example` is committed, and it lists every
+variable. Web variables start with `VITE_` (the only ones that reach the browser). API variables start with `API_`.
 
 ## Scripts
 
-| Script                               | Description                                                                 |
-| ------------------------------------ | --------------------------------------------------------------------------- |
-| `pnpm start:dev`                     | Start the Vite dev server.                                                  |
-| `pnpm build`                         | Typecheck and create a production build in `dist/`.                         |
-| `pnpm preview`                       | Serve the production build locally.                                         |
-| `pnpm test`                          | Everything CI runs: typecheck, prettier, lint, vitest with coverage, build. |
-| `pnpm vitest` / `pnpm vitest:watch`  | Run the unit tests once or in watch mode.                                   |
-| `pnpm typecheck`                     | Run `tsc --noEmit`.                                                         |
-| `pnpm lint`                          | Run ESLint and Stylelint.                                                   |
-| `pnpm format`                        | Fix formatting and auto-fixable lint problems.                              |
-| `pnpm storybook` / `storybook:build` | Run or build Storybook.                                                     |
-| `pnpm codegen`                       | Regenerate GraphQL types.                                                   |
+Run from the repo root. Turbo caches every task except `dev` and `format:check`.
 
-## Project structure
+| Script           | Description                                                               |
+| ---------------- | ------------------------------------------------------------------------- |
+| `pnpm dev`       | Start the API and the Vite dev server.                                    |
+| `pnpm test`      | Everything CI runs: typecheck, lint, tests, build and the prettier check. |
+| `pnpm build`     | Build both apps into their `dist/`.                                       |
+| `pnpm typecheck` | Run `tsc --noEmit` in both apps.                                          |
+| `pnpm lint`      | Run ESLint (and Stylelint for web).                                       |
+| `pnpm format`    | Fix formatting and auto-fixable lint problems.                            |
+
+Per-app scripts run with `pnpm --filter <package> <script>`, for example `pnpm --filter @travelbliss/web storybook`
+or `pnpm --filter @travelbliss/api migration:generate`.
+
+### GraphQL types
+
+`turbo` runs `@travelbliss/api#schema` (writes `apps/api/schema.graphql` without needing a database) before
+`@travelbliss/web#codegen` (writes `apps/web/generated/`). Commit the updated `schema.graphql`; CI fails when it is
+stale. Set `GRAPHQL_SCHEMA` to point web codegen at another file or URL.
+
+### API Docker image
+
+```sh
+docker build -f apps/api/Dockerfile .                         # from the repo root
+pnpm --filter @travelbliss/api docker:serve:up               # API + Postgres + Redis
+```
+
+## Web app
+
+### Project structure
 
 ```
-src/
+apps/web/src/
   components/   reusable UI, each with its tests and stories
   contexts/     React contexts (AuthProvider)
   graphql/      queries and mutations
@@ -66,13 +74,13 @@ src/
   pages/        route components
   routes/       router and route guards (PublicRoute, ProtectedRoute)
   validations/  zod schema helpers
-test-utils/     render() with Mantine, Apollo MockedProvider and an optional router
+apps/web/test-utils/  render() with Mantine, Apollo MockedProvider and an optional router
 ```
 
 Authentication uses an HTTP-only cookie (`credentials: 'include'`); `AuthProvider` loads the current user with the
 `GetMe` query and exposes login and logout through `useAuth`.
 
-## Testing
+### Testing
 
 Use `render` from `@test-utils`. It wraps the UI in Mantine and Apollo's `MockedProvider`; pass `mocks` to stub
 GraphQL operations and `route` to render inside a `MemoryRouter`:
@@ -81,4 +89,4 @@ GraphQL operations and `route` to render inside a `MemoryRouter`:
 render(<SignInPage />, { route: '/sign-in', mocks: [loginMock] });
 ```
 
-Coverage thresholds are enforced in `vite.config.ts`.
+Coverage thresholds are enforced in `apps/web/vite.config.ts`.

@@ -2,10 +2,8 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 
 const config: CodegenConfig = {
   overwrite: true,
-  // Override with a local path or another URL when working offline or against an API branch
-  schema:
-    process.env.GRAPHQL_SCHEMA ??
-    'https://raw.githubusercontent.com/ZachHung/TravelBliss-API/main/schema.graphql',
+  // Written by `pnpm --filter @travelbliss/api schema`; override with another path or URL if needed
+  schema: process.env.GRAPHQL_SCHEMA ?? '../api/schema.graphql',
   documents: 'src/graphql/**/*.tsx',
   ignoreNoDocuments: true,
   generates: {

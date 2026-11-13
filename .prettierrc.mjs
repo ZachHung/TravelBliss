@@ -5,6 +5,8 @@ const config = {
   trailingComma: 'es5',
   endOfLine: 'lf',
   plugins: ['@ianvs/prettier-plugin-sort-imports'],
+  // The API uses legacy decorators (type-graphql, TypeORM, inversify)
+  importOrderParserPlugins: ['typescript', 'jsx', 'decorators-legacy'],
   importOrder: [
     '.*styles.css$',
     '',

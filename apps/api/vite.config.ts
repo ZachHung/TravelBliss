@@ -1,6 +1,5 @@
 import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
-
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
@@ -8,7 +7,7 @@ import { defineConfig } from 'vitest/config';
 const entries = Object.fromEntries(
   globSync('src/**/*.ts')
     .filter((file) => !file.endsWith('.test.ts'))
-    .map((file) => [file.slice('src/'.length, -'.ts'.length), resolve(file)]),
+    .map((file) => [file.slice('src/'.length, -'.ts'.length), resolve(file)])
 );
 
 export default defineConfig({

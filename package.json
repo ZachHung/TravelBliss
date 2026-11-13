@@ -1,0 +1,56 @@
+{
+  "name": "travelbliss",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.12.2",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run typecheck lint test build format:check",
+    "format:check": "prettier --check \"**/*.{ts,tsx,css,json,md,yml,yaml}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,css,json,md,yml,yaml}\" && turbo run lint -- --fix",
+    "prepare": "husky",
+    "preinstall": "npx only-allow pnpm"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^9.39.5",
+    "eslint-config-mantine": "^4.0.3",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "turbo": "2.11.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "bcrypt",
+      "esbuild"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --cache"
+    ],
+    "*.css": [
+      "pnpm --filter @travelbliss/web exec stylelint --fix --cache",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

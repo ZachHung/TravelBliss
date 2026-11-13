@@ -1,10 +1,8 @@
 import { Redis } from 'ioredis';
-
 import { getEnv } from '../utils/helpers';
-
 import logger from './logger';
 
-const redisClient = new Redis(getEnv('REDIS_URI'));
+const redisClient = new Redis(getEnv('API_REDIS_URI'));
 redisClient.on('error', async (error: Error) => {
   logger.error(new Error(`REDIS_${error.message}`));
 });

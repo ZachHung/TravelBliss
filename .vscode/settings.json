@@ -1,4 +1,5 @@
 {
   "cSpell.words": ["codegen", "Mantine", "stylelint", "tabler", "travelbliss", "typecheck"],
-  "a-file-icon-vscode.arrowTheme": "triangle"
+  "a-file-icon-vscode.arrowTheme": "triangle",
+  "python.terminal.useEnvFile": true
 }

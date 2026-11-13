@@ -1,7 +1,6 @@
 import dayjs from 'dayjs';
 import { Authorized, Field, Int, ObjectType } from 'type-graphql';
 import { Column, Entity } from 'typeorm';
-
 import { BaseEntity } from '../../core/shared/entity';
 import { Role } from '../../types/enums';
 

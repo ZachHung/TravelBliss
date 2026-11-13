@@ -14,6 +14,7 @@ import {
   Title,
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
+import { type UseFormReturnType } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import Form, { type FormError } from '@/components/Form/Form';
 import TextGradient from '@/components/TextGradient/TextGradient';
@@ -61,9 +62,89 @@ const formErrors: FormError<typeof initialValues> = {
   ],
 };
 
+const RegisterFields = ({ form }: { form: UseFormReturnType<typeof initialValues> }) => {
+  const [visible, { toggle }] = useDisclosure(false);
+
+  return (
+    <>
+      <Title size="h2" ta="center">
+        Welcome to <TextGradient>TravelBliss</TextGradient>
+      </Title>
+
+      <Group justify="space-between">
+        <TextInput
+          withAsterisk
+          type="text"
+          label="Full Name"
+          placeholder="Enter your full name"
+          key={form.key('fullName')}
+          {...form.getInputProps('fullName')}
+        />
+
+        <TextInput
+          withAsterisk
+          type="text"
+          label="Username"
+          placeholder="Enter your username"
+          key={form.key('username')}
+          {...form.getInputProps('username')}
+        />
+      </Group>
+
+      <Group justify="space-between">
+        <TextInput
+          key={form.key('phoneNumber')}
+          {...form.getInputProps('phoneNumber')}
+          withAsterisk
+          type="tel"
+          label="Phone Number"
+          placeholder="Enter your phone number"
+        />
+
+        <TextInput
+          key={form.key('email')}
+          {...form.getInputProps('email')}
+          withAsterisk
+          type="email"
+          label="Email"
+          placeholder="Enter your email address"
+        />
+      </Group>
+      <DatePickerInput
+        withAsterisk
+        leftSection={icon}
+        leftSectionPointerEvents="none"
+        label="Birthday"
+        placeholder="Pick your birthday"
+        key={form.key('birthday')}
+        {...form.getInputProps('birthday')}
+      />
+
+      <PasswordInput
+        withAsterisk
+        key={form.key('password')}
+        {...form.getInputProps('password')}
+        label="Password"
+        visible={visible}
+        placeholder="Enter your password"
+        onVisibilityChange={toggle}
+      />
+
+      <PasswordInput
+        withAsterisk
+        key={form.key('confirmPassword')}
+        {...form.getInputProps('confirmPassword')}
+        label="Confirm password"
+        visible={visible}
+        placeholder="Reenter your password"
+        onVisibilityChange={toggle}
+      />
+    </>
+  );
+};
+
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const [visible, { toggle }] = useDisclosure(false);
   const {
     register,
     result: { loading },
@@ -90,82 +171,7 @@ const RegisterPage = () => {
               validate={zod4Resolver(validationSchema)}
               loading={loading}
             >
-              {(form) => (
-                <>
-                  <Title size="h2" ta="center">
-                    Welcome to <TextGradient>TravelBliss</TextGradient>
-                  </Title>
-
-                  <Group justify="space-between">
-                    <TextInput
-                      withAsterisk
-                      type="text"
-                      label="Full Name"
-                      placeholder="Enter your full name"
-                      key={form.key('fullName')}
-                      {...form.getInputProps('fullName')}
-                    />
-
-                    <TextInput
-                      withAsterisk
-                      type="text"
-                      label="Username"
-                      placeholder="Enter your username"
-                      key={form.key('username')}
-                      {...form.getInputProps('username')}
-                    />
-                  </Group>
-
-                  <Group justify="space-between">
-                    <TextInput
-                      key={form.key('phoneNumber')}
-                      {...form.getInputProps('phoneNumber')}
-                      withAsterisk
-                      type="tel"
-                      label="Phone Number"
-                      placeholder="Enter your phone number"
-                    />
-
-                    <TextInput
-                      key={form.key('email')}
-                      {...form.getInputProps('email')}
-                      withAsterisk
-                      type="email"
-                      label="Email"
-                      placeholder="Enter your email address"
-                    />
-                  </Group>
-                  <DatePickerInput
-                    withAsterisk
-                    leftSection={icon}
-                    leftSectionPointerEvents="none"
-                    label="Birthday"
-                    placeholder="Pick your birthday"
-                    key={form.key('birthday')}
-                    {...form.getInputProps('birthday')}
-                  />
-
-                  <PasswordInput
-                    withAsterisk
-                    key={form.key('password')}
-                    {...form.getInputProps('password')}
-                    label="Password"
-                    visible={visible}
-                    placeholder="Enter your password"
-                    onVisibilityChange={toggle}
-                  />
-
-                  <PasswordInput
-                    withAsterisk
-                    key={form.key('confirmPassword')}
-                    {...form.getInputProps('confirmPassword')}
-                    label="Confirm password"
-                    visible={visible}
-                    placeholder="Reenter your password"
-                    onVisibilityChange={toggle}
-                  />
-                </>
-              )}
+              {(form) => <RegisterFields form={form} />}
             </Form>
           </Paper>
         </Center>

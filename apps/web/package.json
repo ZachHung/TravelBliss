@@ -1,33 +1,20 @@
 {
-  "name": "travelbliss",
+  "name": "@travelbliss/web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "packageManager": "pnpm@10.12.2",
-  "engines": {
-    "node": ">=22",
-    "pnpm": ">=10"
-  },
   "scripts": {
-    "start:dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "vite",
+    "build": "vite build",
     "preview": "vite preview",
     "preview:test": "vite preview --outDir ./generated/test",
     "typecheck": "tsc --noEmit",
-    "lint": "pnpm eslint && pnpm stylelint",
-    "eslint": "eslint . --cache",
-    "stylelint": "stylelint \"**/*.css\" --cache",
-    "prettier": "prettier --check \"**/*.{ts,tsx,css,json,md,yml,yaml}\"",
-    "prettier:write": "prettier --write \"**/*.{ts,tsx,css,json,md,yml,yaml}\"",
-    "format": "pnpm prettier:write && pnpm eslint --fix && pnpm stylelint --fix",
-    "vitest": "CI=true vitest run",
-    "vitest:watch": "CI=true vitest",
-    "test": "CI=true pnpm typecheck && pnpm prettier && pnpm lint && pnpm vitest && pnpm build",
+    "lint": "eslint . --cache && stylelint \"**/*.css\" --cache",
+    "test": "CI=true vitest run",
+    "test:watch": "vitest",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "prepare": "husky",
-    "codegen": "graphql-codegen --config codegen.ts",
-    "postinstall": "pnpm codegen"
+    "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
     "@apollo/client": "^4.3.7",
@@ -49,10 +36,8 @@
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.6.0",
-    "@eslint/js": "^9.39.5",
     "@graphql-codegen/cli": "^8.0.0",
     "@graphql-codegen/client-preset": "^7.0.0",
-    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@storybook/addon-docs": "10.6.6",
     "@storybook/addon-links": "^10.6.6",
     "@storybook/react": "^10.6.6",
@@ -62,48 +47,20 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/lodash": "^4.17.27",
-    "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "@vitest/coverage-v8": "^5.1.0",
     "@vitest/ui": "^5.1.0",
-    "eslint": "^9.39.5",
-    "eslint-config-mantine": "^4.0.3",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-react": "^7.37.5",
-    "husky": "^9.1.7",
     "jsdom": "^31.0.0",
-    "lint-staged": "^17.6.0",
     "postcss": "^8.5.32",
     "postcss-preset-mantine": "1.18.0",
     "postcss-simple-vars": "^7.0.1",
-    "prettier": "^3.9.10",
     "storybook": "^10.6.6",
     "storybook-dark-mode": "^5.0.0",
     "stylelint": "^17.16.0",
     "stylelint-config-standard-scss": "^17.0.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.1",
     "vite": "^8.3.7",
     "vitest": "^5.1.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "prettier --write",
-      "eslint --fix --cache"
-    ],
-    "*.css": [
-      "stylelint --fix --cache",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
   }
 }

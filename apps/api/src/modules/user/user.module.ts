@@ -1,9 +1,7 @@
 import { ContainerModule } from 'inversify';
-
 import TOKEN from '../../core/container/types.container';
-import Service from '../../core/shared/service';
-
-import { User } from './user.entity';
+import type Service from '../../core/shared/service';
+import { type User } from './user.entity';
 import { UserRepository } from './user.repository';
 import { UserResolver } from './user.resolver';
 import { UserService } from './user.service';

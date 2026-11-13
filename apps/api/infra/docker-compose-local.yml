@@ -10,8 +10,10 @@ services:
     container_name: travel-bliss-postgres
     ports:
       - 5432:5432
-    env_file:
-      - local/postgres.env
+    environment:
+      POSTGRES_USER: ${API_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${API_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${API_POSTGRES_DB}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,8 +27,8 @@ services:
     container_name: travel-bliss-redis
     ports:
       - '6379:6379'
-    env_file:
-      - local/redis.env
+    environment:
+      REDIS_PASSWORD: ${API_REDIS_PASSWORD}
     command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
     volumes:
       - redis_data:/data

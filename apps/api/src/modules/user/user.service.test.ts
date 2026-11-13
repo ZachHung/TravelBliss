@@ -1,16 +1,15 @@
 import 'reflect-metadata';
 
+import dayjs from 'dayjs';
 import { hash } from 'bcrypt';
 import { validate } from 'class-validator';
-import dayjs from 'dayjs';
-
 import { User } from './user.entity';
 import { UserErrorCodes } from './user.exception';
 import { EditInfoInput } from './user.input';
 import { UserService } from './user.service';
 
 Object.assign(process.env, {
-  SALT_ROUND: '4',
+  API_SALT_ROUND: '4',
 });
 
 const setup = async () => {
@@ -20,7 +19,7 @@ const setup = async () => {
       [where]
         .flat()
         .some((cond) =>
-          Object.entries(cond).every(([key, value]) => user[key as keyof User] === value),
+          Object.entries(cond).every(([key, value]) => user[key as keyof User] === value)
         )
         ? user
         : null,
@@ -35,13 +34,13 @@ describe('UserService', () => {
     const { service } = await setup();
 
     await expect(
-      service.authenticate({ usernameOrEmailOrPhone: 'x', password: 'secret123' } as never),
+      service.authenticate({ usernameOrEmailOrPhone: 'x', password: 'secret123' } as never)
     ).resolves.toMatchObject({ id: 'u1' });
     await expect(
-      service.authenticate({ usernameOrEmailOrPhone: 'x', password: 'nope' } as never),
+      service.authenticate({ usernameOrEmailOrPhone: 'x', password: 'nope' } as never)
     ).rejects.toMatchObject({ extensions: { code: UserErrorCodes.WRONG_PASSWORD } });
     await expect(
-      service.authenticate({ usernameOrEmailOrPhone: 'nobody', password: 'x' } as never),
+      service.authenticate({ usernameOrEmailOrPhone: 'nobody', password: 'x' } as never)
     ).rejects.toMatchObject({ extensions: { code: UserErrorCodes.USER_NOT_FOUND } });
   });
 
@@ -58,7 +57,7 @@ describe('UserService', () => {
         email: 'a@b.c',
         phoneNumber: '1',
         password: 'secret123',
-      } as never),
+      } as never)
     ).rejects.toMatchObject({
       extensions: { code: UserErrorCodes.USER_EXISTED, where: 'phoneNumber' },
     });

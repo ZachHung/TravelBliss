@@ -1,5 +1,4 @@
-import { Request, Response } from 'express';
-
+import { type Request, type Response } from 'express';
 import type { AuthContext } from '../modules/session/session.type';
 
 export interface Context {

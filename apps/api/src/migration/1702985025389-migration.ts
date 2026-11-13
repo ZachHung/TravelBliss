@@ -6,7 +6,7 @@ export class Migration1702985025389 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query('ALTER TABLE "user" ADD "phoneNumber" character varying NOT NULL');
     await queryRunner.query(
-      'ALTER TABLE "user" ADD CONSTRAINT "UQ_f2578043e491921209f5dadd080" UNIQUE ("phoneNumber")',
+      'ALTER TABLE "user" ADD CONSTRAINT "UQ_f2578043e491921209f5dadd080" UNIQUE ("phoneNumber")'
     );
   }
 

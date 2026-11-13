@@ -1,5 +1,4 @@
 import http from 'http';
-
 import { ApolloServer } from '@apollo/server';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { ApolloServerPluginInlineTrace } from '@apollo/server/plugin/inlineTrace';
@@ -9,16 +8,15 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { json } from 'express';
 import { buildSchema } from 'type-graphql';
-
 import { PostgresDataSource } from './config/data-source';
 import logger from './config/logger';
 import container from './core/container/config.container';
 import TOKEN from './core/container/types.container';
 import { CustomAuthChecker } from './core/middlewares/auth-checker.middleware';
 import { ErrorLoggerMiddleware } from './core/middlewares/error-logger.middleware';
-import { SessionService } from './modules/session/session.service';
+import { type SessionService } from './modules/session/session.service';
 import { resolvers } from './resolvers';
-import { Context } from './types';
+import { type Context } from './types';
 import { getEnv } from './utils/helpers';
 
 export const bootstrap = async (): Promise<void> => {
@@ -28,7 +26,7 @@ export const bootstrap = async (): Promise<void> => {
   const schema = await buildSchema({
     emitSchemaFile: true,
     validate: true,
-    resolvers: resolvers,
+    resolvers,
     globalMiddlewares: [ErrorLoggerMiddleware],
     authChecker: CustomAuthChecker,
     container,
@@ -54,7 +52,7 @@ export const bootstrap = async (): Promise<void> => {
   app.use(
     '/',
     cors<cors.CorsRequest>({
-      origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+      origin: process.env.API_CORS_ORIGIN || 'http://localhost:5173',
       credentials: true,
     }),
 
@@ -67,12 +65,12 @@ export const bootstrap = async (): Promise<void> => {
           .authenticate(req.headers.authorization);
         return { req, res, auth };
       },
-    }),
+    })
   );
 
-  httpServer.listen(+getEnv('PORT'), () =>
+  httpServer.listen(+getEnv('API_PORT'), () =>
     logger.info(
-      `Server running in ${getEnv('NODE_ENV')} mode at http://localhost${getEnv('PORT') && ':' + getEnv('PORT')}`,
-    ),
+      `Server running in ${getEnv('NODE_ENV')} mode at http://localhost${getEnv('API_PORT') && `:${getEnv('API_PORT')}`}`
+    )
   );
 };

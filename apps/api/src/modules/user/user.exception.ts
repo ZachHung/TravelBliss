@@ -1,6 +1,5 @@
 import { BaseException } from '../../core/shared/exception';
-
-import { User } from './user.entity';
+import { type User } from './user.entity';
 
 export enum UserErrorCodes {
   USER_NOT_FOUND = 'USER_NOT_FOUND',

@@ -1,11 +1,9 @@
-import { compare, hash } from 'bcrypt';
 import dayjs from 'dayjs';
-
+import { compare, hash } from 'bcrypt';
 import TOKEN from '../../core/container/types.container';
 import Service from '../../core/shared/service';
 import { Inject, Injectable } from '../../types/inversify';
 import { getEnv, mutationReturn } from '../../utils/helpers';
-
 import { User } from './user.entity';
 import { UserExistException, UserNotFoundException, WrongPassException } from './user.exception';
 import { ChangePasswordInput, LoginInput, RegisterInput } from './user.input';
@@ -17,7 +15,9 @@ export class UserService implements Service<User> {
 
   public async findById(id: string): Promise<User> {
     const user = await this.userRepository.findOneBy({ id });
-    if (!user) throw new UserNotFoundException();
+    if (!user) {
+      throw new UserNotFoundException();
+    }
     return user;
   }
 
@@ -29,7 +29,7 @@ export class UserService implements Service<User> {
       }
     }
 
-    const hashedPassword = await hash(input.password, +getEnv('SALT_ROUND'));
+    const hashedPassword = await hash(input.password, +getEnv('API_SALT_ROUND'));
 
     try {
       return await this.userRepository.save({ ...input, password: hashedPassword });
@@ -46,9 +46,13 @@ export class UserService implements Service<User> {
       { phoneNumber: usernameOrEmailOrPhone },
     ]);
 
-    if (!user) throw new UserNotFoundException();
+    if (!user) {
+      throw new UserNotFoundException();
+    }
     const isValidPass = await compare(password, user.password);
-    if (!isValidPass) throw new WrongPassException();
+    if (!isValidPass) {
+      throw new WrongPassException();
+    }
     return user;
   }
 
@@ -60,7 +64,9 @@ export class UserService implements Service<User> {
   public async editInfo(input: Partial<User>, userId: string): Promise<User> {
     // GraphQL nullable inputs arrive as null; writing null would break NOT NULL columns.
     const changes = Object.fromEntries(Object.entries(input).filter(([, value]) => value != null));
-    if (!Object.keys(changes).length) return this.findById(userId);
+    if (!Object.keys(changes).length) {
+      return this.findById(userId);
+    }
 
     try {
       return await mutationReturn<User>(
@@ -71,7 +77,7 @@ export class UserService implements Service<User> {
           .set({ ...changes, updatedAt: dayjs().toISOString() })
           .where('id = :id ', { id: userId })
           .returning('*')
-          .execute(),
+          .execute()
       );
     } catch (error) {
       throw this.toUserExist(error);
@@ -82,9 +88,11 @@ export class UserService implements Service<User> {
     const user = await this.findById(userId);
     // Check password hash
     const isValidPass = await compare(input.oldPassword, user.password);
-    if (!isValidPass) throw new WrongPassException();
+    if (!isValidPass) {
+      throw new WrongPassException();
+    }
 
-    const newPassword = await hash(input.newPassword, +getEnv('SALT_ROUND'));
+    const newPassword = await hash(input.newPassword, +getEnv('API_SALT_ROUND'));
     return this.editInfo({ password: newPassword }, userId);
   }
 
@@ -92,7 +100,9 @@ export class UserService implements Service<User> {
   private toUserExist(error: unknown): unknown {
     const { code, detail } = (error as { driverError?: { code?: string; detail?: string } })
       .driverError ?? { code: undefined, detail: undefined };
-    if (code !== '23505') return error;
+    if (code !== '23505') {
+      return error;
+    }
     return new UserExistException(/Key \("?(\w+)"?\)/.exec(detail ?? '')?.[1] as keyof User);
   }
 }

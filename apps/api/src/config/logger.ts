@@ -1,6 +1,5 @@
 import dayjs from 'dayjs';
 import { createLogger, format, transports } from 'winston';
-
 import { getEnv } from '../utils/helpers';
 
 const configFormat = [
@@ -29,7 +28,7 @@ const logger = createLogger({
 
 const env = getEnv('NODE_ENV').toUpperCase();
 
-if (process.env.NODE_ENV !== 'production')
+if (process.env.NODE_ENV !== 'production') {
   logger.add(
     new transports.Console({
       level: 'debug',
@@ -48,12 +47,15 @@ if (process.env.NODE_ENV !== 'production')
               metadata: { stack },
             },
           }: Record<string, any>) => {
-            if (stack) return `[${env}] [${timestamp}] [${level}]: ${stack}`;
+            if (stack) {
+              return `[${env}] [${timestamp}] [${level}]: ${stack}`;
+            }
             return `[${env}] [${timestamp}] [${level}]: ${message}`;
-          },
-        ),
+          }
+        )
       ),
-    }),
+    })
   );
+}
 
 export default logger;
