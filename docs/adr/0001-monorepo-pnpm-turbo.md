@@ -28,5 +28,7 @@ TS 5.9 vs 6, two prettier configs, two env conventions, the API had no CI).
 
 - Schema and client changes ship in one PR, and type errors from API changes show up in CI.
 - Every API file was reformatted and relinted once to match the shared configs.
+- `pnpm test` runs turbo with `--concurrency=1`. Running both apps' typecheck, lint, build and vitest in parallel ran
+  out of memory on a 7 GB WSL machine. The cache keeps repeat runs fast.
 - `consistent-type-imports` must not touch decorated API files, because decorator metadata needs runtime imports.
   The ESLint config tells typescript-eslint about decorator metadata so the rule skips those files.

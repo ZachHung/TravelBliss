@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "dev:local": "test -f .env.local || { echo 'Create .env.local with the local docker values first (see .env.example).' >&2; exit 1; } && pnpm --filter @travelbliss/api docker:local:up -d --wait && turbo run build --filter @travelbliss/api && NODE_ENV=local pnpm --filter @travelbliss/api migration:up && NODE_ENV=local turbo run dev",
+    "dev:local": "test -f .env.local || { echo 'Create .env.local with the local docker values first (see .env.example).' >&2; exit 1; } && pnpm --filter @travelbliss/api docker:local:up -d --wait && NODE_ENV=local pnpm --filter @travelbliss/api migration:up && NODE_ENV=local turbo run dev",
     "dev:local:down": "pnpm --filter @travelbliss/api docker:local:down",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",

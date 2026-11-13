@@ -47,7 +47,7 @@ Run from the repo root. Turbo caches every task except `dev` and `format:check`.
 | ---------------- | ------------------------------------------------------------------------------------------- |
 | `pnpm dev`       | Start the API and the Vite dev server.                                                      |
 | `pnpm dev:local` | Same, against Postgres and Redis in docker using `.env.local`. `dev:local:down` stops them. |
-| `pnpm test`      | Everything CI runs: typecheck, lint, tests, build and the prettier check.                   |
+| `pnpm test`      | Everything CI runs: typecheck, lint, tests, build and prettier, one task at a time.         |
 | `pnpm build`     | Build both apps into their `dist/`.                                                         |
 | `pnpm typecheck` | Run `tsc --noEmit` in both apps.                                                            |
 | `pnpm lint`      | Run ESLint (and Stylelint for web).                                                         |
@@ -62,11 +62,38 @@ or `pnpm --filter @travelbliss/api migration:generate`.
 `@travelbliss/web#codegen` (writes `apps/web/generated/`). Commit the updated `schema.graphql`; CI fails when it is
 stale. Set `GRAPHQL_SCHEMA` to point web codegen at another file or URL.
 
-### API Docker image
+## API
+
+### Project structure
+
+```
+apps/api/src/
+  modules/<name>/   one folder per module: resolver, service, repository, entity, inputs, exceptions, tests
+  core/             inversify container, auth checker and error-logging middlewares, shared base classes
+  config/           Postgres data source, Redis client, logger
+  migration/        TypeORM migrations (generated)
+  schema.ts         writes schema.graphql without a database (`pnpm --filter @travelbliss/api schema`)
+```
+
+### Migrations
+
+TypeORM commands build the API first, so they always see the current entities. They use the env file for
+`NODE_ENV` (`.env.development` by default; prefix with `NODE_ENV=local` for docker):
 
 ```sh
-docker build -f apps/api/Dockerfile .                         # from the repo root
-pnpm --filter @travelbliss/api docker:serve:up               # API + Postgres + Redis
+pnpm --filter @travelbliss/api migration:generate   # after changing an entity
+pnpm --filter @travelbliss/api migration:up
+pnpm --filter @travelbliss/api migration:down
+```
+
+### Docker
+
+Both compose files in `apps/api/infra` read the root `.env.local`.
+
+```sh
+pnpm --filter @travelbliss/api docker:local:up    # Postgres + Redis only (what `pnpm dev:local` uses)
+pnpm --filter @travelbliss/api docker:serve:up    # API image + Postgres + Redis
+docker build -f apps/api/Dockerfile .             # API image alone, from the repo root
 ```
 
 ## Web app
@@ -86,8 +113,10 @@ apps/web/src/
 apps/web/test-utils/  render() with Mantine, Apollo MockedProvider and an optional router
 ```
 
-Authentication uses an HTTP-only cookie (`credentials: 'include'`); `AuthProvider` loads the current user with the
-`GetMe` query and exposes login and logout through `useAuth`.
+Authentication: `login` returns an access token that `authLink.ts` keeps in memory and sends as a Bearer header. On
+`UNAUTHENTICATED` it calls `refreshToken` once, which reads the HttpOnly `<API_COOKIE_NAME>_rf` cookie
+(`credentials: 'include'`), and retries. `AuthProvider` loads the current user with the `GetMe` query and exposes login
+and logout through `useAuth`.
 
 ### Testing
 

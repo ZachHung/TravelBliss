@@ -19,7 +19,7 @@
     "docker:local:down": "docker compose --env-file ../../.env.local -f infra/docker-compose-local.yml down",
     "docker:serve:up": "docker compose --env-file ../../.env.local -f infra/docker-compose-serve.yml up --build",
     "docker:serve:down": "docker compose --env-file ../../.env.local -f infra/docker-compose-serve.yml down",
-    "typeorm": "typeorm-ts-node-commonjs -d ./dist/config/data-source.js",
+    "typeorm": "pnpm build && typeorm-ts-node-commonjs -d ./dist/config/data-source.js",
     "migration:generate": "pnpm typeorm migration:generate ./src/migration/migration",
     "migration:up": "pnpm typeorm migration:run",
     "migration:down": "pnpm typeorm migration:revert"
