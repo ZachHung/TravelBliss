@@ -63,13 +63,14 @@ export class UserResolver {
     return response;
   }
 
+  // Returns fresh tokens: changing the password ends every other session, including this device's old token
   @Authorized()
-  @Mutation((_type) => User)
+  @Mutation((_type) => UserTokens)
   public async changePasswordUser(
     @Arg('input') input: ChangePasswordInput,
-    @Ctx() { auth: { user } }: Required<Context>
-  ): Promise<User> {
-    const response = await this.userService.changePassword(input, user.id);
-    return response;
+    @Ctx() ctx: Required<Context>
+  ): Promise<UserTokens> {
+    await this.userService.changePassword(input, ctx.auth.user.id);
+    return this.sessionService.endOtherSessions(ctx);
   }
 }

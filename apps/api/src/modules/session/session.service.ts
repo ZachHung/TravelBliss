@@ -15,21 +15,23 @@ import { AuthContext, UserTokens } from './session.type';
 const REDIS_KEY = {
   BLACK_LIST: 'blacklist:',
   REFRESH_TOKEN: 'refreshToken:',
+  // Unix seconds: tokens of this user issued before it are revoked (see endOtherSessions)
+  VALID_FROM: 'sessionsValidFrom:',
 } as const;
 
 const refreshCookieName = (): string => `${getEnv('API_COOKIE_NAME')}_rf`; // ':' is not allowed in cookie names (cookie@0.7 throws)
 const refreshKey = (userId: string, token: string): string =>
   `${REDIS_KEY.REFRESH_TOKEN}${userId}:${token}`;
 
-type TokenClaims = { userId: string; token: string; exp: number };
+type TokenClaims = { userId: string; token: string; iat: number; exp: number };
 
 const verifyToken = (token: string, secret: string): TokenClaims | undefined => {
   if (!token) {
     return;
   }
   try {
-    const { userId, exp } = verify(token, secret) as Required<JwtPayload> & { userId: string };
-    return { userId, exp, token };
+    const { userId, iat, exp } = verify(token, secret) as Required<JwtPayload> & { userId: string };
+    return { userId, iat, exp, token };
   } catch {
     // Invalid or expired token: treat as unauthenticated
   }
@@ -59,7 +61,12 @@ export class SessionService {
     if (!auth) {
       return;
     }
-    if (await this.store.get(REDIS_KEY.BLACK_LIST + auth.token)) {
+    // One round trip for both revocation checks: signed out (blacklist) or every session ended (valid-from)
+    const [blacklisted, validFrom] = await this.store.mget(
+      REDIS_KEY.BLACK_LIST + auth.token,
+      REDIS_KEY.VALID_FROM + auth.userId
+    );
+    if (blacklisted || auth.iat < Number(validFrom ?? 0)) {
       return;
     }
     // A deleted user's token makes a guest; any other failure (e.g. the database is down) propagates
@@ -98,8 +105,11 @@ export class SessionService {
     if (!refreshTokenAuth) {
       throw new InvalidTokenException();
     }
-    const { userId } = refreshTokenAuth;
+    const { userId, iat } = refreshTokenAuth;
     await this.users.findById(userId);
+    if (iat < Number((await this.store.get(REDIS_KEY.VALID_FROM + userId)) ?? 0)) {
+      throw new InvalidTokenException();
+    }
 
     // DEL is atomic: only the first caller removes the key, so each refresh token works once.
     const used = await this.store.del(refreshKey(userId, refreshToken));
@@ -139,6 +149,21 @@ export class SessionService {
       logger.error('Logout failed', error instanceof Error ? error : { error });
       return false;
     }
+  }
+
+  /**
+   * Ends every session of the signed-in user except this one (e.g. after a password change): access tokens issued
+   * before now stop authenticating, every refresh token is deleted, and this device gets fresh tokens. A refresh
+   * cookie is only re-issued if this device had one (Remember Me).
+   * shortcut: JWT iat has one-second resolution, so a token issued in this same second survives; store issue times in
+   * ms (or a token version) if that ever matters.
+   */
+  public async endOtherSessions(ctx: Required<Context>): Promise<UserTokens> {
+    const userId = ctx.auth.user.id;
+    const remember = !!this.readCookie(ctx.req, refreshCookieName());
+    await this.store.set(REDIS_KEY.VALID_FROM + userId, String(Math.floor(Date.now() / 1000)));
+    await this.deleteByPattern(`${REDIS_KEY.REFRESH_TOKEN}${userId}:*`);
+    return this.start(userId, { remember }, ctx);
   }
 
   private async storeRefreshToken(userId: string, refreshToken: string, res: Response) {
