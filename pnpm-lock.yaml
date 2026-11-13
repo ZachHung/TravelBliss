@@ -123,6 +123,9 @@ importers:
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
+      '@vitest/coverage-v8':
+        specifier: ^5.1.0
+        version: 5.1.0(vitest@5.1.0)
       ts-node-dev:
         specifier: ^2.0.0
         version: 2.0.0(@swc/core@1.16.22)(@types/node@22.20.5)(typescript@6.0.3)

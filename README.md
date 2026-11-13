@@ -86,6 +86,12 @@ pnpm --filter @travelbliss/api migration:up
 pnpm --filter @travelbliss/api migration:down
 ```
 
+### Testing
+
+Service tests run in Node with fakes for Redis and repositories. `apps/api/vitest.setup.ts` loads `reflect-metadata` and
+sets fixed test env values. Coverage thresholds in `apps/api/vite.config.ts` are set to the current numbers, so CI
+fails if coverage drops; raise them as tests are added.
+
 ### Docker
 
 `apps/api/infra/docker-compose.yml` reads the root `.env.local`. The API container is in the `serve` profile, so plain

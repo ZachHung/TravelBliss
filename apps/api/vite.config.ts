@@ -42,6 +42,19 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: './vitest.setup.ts',
+    coverage: {
+      enabled: true,
+      reportsDirectory: './generated/test/coverage',
+      include: ['src/**', '!src/migration/**'],
+      provider: 'v8',
+      // Today's numbers: raise them as tests are added, never lower them
+      thresholds: {
+        lines: 51,
+        branches: 45,
+        functions: 46,
+        statements: 51,
+      },
+    },
     exclude: ['dist/**', 'node_modules/**'],
   },
 });
