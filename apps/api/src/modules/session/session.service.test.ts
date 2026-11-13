@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { sign } from 'jsonwebtoken';
-import { type Context } from '../../types';
+import { type Context } from '@/types';
 import { SessionErrorCodes } from './session.exception';
 import { SessionService } from './session.service';
 

@@ -1,8 +1,8 @@
 import { AuthCheckerInterface, ResolverData } from 'type-graphql';
-import { UserRepository } from '../../modules/user/user.repository';
-import { Context } from '../../types';
-import { Inject, Injectable } from '../../types/inversify';
-import TOKEN from '../container/types.container';
+import TOKEN from '@/core/container/types.container';
+import { UserRepository } from '@/modules/user/user.repository';
+import { Context } from '@/types';
+import { Inject, Injectable } from '@/types/inversify';
 
 @Injectable()
 export class CustomAuthChecker implements AuthCheckerInterface<Context> {

@@ -1,6 +1,6 @@
 import { ApolloServer } from '@apollo/server';
 import { type Request, type Response } from 'express';
-import logger from '../config/logger';
+import logger from '@/config/logger';
 import { assignCorrelationId, formatError, loggingPlugin } from './logging';
 import { BaseException } from './shared/exception';
 

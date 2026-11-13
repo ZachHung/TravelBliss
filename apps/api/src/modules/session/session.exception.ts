@@ -1,5 +1,5 @@
-import { type BaseEntity } from '../../core/shared/entity';
-import { BaseException } from '../../core/shared/exception';
+import { type BaseEntity } from '@/core/shared/entity';
+import { BaseException } from '@/core/shared/exception';
 
 export enum SessionErrorCodes {
   INVALID_TOKEN = 'INVALID_TOKEN',

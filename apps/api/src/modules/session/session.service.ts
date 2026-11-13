@@ -2,12 +2,12 @@ import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'crypt
 import { Request, Response } from 'express';
 import { Redis } from 'ioredis';
 import { JwtPayload, sign, SignOptions, verify } from 'jsonwebtoken';
-import logger from '../../config/logger';
-import TOKEN from '../../core/container/types.container';
-import { Context } from '../../types';
-import { Inject, Injectable } from '../../types/inversify';
-import { getEnv } from '../../utils/helpers';
-import { UserService } from '../user/user.service';
+import logger from '@/config/logger';
+import TOKEN from '@/core/container/types.container';
+import { UserService } from '@/modules/user/user.service';
+import { Context } from '@/types';
+import { Inject, Injectable } from '@/types/inversify';
+import { getEnv } from '@/utils/helpers';
 import { InvalidCookiesException, InvalidTokenException } from './session.exception';
 import { AuthContext, UserTokens } from './session.type';
 

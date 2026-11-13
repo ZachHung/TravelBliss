@@ -11,6 +11,8 @@ const entries = Object.fromEntries(
 );
 
 export default defineConfig({
+  // @/ imports are resolved at build time, so dist/ keeps plain relative requires
+  resolve: { tsconfigPaths: true },
   // esbuild cannot emit decorator metadata, which type-graphql, TypeORM and inversify read.
   plugins: [
     swc.vite({

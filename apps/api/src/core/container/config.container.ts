@@ -1,10 +1,10 @@
 import { Container } from 'inversify';
 import { type DataSource } from 'typeorm';
-import { PostgresDataSource } from '../../config/data-source';
-import redisClient from '../../config/redis';
-import { SessionModule } from '../../modules/session/session.module';
-import { UserModule } from '../../modules/user/user.module';
-import { CustomAuthChecker } from '../middlewares/auth-checker.middleware';
+import { PostgresDataSource } from '@/config/data-source';
+import redisClient from '@/config/redis';
+import { CustomAuthChecker } from '@/core/middlewares/auth-checker.middleware';
+import { SessionModule } from '@/modules/session/session.module';
+import { UserModule } from '@/modules/user/user.module';
 import TOKEN from './types.container';
 
 const container = new Container({ skipBaseClassChecks: true, defaultScope: 'Singleton' });

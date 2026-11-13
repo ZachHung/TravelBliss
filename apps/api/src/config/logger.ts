@@ -1,6 +1,6 @@
 import { createLogger, format, transports } from 'winston';
 // Loads the root .env file first, so API_LOG_LEVEL and NODE_ENV are set below
-import '../utils/helpers';
+import '@/utils/helpers';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const env = (process.env.NODE_ENV ?? 'development').toUpperCase();

@@ -1,9 +1,9 @@
 import dayjs from 'dayjs';
 import { compare, hash } from 'bcrypt';
-import TOKEN from '../../core/container/types.container';
-import Service from '../../core/shared/service';
-import { Inject, Injectable } from '../../types/inversify';
-import { getEnv, mutationReturn } from '../../utils/helpers';
+import TOKEN from '@/core/container/types.container';
+import Service from '@/core/shared/service';
+import { Inject, Injectable } from '@/types/inversify';
+import { getEnv, mutationReturn } from '@/utils/helpers';
 import { User } from './user.entity';
 import { UserExistException, UserNotFoundException, WrongPassException } from './user.exception';
 import { ChangePasswordInput, LoginInput, RegisterInput } from './user.input';

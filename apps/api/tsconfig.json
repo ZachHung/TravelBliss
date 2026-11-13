@@ -13,6 +13,7 @@
     "strict": true,
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
+    "paths": { "@/*": ["./src/*"] },
     "noEmit": true
   },
   "include": ["src/**/*.ts", "vitest.setup.ts"]

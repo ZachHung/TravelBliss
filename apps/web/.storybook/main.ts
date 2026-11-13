@@ -7,7 +7,7 @@ const config: StorybookConfig = {
     enableCrashReports: false,
   },
 
-  stories: ['../src/**/*.mdx', '../src/**/*.story.@(js|jsx|ts|tsx)'],
+  stories: ['@/**/*.mdx', '@/**/*.story.@(js|jsx|ts|tsx)'],
   addons: ['@storybook/addon-docs', 'storybook-dark-mode', '@chromatic-com/storybook'],
 
   framework: {

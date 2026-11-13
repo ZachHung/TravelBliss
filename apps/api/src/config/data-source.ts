@@ -3,7 +3,7 @@ import { join } from 'path';
 import 'reflect-metadata';
 
 import { DataSource, type DataSourceOptions } from 'typeorm';
-import { getEnv } from '../utils/helpers';
+import { getEnv } from '@/utils/helpers';
 
 export const postgresConfig: DataSourceOptions = {
   type: 'postgres',

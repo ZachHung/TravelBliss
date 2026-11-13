@@ -1,4 +1,4 @@
-import { BaseException } from '../../core/shared/exception';
+import { BaseException } from '@/core/shared/exception';
 import { type User } from './user.entity';
 
 export enum UserErrorCodes {

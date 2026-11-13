@@ -1,6 +1,6 @@
 import { type ResolverData } from 'type-graphql';
-import { type UserRepository } from '../../modules/user/user.repository';
-import { type Context } from '../../types';
+import { type UserRepository } from '@/modules/user/user.repository';
+import { type Context } from '@/types';
 import { CustomAuthChecker } from './auth-checker.middleware';
 
 const check = (findOne: () => Promise<unknown>, userId?: string, roles: string[] = []) =>

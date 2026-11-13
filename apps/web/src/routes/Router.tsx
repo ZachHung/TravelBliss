@@ -1,8 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import FullscreenLoader from '@/components/FullscreenLoader/FullscreenLoader';
-import { ROUTES } from '../constants';
-import ErrorPage from '../pages/Error/Error.page';
+import { ROUTES } from '@/constants';
+import ErrorPage from '@/pages/Error/Error.page';
 
 const RootLayout = lazy(() => import('@/layouts/Root.layout'));
 const AuthProvider = lazy(() => import('@/contexts/AuthProvider'));

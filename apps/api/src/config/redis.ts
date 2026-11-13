@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { getEnv } from '../utils/helpers';
+import { getEnv } from '@/utils/helpers';
 import logger from './logger';
 
 const redisClient = new Redis(getEnv('API_REDIS_URI'));

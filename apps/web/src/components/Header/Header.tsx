@@ -1,10 +1,10 @@
 import { IconLogout, IconMoon, IconSun, IconWorld } from '@tabler/icons-react';
 import { ActionIcon, Burger, Flex, Group, useMantineColorScheme } from '@mantine/core';
+import Logo from '@/components/Logo/Logo';
+import NavLink from '@/components/NavLink/NavLink';
 import { ROUTES } from '@/constants';
 import useAuth from '@/hooks/useAuth';
 import useCurrentPath from '@/hooks/useCurrentPath';
-import Logo from '../Logo/Logo';
-import NavLink from '../NavLink/NavLink';
 
 type HeaderProps = {
   opened: boolean;

@@ -5,7 +5,9 @@ import tseslint from 'typescript-eslint';
 const restrictedTypes = Object.fromEntries(
   ['String', 'Boolean', 'Number', 'Symbol', 'Function', 'Object', '{}'].map((type) => [
     type,
-    { message: `Avoid \`${type}\`: use a primitive, a function signature, Record<string, unknown> or unknown.` },
+    {
+      message: `Avoid \`${type}\`: use a primitive, a function signature, Record<string, unknown> or unknown.`,
+    },
   ])
 );
 
@@ -58,15 +60,29 @@ export default tseslint.config(
       'max-nested-callbacks': ['error', 5],
       'max-params': ['error', 5],
       complexity: ['error', { max: 10 }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [{ group: ['../*'], message: "Import from '@/…' instead of a parent folder." }],
+        },
+      ],
     },
   },
   {
     // Makes consistent-type-imports skip decorated files: decorator metadata needs those imports at runtime.
     files: ['apps/api/**/*.ts'],
-    languageOptions: { parserOptions: { emitDecoratorMetadata: true, experimentalDecorators: true } },
+    languageOptions: {
+      parserOptions: { emitDecoratorMetadata: true, experimentalDecorators: true },
+    },
   },
   {
-    files: ['**/*.test.{ts,tsx}', '**/*.story.tsx', '**/test-utils/**', '**/*.config.ts', '**/vitest.setup.ts'],
+    files: [
+      '**/*.test.{ts,tsx}',
+      '**/*.story.tsx',
+      '**/test-utils/**',
+      '**/*.config.ts',
+      '**/vitest.setup.ts',
+    ],
     rules: {
       'max-lines': 'off',
       'max-lines-per-function': 'off',

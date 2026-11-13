@@ -1,5 +1,5 @@
 import { type Request, type Response } from 'express';
-import type { AuthContext } from '../modules/session/session.type';
+import type { AuthContext } from '@/modules/session/session.type';
 
 export interface Context {
   req: Request;

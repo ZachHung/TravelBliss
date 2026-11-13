@@ -3,8 +3,8 @@ import { type ApolloServerPlugin } from '@apollo/server';
 import { unwrapResolverError } from '@apollo/server/errors';
 import { type RequestHandler } from 'express';
 import { GraphQLError, type GraphQLFormattedError } from 'graphql';
-import logger from '../config/logger';
-import { type Context } from '../types';
+import logger from '@/config/logger';
+import { type Context } from '@/types';
 
 export const CORRELATION_HEADER = 'x-correlation-id';
 
