@@ -81,4 +81,53 @@ describe('createSessionLink', () => {
     expect(seen).toHaveLength(1);
     expect(CombinedGraphQLErrors.is(result)).toBe(true);
   });
+
+  it('lets one tab refresh at a time, so two tabs never spend the same refresh cookie', async () => {
+    // A Web Lock stand-in: callbacks for the same lock run one after another
+    let tail = Promise.resolve();
+    const locks = {
+      request: vi.fn((_name: string, run: () => Promise<unknown>) => {
+        const result = tail.then(run);
+        tail = result.then(
+          () => undefined,
+          () => undefined
+        );
+        return result;
+      }),
+    };
+    vi.stubGlobal('navigator', { ...navigator, locks });
+    let inFlight = 0;
+    let maxInFlight = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        maxInFlight = Math.max(maxInFlight, ++inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        inFlight -= 1;
+        return new Response(JSON.stringify({ data: { refreshToken: { accessToken: 'good' } } }));
+      })
+    );
+    const server = new ApolloLink(
+      (operation) =>
+        new Observable((o) => {
+          const ok = operation.getContext().headers?.authorization === 'Bearer good';
+          o.next(ok ? { data: { me: { id: '1' } } } : unauthenticated);
+          o.complete();
+        })
+    );
+    // Two tabs: each has its own session link, so its own per-tab `pending`
+    const tab = () =>
+      new ApolloClient({
+        cache: new InMemoryCache(),
+        link: createSessionLink('/gql').concat(server),
+      });
+
+    const results = await Promise.all(
+      [tab(), tab()].map((client) => client.query({ query, fetchPolicy: 'no-cache' }))
+    );
+
+    expect(maxInFlight).toBe(1);
+    expect(locks.request).toHaveBeenCalledWith('travelbliss-session-refresh', expect.any(Function));
+    expect(results.map((r) => r.data)).toEqual([{ me: { id: '1' } }, { me: { id: '1' } }]);
+  });
 });

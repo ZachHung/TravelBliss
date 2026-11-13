@@ -15,18 +15,30 @@ export const setAccessToken = (token: string | null) => {
 
 const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
 
+/**
+ * Tabs share the refresh cookie. Two tabs refreshing with it at the same moment look like token reuse to the API,
+ * which then revokes every session. A Web Lock (shared by all tabs of this origin) makes them take turns, so the
+ * second tab sends the cookie the first one just received. Without Web Locks, refresh directly.
+ */
+const oneTabAtATime = <T>(refresh: () => Promise<T>): Promise<T> =>
+  globalThis.navigator?.locks
+    ? globalThis.navigator.locks.request('travelbliss-session-refresh', refresh)
+    : refresh();
+
 /** Adds the access token to every request, and on UNAUTHENTICATED refreshes it once and retries. */
 export const createSessionLink = (uri: string | undefined) => {
-  // One shared request, so parallel failures do not each rotate the refresh cookie.
+  // One shared request per tab, so parallel failures do not each rotate the refresh cookie.
   let pending: Promise<string | null> | null = null;
 
   const refresh = () =>
-    (pending ??= fetch(uri ?? '/graphql', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ operationName: 'RefreshToken', query: REFRESH_QUERY }),
-    })
+    (pending ??= oneTabAtATime(() =>
+      fetch(uri ?? '/graphql', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ operationName: 'RefreshToken', query: REFRESH_QUERY }),
+      })
+    )
       .then(async (res) => (await res.json()).data?.refreshToken?.accessToken ?? null)
       .catch(() => null)
       .then((token: string | null) => {
