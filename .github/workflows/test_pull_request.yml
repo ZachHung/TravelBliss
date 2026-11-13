@@ -8,6 +8,10 @@ on:
     branches:
       - '**'
 
+# Every job only reads the repo; caches and artifacts use the Actions runtime token, not GITHUB_TOKEN
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
   cancel-in-progress: true
