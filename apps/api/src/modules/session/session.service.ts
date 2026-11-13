@@ -16,7 +16,7 @@ const REDIS_KEY = {
   REFRESH_TOKEN: 'refreshToken:',
 } as const;
 
-const refreshCookieName = (): string => `${getEnv('API_COOKIE_NAME')}:rf`;
+const refreshCookieName = (): string => `${getEnv('API_COOKIE_NAME')}_rf`; // ':' is not allowed in cookie names (cookie@0.7 throws)
 const refreshKey = (userId: string, token: string): string =>
   `${REDIS_KEY.REFRESH_TOKEN}${userId}:${token}`;
 

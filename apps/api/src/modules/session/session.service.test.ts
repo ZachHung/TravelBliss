@@ -62,7 +62,7 @@ describe('SessionService', () => {
     const firstRes = fakeRes();
     const first = await service.refresh(ctx(firstRes, cookies));
     expect(first.accessToken).toBeTruthy();
-    expect(Object.keys(firstRes.cookies)).toEqual(['tb:rf']);
+    expect(Object.keys(firstRes.cookies)).toEqual(['tb_rf']);
 
     // The old cookie is now a used token.
     await expect(service.refresh(ctx(fakeRes(), cookies))).rejects.toMatchObject({
