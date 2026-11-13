@@ -31,10 +31,10 @@ the containers with `pnpm dev:local:down` (data is kept).
 Env files live at the repo root, one per environment, and only `.env.example` is committed (it lists every
 variable):
 
-| File               | Used by                                                    |
-| ------------------ | ---------------------------------------------------------- |
-| `.env.local`       | `pnpm dev:local` and the compose files in `apps/api/infra` |
-| `.env.development` | `pnpm dev`, against the hosted dev environment             |
+| File               | Used by                                                  |
+| ------------------ | -------------------------------------------------------- |
+| `.env.local`       | `pnpm dev:local` and `apps/api/infra/docker-compose.yml` |
+| `.env.development` | `pnpm dev`, against the hosted dev environment           |
 
 The API loads exactly `.env.${NODE_ENV}`. Web variables start with `VITE_` (the only ones that reach the browser).
 API variables start with `API_`.
@@ -88,7 +88,8 @@ pnpm --filter @travelbliss/api migration:down
 
 ### Docker
 
-Both compose files in `apps/api/infra` read the root `.env.local`.
+`apps/api/infra/docker-compose.yml` reads the root `.env.local`. The API container is in the `serve` profile, so plain
+`up` starts only Postgres and Redis.
 
 ```sh
 pnpm --filter @travelbliss/api docker:local:up    # Postgres + Redis only (what `pnpm dev:local` uses)
