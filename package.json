@@ -20,7 +20,8 @@
     "knip": "knip",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,md,yml,yaml}\" && turbo run lint -- --fix",
     "prepare": "husky",
-    "preinstall": "npx only-allow pnpm"
+    "preinstall": "npx only-allow pnpm",
+    "e2e": "pnpm --filter @travelbliss/web e2e"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

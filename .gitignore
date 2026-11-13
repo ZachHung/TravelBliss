@@ -11,6 +11,8 @@ dist
 coverage
 generated
 storybook-static
+test-results
+playwright-report
 .vitest
 
 # Logs

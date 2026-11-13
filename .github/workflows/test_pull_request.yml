@@ -82,3 +82,50 @@ jobs:
           timeout 60 sh -c 'until docker logs api 2>&1 | grep -q "Server running"; do sleep 1; done' || { docker logs api; exit 1; }
           curl -sf localhost:8000/ -H 'content-type: application/json' -d '{"query":"{ __typename }"}' | grep -q '"Query"' \
             || { docker logs api; exit 1; }
+
+  # Drives a real browser through register / sign in / reload / sign out against `pnpm dev:local`
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter @travelbliss/web exec playwright install --with-deps chromium
+      - name: Local env for docker Postgres and Redis (CI-only values)
+        run: |
+          cat > .env.local <<'ENV'
+          VITE_GRAPHQL_URI=http://localhost:8000
+          API_PORT=8000
+          API_POSTGRES_HOST=localhost
+          API_POSTGRES_PORT=5432
+          API_POSTGRES_USER=ci
+          API_POSTGRES_PASSWORD=ci
+          API_POSTGRES_DB=travelbliss
+          API_POSTGRES_SSL=false
+          API_REDIS_PASSWORD=ci
+          API_REDIS_URI=redis://default:ci@localhost:6379
+          API_SALT_ROUND=4
+          API_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          API_SECRET_JWT=ci
+          API_JWT_EXPIRED=5m
+          API_SECRET_REFRESH=ci
+          API_REFRESH_EXPIRED=1d
+          API_COOKIE_NAME=travelBliss
+          ENV
+      - name: Run e2e
+        run: pnpm e2e
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: apps/web/test-results
+          retention-days: 7

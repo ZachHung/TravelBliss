@@ -26,5 +26,14 @@
       "@generated/*": ["./generated/*"]
     }
   },
-  "include": ["src", "test-utils", "generated", "codegen.ts", "vite.config.ts", "vitest.setup.ts"]
+  "include": [
+    "src",
+    "test-utils",
+    "generated",
+    "e2e",
+    "playwright.config.ts",
+    "codegen.ts",
+    "vite.config.ts",
+    "vitest.setup.ts"
+  ]
 }

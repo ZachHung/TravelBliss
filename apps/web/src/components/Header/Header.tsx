@@ -27,14 +27,19 @@ const Header = ({ opened, toggle }: HeaderProps) => {
           {!user && currentPath !== ROUTES.SIGN_IN && (
             <NavLink to={ROUTES.SIGN_IN} label="Sign In" active />
           )}
-          <ActionIcon variant="light" size="lg">
+          <ActionIcon variant="light" size="lg" aria-label="Language">
             <IconWorld size={20} />
           </ActionIcon>
-          <ActionIcon variant="light" size="lg" onClick={toggleColorScheme}>
+          <ActionIcon
+            variant="light"
+            size="lg"
+            onClick={toggleColorScheme}
+            aria-label="Toggle color scheme"
+          >
             {colorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
           </ActionIcon>
           {user && (
-            <ActionIcon variant="light" size="lg" onClick={signOut}>
+            <ActionIcon variant="light" size="lg" onClick={signOut} aria-label="Sign out">
               <IconLogout size={20} />
             </ActionIcon>
           )}
