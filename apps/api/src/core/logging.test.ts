@@ -24,7 +24,10 @@ const run = async (query: string, isProduction = false) => {
     plugins: [loggingPlugin],
     formatError: formatError(isProduction),
   });
-  const contextValue = { res: { locals: { correlationId: 'c-1' } }, auth: { userId: 'u1' } };
+  const contextValue = {
+    res: { locals: { correlationId: 'c-1' } },
+    auth: { user: { id: 'u1' } },
+  };
   const response = await server.executeOperation(
     { query, operationName: 'Op' },
     { contextValue: contextValue as never }

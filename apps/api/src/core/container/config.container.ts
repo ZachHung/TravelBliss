@@ -2,7 +2,6 @@ import { Container } from 'inversify';
 import { type DataSource } from 'typeorm';
 import { PostgresDataSource } from '@/config/data-source';
 import redisClient from '@/config/redis';
-import { CustomAuthChecker } from '@/core/middlewares/auth-checker.middleware';
 import { SessionModule } from '@/modules/session/session.module';
 import { UserModule } from '@/modules/user/user.module';
 import TOKEN from './types.container';
@@ -11,9 +10,6 @@ const container = new Container({ skipBaseClassChecks: true, defaultScope: 'Sing
 
 container.load(new UserModule(), new SessionModule());
 container.bind<DataSource>(TOKEN.DataSource.Postgres).toConstantValue(PostgresDataSource);
-
-// Bind Middlewares
-container.bind<CustomAuthChecker>(CustomAuthChecker).to(CustomAuthChecker).inSingletonScope();
 
 container.bind(TOKEN.Store.Redis).toConstantValue(redisClient);
 

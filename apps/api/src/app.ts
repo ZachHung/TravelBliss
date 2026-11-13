@@ -19,7 +19,7 @@ import {
   formatError,
   loggingPlugin,
 } from './core/logging';
-import { CustomAuthChecker } from './core/middlewares/auth-checker.middleware';
+import { authChecker } from './core/middlewares/auth-checker.middleware';
 import { type SessionService } from './modules/session/session.service';
 import { resolvers } from './resolvers';
 import { type Context } from './types';
@@ -34,7 +34,7 @@ export const bootstrap = async (): Promise<void> => {
     emitSchemaFile: true,
     validate: true,
     resolvers,
-    authChecker: CustomAuthChecker,
+    authChecker,
     container,
   });
 

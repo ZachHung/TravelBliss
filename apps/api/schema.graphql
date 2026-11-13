@@ -67,7 +67,6 @@ type User {
   fullName: String!
   id: String!
   lastName: String!
-  password: String
   phoneNumber: String!
   role: Role
   updatedAt: DateTimeISO!

@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import { sign } from 'jsonwebtoken';
+import { UserNotFoundException } from '@/modules/user/user.exception';
 import { type Context } from '@/types';
 import { SessionErrorCodes } from './session.exception';
 import { SessionService } from './session.service';
@@ -88,7 +89,7 @@ describe('SessionService', () => {
     const header = `Bearer ${accessToken}`;
 
     const auth = await service.authenticate(header);
-    expect(auth).toMatchObject({ userId: 'u1', token: accessToken });
+    expect(auth).toMatchObject({ user: { id: 'u1' }, token: accessToken });
 
     await service.end({ auth, req: { cookies: {} }, res: fakeRes() } as never);
 
@@ -101,6 +102,19 @@ describe('SessionService', () => {
     store.data.set(`blacklist:${accessToken}`, accessToken);
 
     expect(await service.authenticate(`Bearer ${accessToken}`)).toBeUndefined();
+  });
+
+  it('authenticate treats a deleted user as a guest, but lets a database failure through', async () => {
+    const { service, users } = setup();
+    const { accessToken } = await service.start('u1', { remember: false }, ctx(fakeRes()));
+    const header = `Bearer ${accessToken}`;
+
+    users.findById.mockRejectedValueOnce(new UserNotFoundException());
+    expect(await service.authenticate(header)).toBeUndefined();
+
+    const outage = new Error('connect ECONNREFUSED');
+    users.findById.mockRejectedValueOnce(outage);
+    await expect(service.authenticate(header)).rejects.toBe(outage);
   });
 
   it('authenticate rejects a missing, malformed or wrongly signed token', async () => {
@@ -117,7 +131,7 @@ describe('SessionService', () => {
     const { service, store } = setup();
 
     const ok = await service.end({
-      auth: { userId: 'u1', token: 'access-token', exp: dayjs().add(1, 'hour').unix() },
+      auth: { user: { id: 'u1' }, token: 'access-token', exp: dayjs().add(1, 'hour').unix() },
       req: { cookies: {} },
       res: fakeRes(),
     } as never);

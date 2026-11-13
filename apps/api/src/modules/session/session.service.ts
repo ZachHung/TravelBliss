@@ -4,6 +4,7 @@ import { Redis } from 'ioredis';
 import { JwtPayload, sign, SignOptions, verify } from 'jsonwebtoken';
 import logger from '@/config/logger';
 import TOKEN from '@/core/container/types.container';
+import { UserNotFoundException } from '@/modules/user/user.exception';
 import { UserService } from '@/modules/user/user.service';
 import { Context } from '@/types';
 import { Inject, Injectable } from '@/types/inversify';
@@ -20,7 +21,9 @@ const refreshCookieName = (): string => `${getEnv('API_COOKIE_NAME')}_rf`; // ':
 const refreshKey = (userId: string, token: string): string =>
   `${REDIS_KEY.REFRESH_TOKEN}${userId}:${token}`;
 
-const verifyToken = (token: string, secret: string): AuthContext | undefined => {
+type TokenClaims = { userId: string; token: string; exp: number };
+
+const verifyToken = (token: string, secret: string): TokenClaims | undefined => {
   if (!token) {
     return;
   }
@@ -44,7 +47,10 @@ export class SessionService {
     @Inject(TOKEN.Store.Redis) private readonly store: Redis
   ) {}
 
-  /** The signed-in user behind an `Authorization: Bearer` header, or undefined. */
+  /**
+   * The signed-in user behind an `Authorization: Bearer` header, or undefined for a guest. The one place that
+   * decides who is signed in: the user is loaded here once per request, and everything else reads the context.
+   */
   public async authenticate(authorization?: string): Promise<AuthContext | undefined> {
     if (!authorization?.startsWith('Bearer ')) {
       return;
@@ -56,7 +62,14 @@ export class SessionService {
     if (await this.store.get(REDIS_KEY.BLACK_LIST + auth.token)) {
       return;
     }
-    return auth;
+    // A deleted user's token makes a guest; any other failure (e.g. the database is down) propagates
+    const user = await this.users.findById(auth.userId).catch((error: unknown) => {
+      if (error instanceof UserNotFoundException) {
+        return undefined;
+      }
+      throw error;
+    });
+    return user && { user, token: auth.token, exp: auth.exp };
   }
 
   public async start(
@@ -102,7 +115,11 @@ export class SessionService {
   }
 
   public async end({
-    auth: { exp, token: accessToken, userId },
+    auth: {
+      exp,
+      token: accessToken,
+      user: { id: userId },
+    },
     res,
     req,
   }: Required<Context>): Promise<boolean> {
@@ -125,7 +142,7 @@ export class SessionService {
   }
 
   private async storeRefreshToken(userId: string, refreshToken: string, res: Response) {
-    const { exp } = verifyToken(refreshToken, getEnv('API_SECRET_REFRESH')) as AuthContext;
+    const { exp } = verifyToken(refreshToken, getEnv('API_SECRET_REFRESH')) as TokenClaims;
     await this.store.set(refreshKey(userId, refreshToken), refreshToken, 'EXAT', exp);
     this.setRefreshCookie(res, refreshToken);
   }

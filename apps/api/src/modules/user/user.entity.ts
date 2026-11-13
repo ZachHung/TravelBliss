@@ -30,8 +30,7 @@ export class User extends BaseEntity {
     return dayjs().diff(dayjs(this.birthday), 'year');
   }
 
-  @Authorized(Role.ADMIN)
-  @Field({ nullable: true })
+  // Never a GraphQL field: no client, admin included, may read a password hash
   @Column()
   public readonly password: string;
 

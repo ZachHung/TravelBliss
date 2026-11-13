@@ -19,9 +19,8 @@ export class UserResolver {
 
   @Authorized()
   @Query((_type) => User)
-  public async me(@Ctx() { auth: { userId } }: Required<Context>): Promise<User> {
-    const response = await this.userService.findById(userId);
-    return response;
+  public me(@Ctx() { auth: { user } }: Required<Context>): User {
+    return user;
   }
 
   @Authorized(Role.ADMIN)
@@ -58,9 +57,9 @@ export class UserResolver {
   @Mutation((_type) => User)
   public async editInfoUser(
     @Arg('input') input: EditInfoInput,
-    @Ctx() { auth: { userId } }: Required<Context>
+    @Ctx() { auth: { user } }: Required<Context>
   ): Promise<User> {
-    const response = await this.userService.editInfo(input, userId);
+    const response = await this.userService.editInfo(input, user.id);
     return response;
   }
 
@@ -68,9 +67,9 @@ export class UserResolver {
   @Mutation((_type) => User)
   public async changePasswordUser(
     @Arg('input') input: ChangePasswordInput,
-    @Ctx() { auth: { userId } }: Required<Context>
+    @Ctx() { auth: { user } }: Required<Context>
   ): Promise<User> {
-    const response = await this.userService.changePassword(input, userId);
+    const response = await this.userService.changePassword(input, user.id);
     return response;
   }
 }

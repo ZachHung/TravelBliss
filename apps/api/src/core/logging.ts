@@ -70,7 +70,7 @@ export const loggingPlugin: ApolloServerPlugin<Context> = {
         logger.log(level, operationName ?? 'anonymous operation', {
           correlationId,
           durationMs: Date.now() - startedAt,
-          userId: contextValue.auth?.userId,
+          userId: contextValue.auth?.user.id,
           outcome: errors.length
             ? errors.map((e) =>
                 isUnexpected(e) ? 'INTERNAL_SERVER_ERROR' : (e.extensions?.code ?? 'UNKNOWN')

@@ -1,36 +1,26 @@
 import { type ResolverData } from 'type-graphql';
-import { type UserRepository } from '@/modules/user/user.repository';
+import { type User } from '@/modules/user/user.entity';
 import { type Context } from '@/types';
-import { CustomAuthChecker } from './auth-checker.middleware';
+import { Role } from '@/types/enums';
+import { authChecker } from './auth-checker.middleware';
 
-const check = (findOne: () => Promise<unknown>, userId?: string, roles: string[] = []) =>
-  new CustomAuthChecker({ findOne } as unknown as UserRepository).check(
-    { context: { auth: userId ? { userId } : undefined } } as ResolverData<Context>,
+const check = (user: Partial<User> | undefined, roles: string[] = []) =>
+  authChecker(
+    { context: { auth: user && { user, token: 't', exp: 0 } } } as ResolverData<Context>,
     roles
   );
 
-describe('CustomAuthChecker', () => {
-  it('denies guests without touching the database', async () => {
-    const findOne = vi.fn();
-
-    await expect(check(findOne)).resolves.toBe(false);
-    expect(findOne).not.toHaveBeenCalled();
+describe('authChecker', () => {
+  it('denies guests', () => {
+    expect(check(undefined)).toBe(false);
   });
 
-  it('allows an existing user, and checks roles when the field requires them', async () => {
-    const findOne = async () => ({ id: 'u1', role: 'USER' });
-
-    await expect(check(findOne, 'u1')).resolves.toBe(true);
-    await expect(check(findOne, 'u1', ['ADMIN'])).resolves.toBe(false);
+  it('allows any signed-in user when the field needs no role', () => {
+    expect(check({ id: 'u1', role: Role.USER })).toBe(true);
   });
 
-  it('denies a deleted user', async () => {
-    await expect(check(async () => null, 'u1')).resolves.toBe(false);
-  });
-
-  it('lets a database failure surface instead of reporting it as access denied', async () => {
-    const outage = new Error('connect ECONNREFUSED 127.0.0.1:5432');
-
-    await expect(check(() => Promise.reject(outage), 'u1')).rejects.toBe(outage);
+  it('checks the role when the field requires one', () => {
+    expect(check({ id: 'u1', role: Role.USER }, [Role.ADMIN])).toBe(false);
+    expect(check({ id: 'a1', role: Role.ADMIN }, [Role.ADMIN])).toBe(true);
   });
 });
