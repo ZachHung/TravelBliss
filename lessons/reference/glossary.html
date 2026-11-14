@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Glossary: TravelBliss sign-in course</title>
+    <link rel="stylesheet" href="../assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course ·
+        <a href="../0001-who-are-you-and-what-may-you-do.html">Lesson 1</a> ·
+        <a href="../0002-inside-the-access-token.html">Lesson 2</a> ·
+        <a href="../0003-refresh-tokens-rotation-and-reuse.html">Lesson 3</a> ·
+        <a href="../0004-the-web-side-and-three-gaps.html">Lesson 4</a> ·
+        <a href="request-pipeline.html">Request pipeline reference</a>
+      </nav>
+      <p class="kicker">Reference</p>
+      <h1>Glossary</h1>
+      <p class="lede">
+        Every lesson uses these words exactly. Repo-wide terms also live in the root
+        <code>GLOSSARY.md</code>.
+      </p>
+
+      <table>
+        <tr>
+          <th>Term</th>
+          <th>Meaning in TravelBliss</th>
+        </tr>
+        <tr id="authentication">
+          <td><b>Authentication</b></td>
+          <td>
+            Answering <i>who are you?</i> Done once per request by
+            <code>SessionService.authenticate</code>.
+            <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html"
+              >[OWASP]</a
+            >
+          </td>
+        </tr>
+        <tr id="authorization">
+          <td><b>Authorization</b></td>
+          <td>
+            Answering <i>what may you do?</i> Done per field by <code>@Authorized</code> and the
+            <code>authChecker</code>. Always after authentication.
+          </td>
+        </tr>
+        <tr id="access-token">
+          <td><b>Access token</b></td>
+          <td>
+            The short-lived string the API issues at sign-in. The web app sends it on every request
+            as
+            <code>Authorization: Bearer &lt;token&gt;</code>.
+          </td>
+        </tr>
+        <tr id="bearer-token">
+          <td><b>Bearer token</b></td>
+          <td>
+            A token anyone holding it can use, with no further proof.
+            <a href="https://www.rfc-editor.org/rfc/rfc6750#section-1.2">[RFC 6750 §1.2]</a> The
+            access token is one.
+          </td>
+        </tr>
+        <tr id="jwt">
+          <td><b>JWT</b> (JSON Web Token)</td>
+          <td>
+            The access token's format: <code>header.payload.signature</code>, each part base64url.
+            <a href="https://www.rfc-editor.org/rfc/rfc7519#section-3">[RFC 7519 §3]</a>
+          </td>
+        </tr>
+        <tr id="claim">
+          <td><b>Claim</b></td>
+          <td>
+            One fact in the payload: <code>userId</code>, <code>iat</code> (issued at),
+            <code>exp</code> (expires). Readable by anyone.
+          </td>
+        </tr>
+        <tr id="signature">
+          <td><b>Signature</b></td>
+          <td>
+            HMAC of header + payload with the secret. Any edit, or another secret, makes it fail to
+            verify.
+          </td>
+        </tr>
+        <tr id="secret">
+          <td><b>Secret</b> (<code>API_SECRET_JWT</code>)</td>
+          <td>Key only the API holds. Needed to mint a valid token, not to read one.</td>
+        </tr>
+        <tr id="refresh-token">
+          <td><b>Refresh token</b></td>
+          <td>
+            Long-lived token whose only job is getting new access tokens. Kept in the
+            <code>travelBliss_rf</code> cookie and in Redis; only with Remember Me.
+            <a href="https://www.rfc-editor.org/rfc/rfc6749#section-1.5">[RFC 6749 §1.5]</a>
+          </td>
+        </tr>
+        <tr id="rotation">
+          <td><b>Rotation</b></td>
+          <td>Every refresh spends the refresh token and issues a new one, so each works once.</td>
+        </tr>
+        <tr id="reuse-detection">
+          <td><b>Reuse detection</b></td>
+          <td>
+            A spent refresh token presented again means a copy exists: revoke all of that user's
+            refresh tokens.
+          </td>
+        </tr>
+        <tr id="httponly">
+          <td><b>HttpOnly</b></td>
+          <td>Cookie attribute: JavaScript cannot read the cookie; the browser still sends it.</td>
+        </tr>
+        <tr id="samesite">
+          <td><b>SameSite</b></td>
+          <td>
+            Cookie attribute controlling cross-site sending: <code>Lax</code> locally,
+            <code>None</code> (+ <code>Secure</code>) in production.
+          </td>
+        </tr>
+        <tr id="use-session">
+          <td><code>useSession()</code></td>
+          <td>
+            The web app's only view of the session:
+            <code>{ user, signIn, signOut, isSigningIn }</code>.
+          </td>
+        </tr>
+        <tr id="session-link">
+          <td><b>Session link</b></td>
+          <td>
+            <code>createSessionLink</code>: adds the Bearer header to every request and, on
+            <code>UNAUTHENTICATED</code>, refreshes once and resends.
+          </td>
+        </tr>
+        <tr id="blacklist">
+          <td><b>Blacklist</b></td>
+          <td>
+            Redis keys <code>blacklist:&lt;access token&gt;</code> written at sign-out, so that
+            token makes a guest until it expires.
+          </td>
+        </tr>
+        <tr id="valid-from">
+          <td><b>Valid-from</b></td>
+          <td>
+            Per-user time in Redis before which every token of that user is revoked; set on password
+            change (#115).
+          </td>
+        </tr>
+        <tr id="idle-timeout">
+          <td><b>Idle timeout</b></td>
+          <td>
+            A remembered session ends 30 days after its last refresh
+            (<code>API_REFRESH_EXPIRED</code>).
+          </td>
+        </tr>
+        <tr id="absolute-timeout">
+          <td><b>Absolute timeout</b></td>
+          <td>
+            No session outlives 90 days from sign-in (<code>API_SESSION_MAX_AGE</code>, via
+            <code>auth_time</code>; #116).
+          </td>
+        </tr>
+        <tr id="signed-in-user">
+          <td><b>Signed-in user</b></td>
+          <td>
+            The <code>User</code> a request acts as: <code>ctx.auth.user</code> on the API,
+            <code>useSession().user</code> on the web.
+          </td>
+        </tr>
+        <tr id="guest">
+          <td><b>Guest</b></td>
+          <td>A caller with no valid session: <code>ctx.auth</code> is <code>undefined</code>.</td>
+        </tr>
+        <tr id="role">
+          <td><b>Role</b></td>
+          <td>
+            <code>USER</code> or <code>ADMIN</code>, stored on the user. Only checked when a
+            decorator lists roles.
+          </td>
+        </tr>
+        <tr id="context">
+          <td><b>Context</b> (<code>ctx</code>)</td>
+          <td>
+            Per-request object every resolver receives: <code>{ req, res, auth }</code>. Built
+            before any field runs.
+          </td>
+        </tr>
+        <tr id="authorized">
+          <td><code>@Authorized</code></td>
+          <td>
+            type-graphql decorator that guards a field. Empty means any signed-in user; with roles,
+            one of those roles.
+          </td>
+        </tr>
+        <tr id="auth-checker">
+          <td><code>authChecker</code></td>
+          <td>
+            Our function type-graphql calls for each guarded field. Returns true or false; never
+            touches the database.
+          </td>
+        </tr>
+        <tr id="unauthenticated">
+          <td><code>UNAUTHENTICATED</code></td>
+          <td>Error code for a guest on any guarded field: we don't know who you are.</td>
+        </tr>
+        <tr id="unauthorized">
+          <td><code>UNAUTHORIZED</code></td>
+          <td>
+            Error code for a known caller missing the role a field requires. (Before #115 also sent
+            to guests on role-gated fields.)
+          </td>
+        </tr>
+      </table>
+    </main>
+  </body>
+</html>

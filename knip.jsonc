@@ -12,6 +12,8 @@
       "ignoreDependencies": ["@graphql-typed-document-node/core"],
     },
   },
+  // The teaching course: static HTML pages that load their scripts with <script> tags
+  "ignore": ["lessons/**"],
   // System tools used by `pnpm dev:stop`
   "ignoreBinaries": ["pkill"],
 }

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web session: TravelBliss sign-in course</title>
+    <link rel="stylesheet" href="../assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course ·
+        <a href="../0004-the-web-side-and-three-gaps.html">Lesson 4</a> ·
+        <a href="glossary.html">Glossary</a> · <a href="refresh-token.html">Refresh token</a>
+      </nav>
+      <p class="kicker">Reference</p>
+      <h1>The web session</h1>
+
+      <pre><code>const { user, signIn, signOut, isSigningIn } = useSession();   // all the app sees
+link: from([createSessionLink(uri), errorLink, httpLink])         // App.tsx</code></pre>
+
+      <h2>createSessionLink</h2>
+      <table>
+        <tr>
+          <th>Step</th>
+          <th>Rule</th>
+        </tr>
+        <tr>
+          <td>Attach</td>
+          <td><code>Authorization: Bearer &lt;in-memory token&gt;</code> when there is one</td>
+        </tr>
+        <tr>
+          <td>Retry</td>
+          <td>
+            on <code>UNAUTHENTICATED</code> only → refresh → resend once (<code>retried</code>)
+          </td>
+        </tr>
+        <tr>
+          <td>Never</td>
+          <td>retry <code>RefreshToken</code> itself; retry an operation twice</td>
+        </tr>
+        <tr>
+          <td>Dedupe</td>
+          <td>one <code>pending</code> refresh per <b>page</b> (tab); others await it</td>
+        </tr>
+      </table>
+
+      <h2>Reload</h2>
+      <p>
+        token <code>null</code> → <code>GetMe</code> → <code>UNAUTHENTICATED</code> → refresh with
+        cookie → retry → user. <code>SessionProvider</code> shows the loader until this settles;
+        then the guards run.
+      </p>
+      <table>
+        <tr>
+          <th>Guard</th>
+          <th>No user</th>
+          <th>User</th>
+        </tr>
+        <tr>
+          <td><code>ProtectedRoute</code></td>
+          <td>→ <code>/sign-in</code>, <code>state.from</code> = here</td>
+          <td>render</td>
+        </tr>
+        <tr>
+          <td><code>PublicRoute</code></td>
+          <td>render</td>
+          <td>→ <code>state.from</code> or <code>/</code></td>
+        </tr>
+      </table>
+
+      <h2>Sign-out</h2>
+      <p>
+        Client: <code>logout</code> mutation, <code>setAccessToken(null)</code>,
+        <code>isSignedOut</code>. Server (<code>end</code>): blacklist this access token until
+        <code>exp</code>, delete <b>this device's</b> refresh key, clear cookie.
+      </p>
+
+      <h2>Gaps found in lesson 4 (fixed in #115)</h2>
+      <table>
+        <tr>
+          <th>Gap</th>
+          <th>Symptom</th>
+        </tr>
+        <tr>
+          <td>A</td>
+          <td>Password change ended no other session → now ends all others (valid-from).</td>
+        </tr>
+        <tr>
+          <td>B</td>
+          <td>Two tabs refreshing together looked like reuse → now take turns (Web Lock).</td>
+        </tr>
+        <tr>
+          <td>C</td>
+          <td>
+            Guest on a role-gated field got <code>UNAUTHORIZED</code> → no refresh; now
+            <code>UNAUTHENTICATED</code>.
+          </td>
+        </tr>
+        <tr>
+          <td>(hardening)</td>
+          <td>
+            Blacklist keyed on the raw token; not exploitable with <code>jsonwebtoken</code> today,
+            <code>jti</code> is sturdier.
+          </td>
+        </tr>
+      </table>
+    </main>
+  </body>
+</html>

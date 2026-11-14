@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lesson 3: Staying signed in: refresh tokens, rotation and reuse</title>
+    <link rel="stylesheet" href="assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        TravelBliss sign-in course · <a href="0001-who-are-you-and-what-may-you-do.html">1</a> ·
+        <a href="0002-inside-the-access-token.html">2</a> ·
+        <a href="reference/glossary.html">Glossary</a> ·
+        <a href="reference/refresh-token.html">Refresh token reference</a>
+      </nav>
+
+      <p class="kicker">Lesson 3 · about 30 minutes · API side</p>
+      <h1>Staying signed in: refresh tokens, rotation and reuse</h1>
+      <p class="lede">
+        The access token dies after five minutes, yet you stay signed in for weeks. By the end of
+        this lesson you will trace a refresh through the API line by line, and predict what happens
+        when someone steals the refresh cookie.
+        <span id="quiz-score"></span>
+      </p>
+
+      <h2>Warm-up, from memory</h2>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Same idea as lesson 2's question 2, in a new form. The signature was computed over the original payload, including the old <code>exp</code>. Change any byte and <code>verify</code> reports <code>invalid signature</code>: the caller is a guest. Only someone with <code>API_SECRET_JWT</code> could sign the new <code>exp</code>."
+      >
+        <legend>
+          1. To keep a token alive forever, someone decodes the payload, changes <code>exp</code> to
+          the year 2100, re-encodes it, and keeps the old signature. What does the API do?
+        </legend>
+        <label><input type="radio" name="w1" value="a" /> Accepts it until 2100</label>
+        <label><input type="radio" name="w1" value="b" /> Treats them as guest</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Stop 1 of the pipeline: <code>SessionService.authenticate</code> turns the Bearer header into <code>ctx.auth</code> once per request; the auth checker at stop 2 only reads it."
+      >
+        <legend>2. Where does a guarded field get the signed-in user from?</legend>
+        <label><input type="radio" name="w2" value="a" /> ctx.auth, set by authenticate</label>
+        <label><input type="radio" name="w2" value="b" /> The token, decoded per field</label>
+      </fieldset>
+
+      <h2>Part 1 · Why two tokens</h2>
+      <p>
+        From lesson 1: whoever holds a bearer token can use it.
+        <a href="https://www.rfc-editor.org/rfc/rfc6750#section-1.2">[RFC 6750 §1.2]</a> If an
+        access token leaks, it works for the thief until its <code>exp</code>. So TravelBliss keeps
+        it short: five minutes (<code>API_JWT_EXPIRED</code>). But signing in every five minutes
+        would be unbearable.
+      </p>
+      <p>
+        The fix is a second token with one narrow job. In OAuth's words, “refresh tokens are
+        credentials used to obtain access tokens”, used “when the current access token becomes
+        invalid or expires”, and, unlike access tokens, “never sent to resource servers.”
+        <a href="https://www.rfc-editor.org/rfc/rfc6749#section-1.5">[RFC 6749 §1.5]</a>
+      </p>
+      <table>
+        <tr>
+          <th></th>
+          <th>Access token</th>
+          <th>Refresh token</th>
+        </tr>
+        <tr>
+          <td>Lifetime</td>
+          <td>5 minutes</td>
+          <td>
+            30 days idle (<code>API_REFRESH_EXPIRED</code>), at most 90 days from sign-in
+            (<code>API_SESSION_MAX_AGE</code>); see Part 3
+          </td>
+        </tr>
+        <tr>
+          <td>Signed with</td>
+          <td><code>API_SECRET_JWT</code></td>
+          <td><code>API_SECRET_REFRESH</code>: a different secret</td>
+        </tr>
+        <tr>
+          <td>Kept by the browser in</td>
+          <td>page memory</td>
+          <td>an <code>HttpOnly</code> cookie, <code>travelBliss_rf</code></td>
+        </tr>
+        <tr>
+          <td>Sent</td>
+          <td>with every request, as <code>Authorization: Bearer</code></td>
+          <td>automatically with requests to the API; only refresh and sign-out read it</td>
+        </tr>
+        <tr>
+          <td>Also recorded in</td>
+          <td>nowhere (until sign-out)</td>
+          <td>Redis: <code>refreshToken:&lt;userId&gt;:&lt;token&gt;</code></td>
+        </tr>
+      </table>
+      <span class="note"
+        >Two secrets mean the tokens cannot stand in for each other: verifying a refresh token with
+        <code>API_SECRET_JWT</code> fails with <code>invalid signature</code>, exactly as in lesson
+        2.</span
+      >
+
+      <h2>Part 2 · Signing in with “Remember Me”</h2>
+      <p>
+        The sign-in form's <b>Remember Me</b> box becomes <code>hasRefresh</code> in the
+        <code>login</code> mutation, then <code>remember</code> in
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L75-L92"
+          ><code>SessionService.start</code></a
+        >:
+      </p>
+      <pre><code>const { accessToken, refreshToken } = this.createTokens(userId);
+if (remember) {
+  await this.storeRefreshToken(userId, refreshToken, res);
+}
+return { accessToken };</code></pre>
+      <p>
+        Both tokens are always minted, but the refresh token only <em>leaves</em> the server when
+        you tick the box.
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L144-L148"
+          ><code>storeRefreshToken</code></a
+        >
+        does two things:
+      </p>
+      <ol>
+        <li>
+          writes Redis key <code>refreshToken:&lt;userId&gt;:&lt;token&gt;</code>, set to expire at
+          the token's own <code>exp</code> (<code>EXAT exp</code>): Redis forgets it exactly when it
+          would stop verifying anyway;
+        </li>
+        <li>sets the cookie (Part 3).</li>
+      </ol>
+      <div class="callout">
+        <b>Without Remember Me</b> there is no cookie and no Redis key. You hold only a five-minute
+        access token in page memory. Reload the page, or wait five minutes, and the session is gone.
+        Lesson 4 shows what the web app does at that moment.
+      </div>
+
+      <h2>Part 3 · The cookie</h2>
+      <p>
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L163-L170"
+          ><code>setRefreshCookie</code></a
+        >:
+      </p>
+      <pre><code>res.cookie(`${API_COOKIE_NAME}_rf`, this.aesEncrypt(refreshToken), {
+  expires: new Date(exp * 1000),         // the token's own exp (since #116; was maxAge: 30 days)
+  httpOnly: true,
+  sameSite: production ? 'none' : 'lax',
+  secure: production,
+});</code></pre>
+      <p>Each attribute is a defence. MDN, for the browser's side of each:</p>
+      <ul>
+        <li>
+          <b><code>httpOnly</code></b
+          >: “forbids JavaScript from accessing the cookie”, which “mitigates attacks against
+          cross-site scripting.” The web app's own code cannot read it, so neither can a script
+          injected into the page.
+          <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie"
+            >[MDN]</a
+          >
+        </li>
+        <li>
+          <b><code>secure</code></b> (production): sent “only when a request is made with the https:
+          scheme (except on localhost).”
+        </li>
+        <li>
+          <b><code>sameSite</code></b
+          >: <code>lax</code> locally; <code>none</code> in production, where the web app and API
+          may sit on different sites. MDN: with <code>None</code> “the Secure attribute must also be
+          set”, which is why the two flip together.
+        </li>
+        <li>
+          <b><code>expires</code></b
+          >: the moment the browser deletes the cookie. It is the refresh token's <code>exp</code>,
+          the same moment its Redis key expires: one lifetime, three places.
+        </li>
+      </ul>
+      <div class="callout">
+        <b
+          >Which limit wins? (Fixed in
+          <a href="https://github.com/ZachHung/TravelBliss/pull/116">#116</a>.)</b
+        >
+        The cookie used to have its own <code>maxAge</code> of 30 days while the token inside was
+        signed for 6 months. The browser deleted the cookie first, so honest users got 30 days, but
+        a cookie <em>value</em> copied by an attacker is not bound by your browser's
+        <code>maxAge</code>: the server accepted it for the full 6 months. Now there is one
+        lifetime: the cookie, the token and its Redis key expire together, at the earlier of
+        <b>30 days</b> after the last refresh (idle timeout) and <b>90 days</b> after you signed in
+        (absolute timeout). The token carries the sign-in time as <code>auth_time</code> (<a
+          href="https://openid.net/specs/openid-connect-core-1_0.html#IDToken"
+          >OpenID Connect Core §2</a
+        >) through every rotation, so refreshing cannot extend a session past that cap. OWASP: an
+        absolute timeout “limits the amount of time an attacker can use a hijacked session.”
+        <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+          >[OWASP]</a
+        >
+      </div>
+      <h3>Why encrypt a cookie JavaScript cannot read?</h3>
+      <p>
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L192-L201"
+          ><code>aesEncrypt</code></a
+        >
+        wraps the refresh token in AES-256 with <code>API_ENCRYPTION_KEY</code> before it becomes
+        the cookie value. Lesson 2 showed a JWT's payload is readable by anyone who sees it;
+        encryption means a cookie that leaks into a log or a proxy shows nothing useful. And
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L172-L182"
+          ><code>readCookie</code></a
+        >
+        treats a value that will not decrypt as no cookie at all.
+      </p>
+
+      <h2>Part 4 · A refresh, line by line</h2>
+      <p>
+        When the access token expires, the web app calls the <code>refreshToken</code> mutation
+        (lesson 4 covers who calls it, and when). The browser attaches the cookie by itself.
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L94-L115"
+          ><code>SessionService.refresh</code></a
+        >:
+      </p>
+      <ol>
+        <li>
+          <b>Read the cookie</b> and decrypt it. Missing or undecryptable →
+          <code>INVALID_COOKIES</code>.
+        </li>
+        <li>
+          <b>Verify</b> the token with <code>API_SECRET_REFRESH</code>. Forged or expired →
+          <code>INVALID_TOKEN</code>.
+        </li>
+        <li><b>Load the user</b>: a deleted user cannot refresh.</li>
+        <li>
+          <b>Delete its Redis key</b>, atomically:
+          <code>const used = await this.store.del(key)</code>. Redis returns how many keys it
+          removed, so only the first request with this token ever sees <code>1</code>.
+        </li>
+        <li>
+          <code>used</code> is 1 → <b>rotate</b>: mint a new access token and a new refresh token,
+          store the new one, set the new cookie.
+        </li>
+        <li>
+          <code>used</code> is 0 → <b>reuse</b>: this token was already spent. Delete every
+          <code>refreshToken:&lt;userId&gt;:*</code> key and fail with <code>INVALID_TOKEN</code>.
+        </li>
+      </ol>
+      <p>
+        Step 5 is <b>rotation</b>, as the OAuth security guidance recommends: “the authorization
+        server issues a new refresh token with every access token refresh response”, and the old one
+        is invalidated.
+        <a href="https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14.2">[RFC 9700 §4.14.2]</a>
+        Every refresh token works exactly once.
+      </p>
+
+      <h2>Part 5 · Reuse detection: catching a stolen cookie</h2>
+      <p>
+        Suppose an attacker copies your cookie. Now two parties hold the same refresh token, and
+        only one can spend it. Whoever presents it second finds its key already gone. The server
+        cannot tell who is who: RFC 9700 notes that it “cannot determine which party submitted the
+        invalid refresh token”, so it revokes the active one. TravelBliss goes further and deletes
+        all of that user's refresh tokens, ending every remembered session, the attacker's included.
+      </p>
+
+      <h3>Predict, then play</h3>
+      <p>
+        For each scenario, decide what the <b>last</b> click does <em>before</em> making it. Use
+        <b>Reset</b> between scenarios.
+      </p>
+      <ol>
+        <li>Sign in · refresh · refresh.</li>
+        <li>Sign in · attacker steals · attacker refreshes · <b>you</b> refresh.</li>
+        <li>…continue scenario 2: <b>attacker</b> refreshes again.</li>
+        <li>Sign in · attacker steals · <b>you</b> refresh · attacker refreshes.</li>
+        <li>Sign in · attacker steals · you sign out · attacker refreshes.</li>
+      </ol>
+      <div class="session-sim"></div>
+      <p>
+        The simulator runs the same rules as
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts"
+          ><code>session.service.ts</code></a
+        >
+        (<a href="assets/session-sim.js">its source</a>), minus expiry and signatures.
+      </p>
+      <span class="note"
+        >Compare scenarios 2 and 4: the order only changes who sees the error first. Either way the
+        second refresh trips the alarm and every remembered session ends, yours included: rotation
+        cannot tell the thief from you, so it stops both.</span
+      >
+
+      <h2>Part 6 · Signing out, briefly</h2>
+      <p>
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/ad727f6/apps/api/src/modules/session/session.service.ts#L117-L142"
+          ><code>SessionService.end</code></a
+        >
+        undoes all of the above: it puts the access token on a Redis blacklist until its
+        <code>exp</code> (that is why, in lesson 1, a signed-out token made you a guest), deletes
+        the refresh token's key, and clears the cookie. Lesson 4 picks this up, including a weakness
+        in how that blacklist is keyed.
+      </p>
+
+      <h2>Practice</h2>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="A bearer token works for whoever holds it until <code>exp</code>. Short life limits what a leaked one is worth."
+      >
+        <legend>1. Why does the access token only live five minutes?</legend>
+        <label><input type="radio" name="p1" value="a" /> Signing it takes too long</label>
+        <label><input type="radio" name="p1" value="b" /> A stolen one expires quickly</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="<code>httpOnly: true</code>: JavaScript, including any injected script, cannot read it. The browser still sends it with requests to the API."
+      >
+        <legend>2. Can the web app's JavaScript read <code>travelBliss_rf</code>?</legend>
+        <label><input type="radio" name="p2" value="a" /> No, HttpOnly blocks it</label>
+        <label
+          ><input type="radio" name="p2" value="b" /> Yes, using document.cookie directly</label
+        >
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="Without Remember Me, <code>start</code> never stores a refresh token or sets the cookie. When the access token expires, there is nothing to refresh with: <code>INVALID_COOKIES</code>, and you are signed out."
+      >
+        <legend>
+          3. You sign in <b>without</b> Remember Me and stay on the page for ten minutes.
+        </legend>
+        <label><input type="radio" name="p3" value="a" /> Refreshed silently in background</label>
+        <label><input type="radio" name="p3" value="b" /> Signed out: no refresh cookie</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Rotation: the old key is deleted (step 4) and only the new token's key is written (step 5)."
+      >
+        <legend>4. After one successful refresh, which of your Redis keys exist?</legend>
+        <label><input type="radio" name="p4" value="a" /> Only the new token's key</label>
+        <label><input type="radio" name="p4" value="b" /> Both old and new keys</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="The attacker spent the token first, so its key is gone. Your request finds <code>used = 0</code>: reuse, every refresh token of yours is deleted, INVALID_TOKEN."
+      >
+        <legend>5. An attacker refreshes with your stolen cookie, then you refresh.</legend>
+        <label><input type="radio" name="p5" value="a" /> Accepted, with a new token</label>
+        <label><input type="radio" name="p5" value="b" /> Rejected, and every token revoked</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Reuse detection deleted every <code>refreshToken:&lt;userId&gt;:*</code> key, including the one the attacker just received. Their next refresh finds nothing: reuse again."
+      >
+        <legend>6. Continuing: the attacker now refreshes with the new token they received.</legend>
+        <label><input type="radio" name="p6" value="a" /> Rejected: its key was revoked</label>
+        <label><input type="radio" name="p6" value="b" /> Accepted: it was never used</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="The idle timeout: a refresh token lives 30 days after its last refresh. Forty-five quiet days later the token, its cookie and its Redis key have all expired. (Before #116 the cookie expired after 30 days while the token itself lived 6 months.)"
+      >
+        <legend>7. You ticked Remember Me, then come back after 45 days.</legend>
+        <label><input type="radio" name="p7" value="a" /> Signed in: token still valid</label>
+        <label><input type="radio" name="p7" value="b" /> Signed out: session went idle</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Each refresh keeps the original <code>auth_time</code>, and every new token's <code>exp</code> is capped at sign-in + 90 days. Daily use keeps the idle timeout away, but not the absolute one."
+      >
+        <legend>7b. You tick Remember Me and use the app every single day for 100 days.</legend>
+        <label><input type="radio" name="p7b" value="a" /> Signed out at day 90</label>
+        <label><input type="radio" name="p7b" value="b" /> Stays signed in for good</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Access and refresh tokens are signed with different secrets. Verifying one as the other fails with <code>invalid signature</code>, the same check as lesson 2."
+      >
+        <legend>8. Why can't an access token be used as a refresh token?</legend>
+        <label><input type="radio" name="p8" value="a" /> Different secrets sign each one</label>
+        <label><input type="radio" name="p8" value="b" /> Access tokens lack a userId</label>
+      </fieldset>
+
+      <fieldset
+        class="quiz"
+        data-answer="del"
+        data-why="Redis <code>DEL</code> is atomic and returns how many keys it removed, so exactly one request per token sees 1. Check-then-delete (GET, then DEL) would let two simultaneous requests both pass."
+      >
+        <legend>
+          9. Which single Redis command makes each refresh token usable only once? (one word)
+        </legend>
+        <label><input type="text" aria-label="Redis command" /></label>
+      </fieldset>
+
+      <div class="source">
+        <p>
+          <b>Read next:</b> section 4.14 of
+          <a href="https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14"
+            >RFC 9700, OAuth 2.0 Security Best Current Practice</a
+          >, on refresh token protection: rotation, and why it exists. Then the attribute list in
+          <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie"
+            >MDN's Set-Cookie</a
+          >.
+        </p>
+        <p>
+          <b>Stuck, or curious?</b> Ask me anything: why not keep the refresh token in
+          <code>localStorage</code>, what happens if two tabs refresh at the same moment, how you
+          would shorten “Remember Me” to a week.
+        </p>
+        <p>
+          <b>Next:</b> <a href="0004-the-web-side-and-three-gaps.html">lesson 4</a>, the web side:
+          how <code>useSession</code> and the session link decide when to refresh, what sign-out
+          really clears, and how the route guards produced (and lost) today's reload flash.
+        </p>
+      </div>
+    </main>
+    <script src="assets/quiz.js"></script>
+    <script src="assets/session-sim.js"></script>
+  </body>
+</html>
