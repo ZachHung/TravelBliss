@@ -1,4 +1,6 @@
-import { render, screen } from '@test-utils';
+import { render, screen, userEvent } from '@test-utils';
+import { waitFor } from '@testing-library/react';
+import { SET_PASSWORD } from '@/graphql/mutations/linkedSignIn';
 import { LINKED_SIGN_IN_PROVIDERS, SIGN_IN_METHODS } from '@/graphql/queries/linkedSignIn';
 import AccountPage from './Account.page';
 
@@ -42,5 +44,28 @@ describe('Account page', () => {
 
     expect(await screen.findByRole('button', { name: 'Disconnect Google' })).toBeEnabled();
     expect(screen.queryByRole('heading', { name: 'Set a password' })).not.toBeInTheDocument();
+  });
+
+  it('hides the set-password form and allows disconnecting once the password is set', async () => {
+    const password = 'x'.repeat(10);
+    render(<AccountPage />, {
+      route: '/account',
+      mocks: [
+        ...mocks({ hasPassword: false, linkedSignIns: [{ id: 'l1', provider: 'GOOGLE' }] }),
+        {
+          request: { query: SET_PASSWORD, variables: { input: { password } } },
+          result: { data: { setPassword: { __typename: 'User', id: 'u1', hasPassword: true } } },
+        },
+      ],
+    });
+
+    await userEvent.type(await screen.findByLabelText(/new password/i), password);
+    await userEvent.type(screen.getByLabelText(/confirm password/i), password);
+    await userEvent.click(screen.getByRole('button', { name: 'Set password' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: 'Set a password' })).not.toBeInTheDocument()
+    );
+    expect(screen.getByRole('button', { name: 'Disconnect Google' })).toBeEnabled();
   });
 });

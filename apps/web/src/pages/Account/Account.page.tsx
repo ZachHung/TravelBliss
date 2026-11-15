@@ -171,7 +171,9 @@ const SetPasswordForm = () => {
 };
 
 const AccountPage = () => {
-  const me = useQuery(SIGN_IN_METHODS).data?.me;
+  // Not the app's default no-cache: setPassword and disconnectLinkedSignIn return this user, and the page updates from
+  // the cache they write
+  const me = useQuery(SIGN_IN_METHODS, { fetchPolicy: 'cache-and-network' }).data?.me;
 
   return (
     <Container size="xs" py="xl">
