@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { randomBytes } from 'crypto';
 import { compare, hash } from 'bcrypt';
+import { Raw, type EntityManager } from 'typeorm';
 import TOKEN from '@/core/container/types.container';
 import Service from '@/core/shared/service';
 import { Inject, Injectable } from '@/types/inversify';
@@ -27,8 +28,11 @@ export class UserService implements Service<User> {
     return user;
   }
 
+  /** Case-insensitive: providers and people type the same address in different cases. */
   public async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOneBy({ email });
+    return this.userRepository.findOneBy({
+      email: Raw((column) => `LOWER(${column}) = LOWER(:email)`, { email }),
+    });
   }
 
   public async register(input: RegisterInput): Promise<User> {
@@ -113,18 +117,16 @@ export class UserService implements Service<User> {
   }
 
   /** A user with no password, phone or birthday, as a linked sign-in creates one. */
-  public async createWithoutPassword({
-    fullName,
-    email,
-  }: {
-    fullName: string;
-    email: string | null;
-  }): Promise<User> {
+  /** Pass `manager` to create the user inside the caller's transaction. */
+  public async createWithoutPassword(
+    { fullName, email }: { fullName: string; email: string | null },
+    manager?: EntityManager
+  ): Promise<User> {
     // Usernames are unique and the provider has none: a readable stem plus a random suffix
     const stem =
       (email?.split('@')[0] ?? fullName).toLowerCase().replace(/[^a-z0-9]+/g, '') || 'user';
     try {
-      return await this.userRepository.save({
+      return await (manager?.getRepository(User) ?? this.userRepository).save({
         fullName,
         email,
         username: `${stem}${randomBytes(3).toString('hex')}`,

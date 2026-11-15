@@ -25,13 +25,13 @@ test.beforeAll(async ({ request }) => {
 });
 
 /** Through the Dev provider's consent page and back, as a provider redirect would go. */
-const continueWithDev = async (page: Page) => {
+const continueWithDev = async (page: Page, email = profile.email) => {
   await page.goto('/sign-in');
   await page.getByRole('button', { name: 'Continue with Dev test user' }).click();
   await expect(page.getByRole('heading', { name: 'Dev sign-in' })).toBeVisible();
   await page.getByLabel('Provider user id').fill(profile.providerUserId);
   await page.getByLabel('Full name').fill(profile.fullName);
-  await page.getByLabel(/^Email/).fill(profile.email);
+  await page.getByLabel(/^Email/).fill(email);
   await page.getByRole('button', { name: 'Continue' }).click();
 };
 
@@ -61,7 +61,8 @@ test('sign in through a provider, set a password, disconnect, and be refused by 
 
   await test.step('signed out, the same provider account is refused: its email now belongs to a user', async () => {
     await page.getByRole('button', { name: 'Sign out' }).click();
-    await continueWithDev(page);
+    // Upper case: the provider may report the address in a different case than the user has
+    await continueWithDev(page, profile.email.toUpperCase());
     await expect(page).toHaveURL(/\/sign-in\?error=EMAIL_TAKEN_SIGN_IN_TO_LINK$/);
     await expect(page.getByText(/an account with this email already exists/i)).toBeVisible();
   });

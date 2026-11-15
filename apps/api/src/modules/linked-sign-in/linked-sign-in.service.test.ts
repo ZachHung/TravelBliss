@@ -21,6 +21,25 @@ const setup = () => {
   const users: Partial<User>[] = [{ id: 'u-pass', email: 'taken@example.com', password: 'hash' }];
   const links: Partial<LinkedSignIn>[] = [];
   const store = new Map<string, string>();
+  // A transaction keeps its writes apart and applies them only when the callback succeeds, as Postgres would
+  type Tx = { users: Partial<User>[]; links: Partial<LinkedSignIn>[] };
+  const failNextLink = { value: false };
+  const transaction = async <T>(work: (manager: unknown) => Promise<T>) => {
+    const tx: Tx = { users: [], links: [] };
+    const manager = {
+      tx,
+      insert: async (_entity: unknown, row: Partial<LinkedSignIn>) => {
+        if (failNextLink.value) {
+          throw new Error('insert failed');
+        }
+        tx.links.push({ id: `l${links.length}`, ...row });
+      },
+    };
+    const result = await work(manager);
+    users.push(...tx.users);
+    links.push(...tx.links);
+    return result;
+  };
   const matches = (where: object) => (row: object) =>
     Object.entries(where).every(([key, value]) => row[key as keyof typeof row] === value);
   const service = new LinkedSignInService(
@@ -30,13 +49,14 @@ const setup = () => {
       findOneBy: async (where: object) => links.find(matches(where)) ?? null,
       insert: async (row: Partial<LinkedSignIn>) => links.push({ id: `l${links.length}`, ...row }),
       delete: async (where: object) => links.splice(links.findIndex(matches(where)), 1),
+      manager: { transaction },
     } as never,
     {
       findById: async (id: string) => users.find((user) => user.id === id),
       findByEmail: async (email: string) => users.find((user) => user.email === email) ?? null,
-      createWithoutPassword: async (profile: ProviderProfile) => {
+      createWithoutPassword: async (profile: ProviderProfile, manager?: { tx: Tx }) => {
         const user = { id: `u${users.length}`, email: profile.email, password: null };
-        users.push(user);
+        (manager?.tx.users ?? users).push(user);
         return user;
       },
     } as never,
@@ -52,7 +72,7 @@ const setup = () => {
   );
   const sessions = (service as unknown as { sessions: { start: ReturnType<typeof vi.fn> } })
     .sessions;
-  return { service, users, links, sessions };
+  return { service, users, links, sessions, store, failNextLink };
 };
 
 // A browser: keeps the state cookie from start and sends it back on the callback
@@ -141,6 +161,25 @@ describe('LinkedSignInService', () => {
       connecting: false,
       error: ErrorCode.LINKED_SIGN_IN_FAILED,
     });
+  });
+
+  it('creates no user when linking it fails: both happen in one transaction', async () => {
+    const { service, users, failNextLink } = setup();
+    failNextLink.value = true;
+
+    await expect(signIn(service, code())).rejects.toThrow('insert failed');
+    expect(users).toHaveLength(1);
+  });
+
+  it('sends a failed connect back to the account page, even when its flow is gone', async () => {
+    const { service, store } = setup();
+
+    const expired = await signIn(service, code(), 'u-pass', (state) => {
+      store.clear();
+      return state;
+    });
+
+    expect(expired.result).toEqual({ connecting: true, error: ErrorCode.LINKED_SIGN_IN_FAILED });
   });
 
   it('keeps the last way to sign in', async () => {

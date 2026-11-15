@@ -17,7 +17,7 @@ import { UserService } from '@/modules/user/user.service';
 import { type Context } from '@/types';
 import { Inject, Injectable } from '@/types/inversify';
 import { getEnv } from '@/utils/helpers';
-import { type LinkedSignIn } from './linked-sign-in.entity';
+import { LinkedSignIn } from './linked-sign-in.entity';
 import {
   EmailTakenSignInToLinkException,
   LastSignInMethodException,
@@ -93,7 +93,8 @@ export class LinkedSignInService {
     const codeVerifier = generateCodeVerifier();
     const flow: Flow = { provider: name, codeVerifier, userId };
     await this.store.set(flowKey(state), JSON.stringify(flow), 'EX', FLOW_TTL_SECONDS);
-    res.cookie(stateCookieName(), state, {
+    // The mode rides along, so a callback whose flow is gone still knows which page to return to
+    res.cookie(stateCookieName(), `${userId ? 'connect' : 'sign-in'}:${state}`, {
       path: stateCookiePath,
       maxAge: FLOW_TTL_SECONDS * 1000,
       httpOnly: true,
@@ -113,11 +114,10 @@ export class LinkedSignInService {
     { code, state }: { code?: string; state?: string },
     ctx: Context
   ): Promise<FinishResult> {
-    const flow = await this.consumeFlow(name, state, ctx);
+    const { flow, connecting } = await this.consumeFlow(name, state, ctx);
     if (!flow) {
-      return { connecting: false, error: ErrorCode.LINKED_SIGN_IN_FAILED };
+      return { connecting, error: ErrorCode.LINKED_SIGN_IN_FAILED };
     }
-    const connecting = !!flow.userId;
 
     try {
       // No code: the user cancelled at the provider (it sends ?error=access_denied instead)
@@ -151,21 +151,25 @@ export class LinkedSignInService {
     await this.links.delete({ id: linkId, userId });
   }
 
-  /** The flow this callback belongs to, if its state matches this browser's cookie; usable once. */
+  /**
+   * The flow this callback belongs to, if its state matches this browser's cookie; usable once. `connecting` comes
+   * from the cookie, so it is known even when the flow is not (expired, replayed, forged).
+   */
   private async consumeFlow(
     name: SignInProviderName,
     state: string | undefined,
     { req, res }: Context
-  ): Promise<Flow | undefined> {
-    const cookieState = req.cookies?.[stateCookieName()];
+  ): Promise<{ flow?: Flow; connecting: boolean }> {
+    const [mode, cookieState] = String(req.cookies?.[stateCookieName()] ?? '').split(':');
+    const connecting = mode === 'connect';
     res.clearCookie(stateCookieName(), { path: stateCookiePath });
     if (!state || state !== cookieState) {
-      return;
+      return { connecting };
     }
     // GETDEL: each flow completes once, so a replayed callback finds nothing
     const stored = await this.store.getdel(flowKey(state));
     const flow = stored ? (JSON.parse(stored) as Flow) : undefined;
-    return flow?.provider === name ? flow : undefined;
+    return flow?.provider === name ? { flow, connecting: !!flow.userId } : { connecting };
   }
 
   /** The code to show for an expected failure; rethrows anything else. */
@@ -204,8 +208,16 @@ export class LinkedSignInService {
     if (profile.email && (await this.users.findByEmail(profile.email))) {
       throw new EmailTakenSignInToLinkException();
     }
-    const user = await this.users.createWithoutPassword(profile);
-    return this.link(provider, profile, user.id);
+    // One transaction: a failure between the two would leave a user with no way to sign in
+    return this.links.manager.transaction(async (manager) => {
+      const user = await this.users.createWithoutPassword(profile, manager);
+      await manager.insert(LinkedSignIn, {
+        provider,
+        providerUserId: profile.providerUserId,
+        userId: user.id,
+      });
+      return user.id;
+    });
   }
 
   private async link(
