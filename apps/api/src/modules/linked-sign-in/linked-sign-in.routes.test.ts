@@ -62,7 +62,7 @@ describe('linked sign-in routes', () => {
 
     expect((await get('/auth/dev/authorize?state=s')).status).toBe(200);
     const { location } = await get('/auth/dev/authorize?state=s&providerUserId=d-1&email=a%40b.c');
-    const code = new URL(location!, 'http://x').searchParams.get('code')!;
+    const code = new URL(location!, 'https://x').searchParams.get('code')!;
     expect(JSON.parse(Buffer.from(code, 'base64url').toString())).toEqual({
       providerUserId: 'd-1',
       email: 'a@b.c',

@@ -8,7 +8,14 @@ import { SignInProviderName } from './providers/sign-in-provider';
 
 // Web app routes (apps/web/src/constants): failures show on the page the flow started from
 const webUrl = ({ connecting, error }: FinishResult) => {
-  const url = new URL(connecting ? '/account' : error ? '/sign-in' : '/', webOrigin());
+  if (connecting) {
+    return webPath('/account', error);
+  }
+  return error ? webPath('/sign-in', error) : webPath('/');
+};
+
+const webPath = (path: string, error?: ErrorCode) => {
+  const url = new URL(path, webOrigin());
   if (error) {
     url.searchParams.set('error', error);
   }
