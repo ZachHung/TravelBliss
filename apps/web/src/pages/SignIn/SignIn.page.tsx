@@ -15,6 +15,7 @@ import {
   Title,
 } from '@mantine/core';
 import Form, { type FormError } from '@/components/Form/Form';
+import { LinkedSignInAlert, LinkedSignInButtons } from '@/components/LinkedSignIn/LinkedSignIn';
 import TextGradient from '@/components/TextGradient/TextGradient';
 import { ROUTES } from '@/constants';
 import { useSession } from '@/session';
@@ -73,6 +74,8 @@ const SignInPage = () => {
                     <TextGradient>Sign In</TextGradient>
                   </Title>
 
+                  <LinkedSignInAlert />
+
                   <TextInput
                     withAsterisk
                     type="tel"
@@ -110,12 +113,15 @@ const SignInPage = () => {
 };
 
 const formFooter = (
-  <Group fz="sm" justify="center" gap="xs">
-    Not a member?{' '}
-    <Anchor to={ROUTES.REGISTER} inherit component={Link}>
-      Sign up
-    </Anchor>
-  </Group>
+  <>
+    <LinkedSignInButtons />
+    <Group fz="sm" justify="center" gap="xs">
+      Not a member?{' '}
+      <Anchor to={ROUTES.REGISTER} inherit component={Link}>
+        Sign up
+      </Anchor>
+    </Group>
+  </>
 );
 
 export default SignInPage;

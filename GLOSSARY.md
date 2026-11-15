@@ -18,6 +18,11 @@ _Avoid_: current user, me, principal
 Someone with no valid session: a visitor who is not signed in, or whose session has ended.
 _Avoid_: anonymous, logged-out user
 
+**Linked sign-in**:
+A way to sign in as a user through an outside provider, such as Google or Facebook, instead of a password. A user can
+have several, alongside a password or without one.
+_Avoid_: social login, OAuth account, identity
+
 **Remembered session**:
 A session the user asked to keep across browser restarts ("Remember Me"). It ends after a stretch without use, or at a
 maximum age since sign-in, whichever comes first.

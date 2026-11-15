@@ -23,15 +23,27 @@ input EditInfoInput {
 """Values of errors[].extensions.code"""
 enum ErrorCode {
   BAD_USER_INPUT
+  EMAIL_TAKEN_SIGN_IN_TO_LINK
   INTERNAL_SERVER_ERROR
   INVALID_COOKIES
   INVALID_TOKEN
+  LAST_SIGN_IN_METHOD
+  LINKED_SIGN_IN_FAILED
+  LINKED_SIGN_IN_TAKEN
+  PASSWORD_ALREADY_SET
   SOMETHING_WENT_WRONG
   UNAUTHENTICATED
   UNAUTHORIZED
   USER_EXISTED
   USER_NOT_FOUND
   WRONG_PASSWORD
+}
+
+type LinkedSignIn {
+  createdAt: DateTimeISO!
+  id: String!
+  provider: SignInProviderName!
+  updatedAt: DateTimeISO!
 }
 
 input LoginInput {
@@ -42,15 +54,25 @@ input LoginInput {
 
 type Mutation {
   changePasswordUser(input: ChangePasswordInput!): UserTokens!
+  disconnectLinkedSignIn(id: String!): User!
   editInfoUser(input: EditInfoInput!): User!
   login(input: LoginInput!): UserTokens!
   logout: Boolean!
   refreshToken: UserTokens!
   register(input: RegisterInput!): User!
+  setPassword(input: SetPasswordInput!): User!
+
+  """
+  The provider's URL to send the browser to. Signed in, the provider is connected instead.
+  """
+  startLinkedSignIn(provider: SignInProviderName!): String!
 }
 
 type Query {
   allUser: [User!]!
+
+  """Providers offered here, one button each"""
+  linkedSignInProviders: [SignInProviderName!]!
   me: User!
 }
 
@@ -72,16 +94,28 @@ enum Role {
   USER
 }
 
+input SetPasswordInput {
+  password: String!
+}
+
+enum SignInProviderName {
+  DEV
+  FACEBOOK
+  GOOGLE
+}
+
 type User {
-  age: Int!
-  birthday: DateTimeISO!
+  age: Int
+  birthday: DateTimeISO
   createdAt: DateTimeISO!
-  email: String!
+  email: String
   firstName: String!
   fullName: String!
+  hasPassword: Boolean!
   id: String!
   lastName: String!
-  phoneNumber: String!
+  linkedSignIns: [LinkedSignIn!]!
+  phoneNumber: String
   role: Role
   updatedAt: DateTimeISO!
   username: String!

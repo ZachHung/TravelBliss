@@ -9,6 +9,7 @@ const SessionProvider = lazy(() => import('@/session/SessionProvider'));
 const HomePage = lazy(() => import('@/pages/Home.page'));
 const SignInPage = lazy(() => import('@/pages/SignIn/SignIn.page'));
 const RegisterPage = lazy(() => import('@/pages/Register/Register.page'));
+const AccountPage = lazy(() => import('@/pages/Account/Account.page'));
 const PublicRoute = lazy(() => import('./PublicRoute'));
 const ProtectedRoute = lazy(() => import('./ProtectedRoute'));
 
@@ -49,6 +50,10 @@ const router = createBrowserRouter([
           {
             path: ROUTES.PROTECTED,
             element: <p>Protected</p>,
+          },
+          {
+            path: ROUTES.ACCOUNT,
+            element: <AccountPage />,
           },
         ],
       },

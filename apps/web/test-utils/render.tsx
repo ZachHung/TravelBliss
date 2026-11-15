@@ -3,6 +3,7 @@ import { MockedProvider, type MockedProviderProps } from '@apollo/client/testing
 import { render as testingLibraryRender } from '@testing-library/react';
 import { MemoryRouter, type InitialEntry } from 'react-router';
 import { MantineProvider } from '@mantine/core';
+import { apolloDefaultOptions } from '@/App';
 import { theme } from '@/theme';
 
 type RenderOptions = {
@@ -23,7 +24,7 @@ export function render(ui: ReactNode, { mocks = [], route }: RenderOptions = {})
         );
 
       return (
-        <MockedProvider mocks={mocks}>
+        <MockedProvider mocks={mocks} defaultOptions={apolloDefaultOptions}>
           <MantineProvider theme={theme} env="test">
             {content}
           </MantineProvider>

@@ -1,0 +1,7 @@
+# GitGuardian (PR check and ggshield). Tests hold fake credentials by design; real secrets live only in .env.* files
+version: 2
+secret:
+  ignored_paths:
+    - '**/*.test.ts'
+    - '**/*.test.tsx'
+    - '**/*.e2e.ts'

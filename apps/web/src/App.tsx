@@ -31,17 +31,20 @@ const errorLink = new ErrorLink(({ error }) => {
   /* eslint-enable no-console */
 });
 
+// Shared with test-utils, so component tests read the cache the way the app does
+export const apolloDefaultOptions: ApolloClient.DefaultOptions = {
+  watchQuery: {
+    fetchPolicy: 'no-cache',
+  },
+  query: {
+    fetchPolicy: 'no-cache',
+  },
+};
+
 const client = new ApolloClient({
   cache: new InMemoryCache(),
   link: from([createSessionLink(uri), errorLink, httpLink]),
-  defaultOptions: {
-    watchQuery: {
-      fetchPolicy: 'no-cache',
-    },
-    query: {
-      fetchPolicy: 'no-cache',
-    },
-  },
+  defaultOptions: apolloDefaultOptions,
 });
 
 export default function App() {
