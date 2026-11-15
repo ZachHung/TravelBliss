@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lesson 5: Signing in with Google and Facebook</title>
+    <link rel="stylesheet" href="../assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        <a href="../index.html">TravelBliss sign-in course</a> ·
+        <a href="0001-who-are-you-and-what-may-you-do.html">1</a> ·
+        <a href="0002-inside-the-access-token.html">2</a> ·
+        <a href="0003-refresh-tokens-rotation-and-reuse.html">3</a> ·
+        <a href="0004-the-web-side-and-three-gaps.html">4</a> ·
+        <a href="reference/glossary.html">Glossary</a> ·
+        <a href="reference/linked-sign-in.html">Linked sign-in reference</a>
+      </nav>
+
+      <p class="kicker">Lesson 5 · about 30 minutes · API and web</p>
+      <h1>Signing in with Google and Facebook</h1>
+      <p class="lede">
+        A <a href="reference/glossary.html#linked-sign-in">linked sign-in</a> lets someone sign in
+        through Google or Facebook instead of a password. You will follow one round trip from the
+        button to the signed-in page, learn the three checks that stop a forged trip, and predict,
+        for any situation, which user the API signs in as. <span id="quiz-score"></span>
+      </p>
+
+      <h2>Warm-up, from memory</h2>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="The in-memory access token is gone, but the first query fails with UNAUTHENTICATED, the session link refreshes with the cookie, and retries (lesson 4, Part 3). Remember this: linked sign-in ends exactly this way."
+      >
+        <legend>
+          1. A page loads with a valid <code>travelBliss_rf</code> cookie and no access token.
+        </legend>
+        <label
+          ><input type="radio" name="w1" value="a" /> Signed out, needs the password again</label
+        >
+        <label><input type="radio" name="w1" value="b" /> Signed in after one silent refresh</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="The signature was computed over the original payload, so a changed <code>exp</code> no longer matches it: verification fails and the caller is a guest (lesson 2)."
+      >
+        <legend>2. You add a day to the <code>exp</code> claim of your own access token.</legend>
+        <label
+          ><input type="radio" name="w2" value="a" /> Rejected: the signature no longer
+          matches</label
+        >
+        <label><input type="radio" name="w2" value="b" /> Accepted: the token is still yours</label>
+      </fieldset>
+
+      <h2>Part 1 · Five new words</h2>
+      <p>
+        Google and Facebook play the same role here: a <b>provider</b>, a site that already knows
+        who the person is and will tell TravelBliss, if the person agrees. The protocol for that is
+        OAuth 2.0's <i>authorization code grant</i>.
+        <a href="https://www.rfc-editor.org/rfc/rfc6749#section-4.1">[RFC 6749 §4.1]</a>
+      </p>
+      <table>
+        <tr>
+          <th>Word</th>
+          <th>What it is here</th>
+        </tr>
+        <tr>
+          <td><a href="reference/glossary.html#authorization-code">Authorization code</a></td>
+          <td>
+            A one-time ticket the provider puts in the URL when it sends the browser back. Worth
+            nothing alone: only the API, with its client secret, can trade it for the person's
+            profile.
+          </td>
+        </tr>
+        <tr>
+          <td><a href="reference/glossary.html#callback">Callback</a></td>
+          <td>
+            The API page the provider sends the browser back to:
+            <code>GET /auth/google/callback?code=…&amp;state=…</code>
+          </td>
+        </tr>
+        <tr>
+          <td><a href="reference/glossary.html#state">State</a></td>
+          <td>
+            A random value the API makes at the start, which comes back unchanged in the callback.
+            Proves the callback belongs to a trip <em>this browser</em> started.
+          </td>
+        </tr>
+        <tr>
+          <td><a href="reference/glossary.html#pkce">PKCE</a></td>
+          <td>
+            “Pixy”. A secret (the <i>code verifier</i>) the API keeps, whose hash goes to the
+            provider at the start; trading the code requires the secret itself.
+            <a href="https://www.rfc-editor.org/rfc/rfc7636#section-4.2">[RFC 7636 §4.2]</a>
+          </td>
+        </tr>
+        <tr>
+          <td><a href="reference/glossary.html#provider-user-id">Provider user id</a></td>
+          <td>
+            The provider's permanent id for the person (Google calls it <code>sub</code>). The only
+            thing a linked sign-in is matched on.
+          </td>
+        </tr>
+      </table>
+
+      <h2>Part 2 · One round trip</h2>
+      <div class="pipeline">
+        <div class="stage"><b>Web</b>button → mutation</div>
+        <div class="arrow">→</div>
+        <div class="stage"><b>API</b>flow in Redis, state cookie</div>
+        <div class="arrow">→</div>
+        <div class="stage"><b>Google</b>person agrees</div>
+        <div class="arrow">→</div>
+        <div class="stage"><b>API</b>callback, session</div>
+        <div class="arrow">→</div>
+        <div class="stage"><b>Web</b>reload refresh</div>
+      </div>
+      <ol>
+        <li>
+          <b>Button.</b> The sign-in page shows one button per provider the API offers (query
+          <code>linkedSignInProviders</code>). A click runs the <code>startLinkedSignIn</code>
+          mutation, then sends the whole page to the URL it returns:
+          <code>window.location.assign(…)</code>.
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/web/src/components/LinkedSignIn/LinkedSignIn.tsx#L70-L86"
+            >[<code>LinkedSignIn.tsx</code>]</a
+          >
+        </li>
+        <li>
+          <b>Start.</b>
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/api/src/modules/linked-sign-in/linked-sign-in.service.ts#L90-L110"
+            ><code>LinkedSignInService.start</code></a
+          >
+          makes a <code>state</code> and a code verifier, saves the <i>flow</i>
+          <code>{ provider, codeVerifier, userId? }</code> in Redis as
+          <code>linkedSignInFlow:&lt;state&gt;</code> for 10 minutes, sets the
+          <code>travelBliss_ls</code> cookie to <code>sign-in:&lt;state&gt;</code> (HttpOnly, only
+          sent to <code>/auth</code>), and returns Google's consent URL.
+        </li>
+        <li>
+          <b>Google.</b> The person signs in to Google and agrees. Google redirects the browser to
+          the callback with <code>code</code> and the same <code>state</code>. TravelBliss code runs
+          nowhere during this step.
+        </li>
+        <li>
+          <b>Callback.</b> The Express route
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/api/src/modules/linked-sign-in/linked-sign-in.routes.ts#L32-L48"
+            ><code>/auth/:provider/callback</code></a
+          >
+          hands <code>code</code> and <code>state</code> to
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/api/src/modules/linked-sign-in/linked-sign-in.service.ts#L116-L141"
+            ><code>finish</code></a
+          >, which runs the three checks (Part 3), trades the code for a profile, finds the user
+          (Part 4), and calls <code>SessionService.start(userId, { remember: true })</code>: the
+          same function password sign-in uses, so it sets the same <code>rf</code> cookie (lesson
+          3).
+        </li>
+        <li>
+          <b>Back to the web app.</b> The route answers with a redirect to <code>/</code>. That is a
+          fresh page load with an <code>rf</code> cookie and no access token: your warm-up question
+          1. <code>SessionProvider</code> refreshes, and you are signed in.
+        </li>
+      </ol>
+      <div class="callout">
+        <b>Why a mutation, not a plain link?</b> A link like
+        <code>&lt;a href="/auth/google"&gt;</code> would be simpler, but when you
+        <em>connect</em> Google from the account page (Part 5), the API must know who you are. Your
+        access token lives in a JavaScript variable (lesson 4), and a page navigation never carries
+        it. A GraphQL mutation does, through the session link. So
+        <code>startLinkedSignIn</code> reads <code>auth?.user.id</code>: set means connect, unset
+        means sign in.
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/api/src/modules/linked-sign-in/linked-sign-in.resolver.ts#L35-L40"
+          >[resolver]</a
+        >
+      </div>
+
+      <h2>Part 3 · Three checks on the callback</h2>
+      <p>
+        The callback is a public URL; anyone can open it with any <code>code</code> and
+        <code>state</code>. <code>finish</code> refuses a trip unless all three hold:
+      </p>
+      <h3>1. The state matches this browser's cookie</h3>
+      <p>
+        <code>state === started.state</code>, where <code>started</code> comes from the
+        <code>travelBliss_ls</code> cookie. Without this, an attacker could start a trip, sign in to
+        <em>their own</em> Google account, and stop just before the callback. They send you that
+        callback link. You open it while signed in, and their Google account is now connected to
+        <em>your</em> TravelBliss user: they can sign in as you. RFC 6749 calls this CSRF against
+        the callback, which “allows an attacker to inject its own authorization code”, and asks for
+        a value that “binds the request to the user-agent's authenticated state”.
+        <a href="https://www.rfc-editor.org/rfc/rfc6749#section-10.12">[RFC 6749 §10.12]</a> The
+        cookie is that value: your browser never received the attacker's cookie.
+      </p>
+      <h3>2. The flow exists, once</h3>
+      <p>
+        <code>consumeFlow</code> reads the flow with Redis <code>GETDEL</code>: get and delete in
+        one step, so a second use of the same callback finds nothing. The 10-minute expiry makes a
+        leaked <code>state</code> useless soon after.
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/api/src/modules/linked-sign-in/linked-sign-in.service.ts#L177-L185"
+          >[L177]</a
+        >
+        You saw the same <i>delete-to-claim</i> move in lesson 3's refresh rotation.
+      </p>
+      <h3>3. The code is traded with the verifier</h3>
+      <p>
+        Google only hands over the profile if the API sends the code <em>and</em> the code verifier
+        whose hash it saw at the start. A stolen code alone is worthless. PKCE was designed against
+        that “authorization code interception attack”
+        <a href="https://www.rfc-editor.org/rfc/rfc7636">[RFC 7636]</a>, and today's OAuth security
+        advice recommends it even for server apps like ours.
+        <a href="https://datatracker.ietf.org/doc/html/rfc9700#section-2.1.1">[RFC 9700 §2.1.1]</a>
+        Facebook's flow here ignores the verifier; checks 1 and 2 still bind it.
+      </p>
+      <p class="note">
+        Every failure becomes a redirect, never a crash: <code>finish</code> catches everything and
+        sends the browser to <code>/sign-in?error=&lt;code&gt;</code> (or
+        <code>/account?error=…</code> when connecting).
+      </p>
+      <div class="callout">
+        <b>Lesson 2 asked: why trust a token?</b> Because of its signature. Google's profile arrives
+        as a signed JWT too (an <i>ID token</i>), yet
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/api/src/modules/linked-sign-in/providers/google.ts#L13-L15"
+          ><code>google.ts</code></a
+        >
+        only decodes it. That is allowed when the API received it directly from Google's token
+        endpoint over HTTPS: the TLS connection already proves who sent it.
+        <a href="https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation"
+          >[OIDC Core §3.1.3.7]</a
+        >
+        A signature matters when a token passes through hands you don't trust. This one never did.
+      </div>
+
+      <h2>Part 4 · Which user is this?</h2>
+      <p>
+        Google has said “this is <code>sub 1081…</code>, email <code>ann@mail.test</code>”.
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/api/src/modules/linked-sign-in/linked-sign-in.service.ts#L220-L253"
+          ><code>userFor</code></a
+        >
+        asks, in this order:
+      </p>
+      <ol>
+        <li>
+          <b>Is there a <code>linked_sign_in</code> row for (Google, this sub)?</b> Then that row's
+          user, full stop. Connecting a sub that belongs to someone else fails with
+          <code>LINKED_SIGN_IN_TAKEN</code>. The table is unique on
+          <code>(provider, providerUserId)</code>, so one Google account links to at most one user.
+        </li>
+        <li><b>Connecting?</b> Insert a row for the signed-in user.</li>
+        <li>
+          <b>Does a user already have this email?</b> Then fail with
+          <code>EMAIL_TAKEN_SIGN_IN_TO_LINK</code>: sign in with your password, then connect.
+        </li>
+        <li><b>Otherwise</b> create a user without a password, and its row, in one transaction.</li>
+      </ol>
+      <p>
+        Two rules hide in that order. <b>Match on the sub, not the email:</b> OpenID Connect says
+        <code>sub</code> and the issuer “are the only Claims that an RP can rely upon as a stable
+        identifier”, and email “MUST NOT be used” as one.
+        <a href="https://openid.net/specs/openid-connect-core-1_0.html#ClaimStability"
+          >[OIDC Core §5.7]</a
+        >
+        People change emails; the sub never changes. <b>Never link by email:</b> TravelBliss
+        registration does not check that you own the email you type. If Mallory registers with Ann's
+        address first, and Ann's Google sign-in then joined that account automatically, Mallory
+        would hold a working password to Ann's account. So step 3 refuses instead.
+        <a
+          href="https://github.com/ZachHung/TravelBliss/blob/3841012/docs/adr/0005-linked-sign-in.md"
+          >[ADR 0005]</a
+        >
+      </p>
+
+      <h3>Try it: predict, then run</h3>
+      <p>
+        Ann has a password account with <code>ann@mail.test</code>; Bob is another user. Set a
+        situation, <b>choose your prediction</b>, then run it. Try at least these four: a first
+        Google sign-in with a new email; the same with Ann's email; the callback opened in another
+        browser while connecting; Ann connects a Google account that is linked to Bob.
+      </p>
+      <div class="linked-sign-in-sim"></div>
+
+      <h2>Part 5 · Landing, errors, and the account page</h2>
+      <ul>
+        <li>
+          <b>Errors</b> come back as <code>?error=&lt;ErrorCode&gt;</code>.
+          <code>LinkedSignInAlert</code> turns the code into a sentence and clears it from the URL
+          when dismissed.
+        </li>
+        <li>
+          <b>Connect</b> is the same round trip started while signed in: the flow stores
+          <code>userId</code>, the cookie says <code>connect:</code>, no new session is started, and
+          the browser returns to <code>/account</code>.
+        </li>
+        <li>
+          <b>Disconnect</b> (<code>disconnectLinkedSignIn</code>, <code>@Authorized()</code>)
+          refuses with <code>LAST_SIGN_IN_METHOD</code> if it would leave a user with no password
+          and no linked sign-in, a user nobody could ever sign in as. It locks the user's row first,
+          so two disconnects at once cannot both pass the count.
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/3841012/apps/api/src/modules/linked-sign-in/linked-sign-in.service.ts#L148-L167"
+            >[L148]</a
+          >
+        </li>
+        <li>
+          <b>Set password</b> (<code>setPassword</code>) gives a provider-only user a password,
+          after which disconnecting is allowed.
+        </li>
+        <li>
+          <b>Nullable fields.</b> A user created by Google may have no password, email, phone or
+          birthday. Any code that reads them must handle <code>null</code>.
+        </li>
+      </ul>
+
+      <h2>Practice</h2>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="The attacker's trip set the state cookie in the attacker's browser. Yours has none, so the state matches nothing and the callback fails: that is check 1."
+      >
+        <legend>
+          1. An attacker sends you a callback link from a trip they started. You open it.
+        </legend>
+        <label><input type="radio" name="p1" value="a" /> Their Google connects to your user</label>
+        <label
+          ><input type="radio" name="p1" value="b" /> Fails: your browser lacks their cookie</label
+        >
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="The link row decides first: the sub is linked to Bob, so this signs in as Bob. Email is only looked at when no link exists."
+      >
+        <legend>2. Signing in, Google's sub is linked to Bob, but the email is Ann's.</legend>
+        <label><input type="radio" name="p2" value="a" /> Signed in as Bob, email ignored</label>
+        <label><input type="radio" name="p2" value="b" /> Refused, since Ann owns that email</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="Registration does not verify emails, so a matching email proves nothing about who registered it. Linking would hand the registrant's password to the email's real owner's account."
+      >
+        <legend>3. Why not join a Google sign-in to the user with the same email?</legend>
+        <label
+          ><input type="radio" name="p3" value="a" /> Our registration never proves email
+          ownership</label
+        >
+        <label
+          ><input type="radio" name="p3" value="b" /> Google never shares an email address</label
+        >
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="GETDEL took the flow on the first use, and the state cookie was cleared; the second request finds neither."
+      >
+        <legend>4. The callback request is sent twice with the same code and state.</legend>
+        <label><input type="radio" name="p4" value="a" /> Both succeed: same user both times</label>
+        <label><input type="radio" name="p4" value="b" /> Second fails: the flow was taken</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="b"
+        data-why="The callback only sets the rf cookie and redirects. The web app gets its access token the way any reload does: UNAUTHENTICATED, refresh, retry."
+      >
+        <legend>5. How does the web app get an access token after a Google sign-in?</legend>
+        <label><input type="radio" name="p5" value="a" /> The callback URL carries the token</label>
+        <label><input type="radio" name="p5" value="b" /> A refresh from the rf cookie</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="a"
+        data-why="A navigation never carries the in-memory access token; the mutation does, so the API knows whether to connect."
+      >
+        <legend>6. Why is the trip started by a mutation rather than a link?</legend>
+        <label><input type="radio" name="p6" value="a" /> Connecting needs to know the user</label>
+        <label><input type="radio" name="p6" value="b" /> Links cannot leave for other sites</label>
+      </fieldset>
+      <fieldset
+        class="quiz"
+        data-answer="LAST_SIGN_IN_METHOD"
+        data-why="Without a password, a user's only linked sign-in is their only way in; <code>setPassword</code> first."
+      >
+        <legend>
+          7. A user with no password disconnects their only linked sign-in. Which error code?
+        </legend>
+        <label><input type="text" aria-label="Error code" /></label>
+      </fieldset>
+
+      <div class="source">
+        <p>
+          <b>Read next:</b>
+          <a href="https://www.rfc-editor.org/rfc/rfc6749#section-4.1">RFC 6749 §4.1</a>, steps
+          (A)–(E) of the authorization code grant, then
+          <a href="https://www.rfc-editor.org/rfc/rfc6749#section-10.12">§10.12</a> on the state
+          check. Map each step to Part 2. Then read our own
+          <a
+            href="https://github.com/ZachHung/TravelBliss/blob/3841012/docs/adr/0005-linked-sign-in.md"
+            >ADR 0005</a
+          >: every rule in this lesson, and the options it rejected.
+        </p>
+        <p>
+          <b>Try it for real:</b> <code>pnpm dev:local</code> offers a fake “Dev test user” provider
+          (no Google app needed). Sign in with it, set a password, disconnect, and watch
+          <code>linkedSignInFlow:*</code> appear and vanish in Redis.
+        </p>
+        <p>
+          <b>Stuck, or curious?</b> Ask me anything: for example, what would change if registration
+          started verifying emails.
+        </p>
+      </div>
+    </main>
+    <script src="../assets/quiz.js"></script>
+    <script src="../assets/linked-sign-in-sim.js"></script>
+  </body>
+</html>

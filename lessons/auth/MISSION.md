@@ -16,8 +16,9 @@ it.
 ## Constraints
 
 - Starts from zero prior knowledge of auth concepts.
-- Lessons are short and grounded in this repo's real code; they live in `lessons/` and are committed.
+- Lessons are short and grounded in this repo's real code; they live in `lessons/auth/` and are committed.
 
 ## Out of scope
 
-- Building an auth system from scratch, OAuth/OpenID Connect providers, and password-hashing internals.
+- Building an auth system from scratch, running an OAuth/OpenID Connect provider, and password-hashing internals.
+  (Using Google and Facebook as providers, linked sign-in, is in scope since lesson 5.)

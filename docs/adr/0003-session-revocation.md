@@ -4,7 +4,7 @@ Date: 2026-11-14. Status: accepted.
 
 ## Context
 
-The auth course (`lessons/0004`) surfaced three gaps. Changing the password ended no other session, so a stolen
+The auth course (`lessons/auth/0004`) surfaced three gaps. Changing the password ended no other session, so a stolen
 session survived it. Two tabs refreshing at the same moment spent the same refresh token, which reuse detection
 (`SessionService.refresh`) cannot tell from theft, so it signed the user out everywhere. And a guest on a role-gated
 field got `UNAUTHORIZED`, which the web session link never answers with a refresh.

@@ -1,7 +1,7 @@
 # Notes
 
 - Prior knowledge: none claimed ("let's say I don't know anything"). Define every term on first use.
-- The course lives in `lessons/` in the repo and is committed with the code.
+- The course lives in `lessons/auth/` (one folder per section, `lessons/assets/` shared, published to GitHub Pages) and is committed with the code.
 - Preference (after lesson 2): lessons felt too short. Make each lesson longer (about 25-30 minutes), combining
   topics rather than splitting them.
 - Plan from lesson 3 on: 3 refresh token, `_rf` cookie, rotation and reuse detection (API side) · 4 the web side:
@@ -13,3 +13,7 @@
 - 2026-11-14: lessons updated for #115 (gaps fixed; lesson 1's error rule changed: guests are always
   UNAUTHENTICATED) and #116 (one session lifetime, 30-day idle / 90-day absolute). Learning records 0001-0003 describe
   what the learner knew at the time and stay unchanged; lesson 1 Q4's answer flipped.
+- 2026-11-15: lesson 5 (linked sign-in, #121). Mission's out-of-scope narrowed to _running_ a provider; using
+  Google/Facebook is in. New component `assets/linked-sign-in-sim.js` (predict-then-run over `finish`/`userFor`).
+  Next: retrieval of lesson 5 (state vs PKCE, sub vs email) before anything new; candidate topics: email verification
+  (#120) and how it would change "never link by email".

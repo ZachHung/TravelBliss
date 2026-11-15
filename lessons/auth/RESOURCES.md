@@ -37,6 +37,16 @@
 - [Apollo Client: Advanced HTTP networking](https://www.apollographql.com/docs/react/networking/advanced-http-networking)
   How links chain and forward operations, adding an auth header. Use for: `createSessionLink`.
 
+- [RFC 6749 §4.1 and §10.12](https://www.rfc-editor.org/rfc/rfc6749#section-4.1)
+  The authorization code grant, steps (A)-(E), and CSRF on the callback (the `state` check). Use for: lesson 5.
+- [RFC 7636: PKCE](https://www.rfc-editor.org/rfc/rfc7636)
+  The code interception attack and `code_challenge = BASE64URL(SHA256(code_verifier))` (§4.2). RFC 9700 §2.1.1
+  recommends it for confidential clients too. Use for: lesson 5, check 3.
+- [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)
+  §3.1.3.7 (TLS can replace the ID token signature check from the token endpoint), §5.7 (only `sub` + `iss` are a
+  stable identifier; never email). Use for: `google.ts`, matching on the provider user id.
+- `docs/adr/0005-linked-sign-in.md` and `apps/api/src/modules/linked-sign-in/`. Use for: every linked sign-in rule.
+
 ## Wisdom (Communities)
 
 - [OWASP Slack](https://owasp.org/slack/invite) (`#cheatsheets` and general channels)
