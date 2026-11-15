@@ -9,7 +9,7 @@ import { UserNotFoundException } from '@/modules/user/user.exception';
 import { UserService } from '@/modules/user/user.service';
 import { Context } from '@/types';
 import { Inject, Injectable } from '@/types/inversify';
-import { getEnv } from '@/utils/helpers';
+import { cookieOptions, getEnv } from '@/utils/helpers';
 import { InvalidCookiesException, InvalidTokenException } from './session.exception';
 import { AuthContext, UserTokens } from './session.type';
 
@@ -81,7 +81,7 @@ const verifyToken = (token: string, secret: string): TokenClaims | undefined => 
 @Injectable()
 export class SessionService {
   constructor(
-    @Inject(TOKEN.Services.User) private readonly users: UserService,
+    @Inject(UserService) private readonly users: UserService,
     @Inject(TOKEN.Store.Redis) private readonly store: Redis
   ) {}
 
@@ -233,12 +233,11 @@ export class SessionService {
 
   // The cookie expires with the token inside it: one lifetime, enforced by the server, mirrored by the browser
   private setRefreshCookie(res: Response, value: string, exp: number): void {
-    res.cookie(refreshCookieName(), this.aesEncrypt(value), {
-      expires: new Date(exp * 1000),
-      httpOnly: true,
-      sameSite: getEnv('NODE_ENV') === 'production' ? 'none' : 'lax',
-      secure: getEnv('NODE_ENV') === 'production',
-    });
+    res.cookie(
+      refreshCookieName(),
+      this.aesEncrypt(value),
+      cookieOptions({ expires: new Date(exp * 1000) })
+    );
   }
 
   private readCookie(req: Request, name: string): string | undefined {

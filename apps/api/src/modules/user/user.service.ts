@@ -1,10 +1,8 @@
-import dayjs from 'dayjs';
 import { randomBytes } from 'crypto';
 import { compare, hash } from 'bcrypt';
-import { Raw, type EntityManager } from 'typeorm';
-import TOKEN from '@/core/container/types.container';
-import Service from '@/core/shared/service';
-import { Inject, Injectable } from '@/types/inversify';
+import { Raw, type EntityManager, type Repository } from 'typeorm';
+import { InjectRepository } from '@/core/module';
+import { Injectable } from '@/types/inversify';
 import { getEnv, mutationReturn } from '@/utils/helpers';
 import { User } from './user.entity';
 import {
@@ -14,11 +12,10 @@ import {
   WrongPassException,
 } from './user.exception';
 import { ChangePasswordInput, LoginInput, RegisterInput } from './user.input';
-import { UserRepository } from './user.repository';
 
 @Injectable()
-export class UserService implements Service<User> {
-  constructor(@Inject(TOKEN.Repositories.User) private readonly userRepository: UserRepository) {}
+export class UserService {
+  constructor(@InjectRepository(User) private readonly userRepository: Repository<User>) {}
 
   public async findById(id: string): Promise<User> {
     const user = await this.userRepository.findOneBy({ id });
@@ -88,7 +85,7 @@ export class UserService implements Service<User> {
         this.userRepository
           .createQueryBuilder()
           .update(User)
-          .set({ ...changes, updatedAt: dayjs().toISOString() })
+          .set(changes) // updatedAt is set by @UpdateDateColumn
           .where('id = :id ', { id: userId })
           .returning('*')
           .execute()
@@ -115,7 +112,7 @@ export class UserService implements Service<User> {
     const result = await this.userRepository
       .createQueryBuilder()
       .update(User)
-      .set({ password: hashed, updatedAt: dayjs().toISOString() })
+      .set({ password: hashed }) // updatedAt is set by @UpdateDateColumn
       .where('id = :id AND password IS NULL', { id: userId })
       .returning('*')
       .execute();

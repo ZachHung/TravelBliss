@@ -1,23 +1,12 @@
+/** Injection tokens for what is not a class; classes are injected by themselves (`@Inject(UserService)`). */
 const TOKEN = {
   DataSource: {
     Postgres: Symbol.for('PostgresDataSource'),
   },
-  Repositories: {
-    User: Symbol.for('UserRepository'),
-    LinkedSignIn: Symbol.for('LinkedSignInRepository'),
-  },
-
-  Services: {
-    User: Symbol.for('UserService'),
-    Session: Symbol.for('SessionService'),
-    LinkedSignIn: Symbol.for('LinkedSignInService'),
-  },
-
-  SignInProviders: Symbol.for('SignInProviders'),
-
   Store: {
     Redis: Symbol.for('RedisStore'),
   },
+  SignInProviders: Symbol.for('SignInProviders'),
 };
 
 export default TOKEN;

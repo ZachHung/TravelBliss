@@ -1,5 +1,5 @@
 import { Arg, Authorized, Ctx, FieldResolver, Mutation, Query, Resolver, Root } from 'type-graphql';
-import TOKEN from '@/core/container/types.container';
+import { SignedInUser } from '@/core/middlewares/signed-in-user.decorator';
 import { User } from '@/modules/user/user.entity';
 import { UserService } from '@/modules/user/user.service';
 import type { Context } from '@/types';
@@ -12,8 +12,8 @@ import { SignInProviderName } from './providers/sign-in-provider';
 @Resolver((_type) => User)
 export class LinkedSignInResolver {
   constructor(
-    @Inject(TOKEN.Services.LinkedSignIn) private readonly service: LinkedSignInService,
-    @Inject(TOKEN.Services.User) private readonly users: UserService
+    @Inject(LinkedSignInService) private readonly service: LinkedSignInService,
+    @Inject(UserService) private readonly users: UserService
   ) {}
 
   @Query((_type) => [SignInProviderName], {
@@ -43,7 +43,7 @@ export class LinkedSignInResolver {
   @Mutation((_type) => User)
   public async disconnectLinkedSignIn(
     @Arg('id') id: string,
-    @Ctx() { auth: { user } }: Required<Context>
+    @SignedInUser() user: User
   ): Promise<User> {
     await this.service.disconnect(id, user.id);
     return this.users.findById(user.id);

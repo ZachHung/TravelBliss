@@ -15,6 +15,9 @@ Monorepo for TravelBliss, a passenger rail booking service. pnpm workspace + Tur
 ## Conventions
 
 - Env: variable names and which file is used when are in `.env.example`; add new variables there.
+- API module: a folder in `apps/api/src/modules/` whose `index.ts` calls `defineModule` (`src/core/module.ts`), plus
+  one entry in `src/modules/index.ts`. Inject classes by class, repositories with `@InjectRepository(Entity)`, the
+  signed-in user with `@SignedInUser()`.
 - Code review: [CODING_STANDARDS.md](CODING_STANDARDS.md).
 
 ## Agent skills

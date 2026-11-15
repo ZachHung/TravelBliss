@@ -8,8 +8,10 @@ import {
 } from 'arctic';
 import { type Response } from 'express';
 import { Redis } from 'ioredis';
+import { type Repository } from 'typeorm';
 import logger from '@/config/logger';
 import TOKEN from '@/core/container/types.container';
+import { InjectRepository } from '@/core/module';
 import { ErrorCode } from '@/core/shared/error-code';
 import { BaseException } from '@/core/shared/exception';
 import { SessionService } from '@/modules/session/session.service';
@@ -18,7 +20,7 @@ import { UserNotFoundException } from '@/modules/user/user.exception';
 import { UserService } from '@/modules/user/user.service';
 import { type Context } from '@/types';
 import { Inject, Injectable } from '@/types/inversify';
-import { getEnv } from '@/utils/helpers';
+import { cookieOptions, getEnv } from '@/utils/helpers';
 import { LinkedSignIn } from './linked-sign-in.entity';
 import {
   EmailTakenSignInToLinkException,
@@ -26,7 +28,6 @@ import {
   LinkedSignInFailedException,
   LinkedSignInTakenException,
 } from './linked-sign-in.exception';
-import { LinkedSignInRepository } from './linked-sign-in.repository';
 import {
   type ProviderProfile,
   type SignInProvider,
@@ -66,9 +67,9 @@ export class LinkedSignInService {
 
   constructor(
     @Inject(TOKEN.SignInProviders) providers: SignInProvider[],
-    @Inject(TOKEN.Repositories.LinkedSignIn) private readonly links: LinkedSignInRepository,
-    @Inject(TOKEN.Services.User) private readonly users: UserService,
-    @Inject(TOKEN.Services.Session) private readonly sessions: SessionService,
+    @InjectRepository(LinkedSignIn) private readonly links: Repository<LinkedSignIn>,
+    @Inject(UserService) private readonly users: UserService,
+    @Inject(SessionService) private readonly sessions: SessionService,
     @Inject(TOKEN.Store.Redis) private readonly store: Redis
   ) {
     this.providers = new Map(providers.map((provider) => [provider.name, provider]));
@@ -100,14 +101,11 @@ export class LinkedSignInService {
     const flow: Flow = { provider: name, codeVerifier, userId };
     await this.store.set(flowKey(state), JSON.stringify(flow), 'EX', FLOW_TTL_SECONDS);
     // The mode rides along, so a callback whose flow is gone still knows which page to return to
-    res.cookie(stateCookieName(), `${userId ? 'connect' : 'sign-in'}:${state}`, {
-      path: stateCookiePath,
-      maxAge: FLOW_TTL_SECONDS * 1000,
-      httpOnly: true,
-      // As the refresh cookie: the API is cross-site from the web app in production
-      sameSite: getEnv('NODE_ENV') === 'production' ? 'none' : 'lax',
-      secure: getEnv('NODE_ENV') === 'production',
-    });
+    res.cookie(
+      stateCookieName(),
+      `${userId ? 'connect' : 'sign-in'}:${state}`,
+      cookieOptions({ path: stateCookiePath, maxAge: FLOW_TTL_SECONDS * 1000 })
+    );
     return provider.authorizationUrl(state, codeVerifier).toString();
   }
 

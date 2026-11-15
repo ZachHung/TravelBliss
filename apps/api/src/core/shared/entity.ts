@@ -1,5 +1,5 @@
 import { Field, ObjectType } from 'type-graphql';
-import { CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()
 @ObjectType()
@@ -13,6 +13,6 @@ export class BaseEntity {
   public readonly createdAt: Date;
 
   @Field()
-  @CreateDateColumn()
+  @UpdateDateColumn()
   public readonly updatedAt: Date;
 }
