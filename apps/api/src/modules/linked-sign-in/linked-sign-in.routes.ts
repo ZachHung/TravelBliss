@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import logger from '@/config/logger';
-import { ErrorCode } from '@/core/shared/error-code';
+import { type ErrorCode } from '@/core/shared/error-code';
 import { webOrigin } from '@/utils/helpers';
 import { type FinishResult, type LinkedSignInService } from './linked-sign-in.service';
 import { devAuthorizePage } from './providers/dev';
@@ -37,20 +36,15 @@ export const linkedSignInRoutes = (service: LinkedSignInService): Router => {
       return;
     }
     const { code, state } = req.query;
-    try {
-      const result = await service.finish(
-        name,
-        {
-          code: typeof code === 'string' ? code : undefined,
-          state: typeof state === 'string' ? state : undefined,
-        },
-        { req, res }
-      );
-      res.redirect(webUrl(result));
-    } catch (error) {
-      logger.error('Linked sign-in callback failed', error instanceof Error ? error : { error });
-      res.redirect(webUrl({ connecting: false, error: ErrorCode.SOMETHING_WENT_WRONG }));
-    }
+    const result = await service.finish(
+      name,
+      {
+        code: typeof code === 'string' ? code : undefined,
+        state: typeof state === 'string' ? state : undefined,
+      },
+      { req, res }
+    );
+    res.redirect(webUrl(result));
   });
 
   return router;

@@ -48,11 +48,6 @@ describe('linked sign-in routes', () => {
       'http://localhost:5173/account?error=LINKED_SIGN_IN_TAKEN'
     );
 
-    finish.mockRejectedValueOnce(new Error('database down'));
-    expect((await get('/auth/google/callback')).location).toBe(
-      'http://localhost:5173/sign-in?error=SOMETHING_WENT_WRONG'
-    );
-
     expect((await get('/auth/myspace/callback')).status).toBe(404);
     close();
   });

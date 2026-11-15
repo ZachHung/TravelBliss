@@ -21,33 +21,52 @@ const setup = () => {
   const users: Partial<User>[] = [{ id: 'u-pass', email: 'taken@example.com', password: 'hash' }];
   const links: Partial<LinkedSignIn>[] = [];
   const store = new Map<string, string>();
-  // A transaction keeps its writes apart and applies them only when the callback succeeds, as Postgres would
-  type Tx = { users: Partial<User>[]; links: Partial<LinkedSignIn>[] };
-  const failNextLink = { value: false };
-  const transaction = async <T>(work: (manager: unknown) => Promise<T>) => {
-    const tx: Tx = { users: [], links: [] };
-    const manager = {
-      tx,
-      insert: async (_entity: unknown, row: Partial<LinkedSignIn>) => {
-        if (failNextLink.value) {
-          throw new Error('insert failed');
-        }
-        tx.links.push({ id: `l${links.length}`, ...row });
-      },
-    };
-    const result = await work(manager);
-    users.push(...tx.users);
-    links.push(...tx.links);
-    return result;
-  };
   const matches = (where: object) => (row: object) =>
     Object.entries(where).every(([key, value]) => row[key as keyof typeof row] === value);
+  // Postgres in miniature: (provider, providerUserId) is unique, and a transaction holds the row lock it takes, so
+  // transactions run one at a time; its inserts apply only when the callback succeeds
+  type Tx = { users: Partial<User>[]; links: Partial<LinkedSignIn>[] };
+  const failNextLink = { value: false };
+  let nextLinkId = 0;
+  const insertLink = (target: Partial<LinkedSignIn>[], row: Partial<LinkedSignIn>) => {
+    if (failNextLink.value) {
+      throw new Error('insert failed');
+    }
+    if (links.some((l) => l.provider === row.provider && l.providerUserId === row.providerUserId)) {
+      throw Object.assign(new Error('duplicate key'), { driverError: { code: '23505' } });
+    }
+    target.push({ id: `l${nextLinkId++}`, ...row });
+  };
+  let lock = Promise.resolve();
+  const transaction = <T>(work: (manager: unknown) => Promise<T>): Promise<T> => {
+    const run = lock.then(async () => {
+      const tx: Tx = { users: [], links: [] };
+      const result = await work({
+        tx,
+        insert: async (_entity: unknown, row: Partial<LinkedSignIn>) => insertLink(tx.links, row),
+        findOne: async (_entity: unknown, { where }: { where: object }) =>
+          users.find(matches(where)) ?? null,
+        find: async (_entity: unknown, { where }: { where: object }) =>
+          links.filter(matches(where)),
+        delete: async (_entity: unknown, where: object) =>
+          links.splice(links.findIndex(matches(where)), 1),
+      });
+      users.push(...tx.users);
+      links.push(...tx.links);
+      return result;
+    });
+    lock = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  };
   const service = new LinkedSignInService(
     [fakeProvider],
     {
       find: async ({ where }: { where: object }) => links.filter(matches(where)),
       findOneBy: async (where: object) => links.find(matches(where)) ?? null,
-      insert: async (row: Partial<LinkedSignIn>) => links.push({ id: `l${links.length}`, ...row }),
+      insert: async (row: Partial<LinkedSignIn>) => insertLink(links, row),
       delete: async (where: object) => links.splice(links.findIndex(matches(where)), 1),
       manager: { transaction },
     } as never,
@@ -167,7 +186,7 @@ describe('LinkedSignInService', () => {
     const { service, users, failNextLink } = setup();
     failNextLink.value = true;
 
-    await expect(signIn(service, code())).rejects.toThrow('insert failed');
+    expect((await signIn(service, code())).result.error).toBe(ErrorCode.SOMETHING_WENT_WRONG);
     expect(users).toHaveLength(1);
   });
 
@@ -180,6 +199,41 @@ describe('LinkedSignInService', () => {
     });
 
     expect(expired.result).toEqual({ connecting: true, error: ErrorCode.LINKED_SIGN_IN_FAILED });
+  });
+
+  it('answers a second callback racing the first for the same provider account as if the link existed', async () => {
+    const { service, links } = setup();
+
+    const [first, second] = await Promise.all([
+      signIn(service, code(), 'u-pass'),
+      signIn(service, code(), 'u-pass'),
+    ]);
+
+    expect([first.result, second.result]).toEqual([{ connecting: true }, { connecting: true }]);
+    expect(links).toHaveLength(1);
+  });
+
+  it('returns an unexpected failure during a connect to the account page', async () => {
+    const { service } = setup();
+
+    // The fake provider cannot parse this code: an error no rule expects
+    const { result } = await signIn(service, 'not json', 'u-pass');
+
+    expect(result).toEqual({ connecting: true, error: ErrorCode.SOMETHING_WENT_WRONG });
+  });
+
+  it('keeps the last way in when two disconnects race', async () => {
+    const { service, links } = setup();
+    await signIn(service, code());
+    await signIn(service, code({ email: null, providerUserId: 'g-2' }), 'u1');
+
+    const results = await Promise.allSettled([
+      service.disconnect('l0', 'u1'),
+      service.disconnect('l1', 'u1'),
+    ]);
+
+    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(links).toHaveLength(1);
   });
 
   it('keeps the last way to sign in', async () => {
