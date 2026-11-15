@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "skills": {
+    "mantine-combobox": {
+      "source": "mantinedev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/mantine-combobox/SKILL.md",
+      "computedHash": "4a6bfe46c608e68344735d2a46e146914a43553f66e407eb29eb68317770ed32"
+    },
+    "mantine-custom-components": {
+      "source": "mantinedev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/mantine-custom-components/SKILL.md",
+      "computedHash": "fe74cc822dd8ba3f889305c58cc35384a592c441febe5d98a1151f1444610c4c"
+    },
+    "mantine-form": {
+      "source": "mantinedev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/mantine-form/SKILL.md",
+      "computedHash": "c55ed7204c3fea77ea57165d0ec992bf9c970773008c1db9cb32c18005dd1745"
+    }
+  }
+}
