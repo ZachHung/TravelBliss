@@ -12,7 +12,6 @@ import { buildSchema } from 'type-graphql';
 import { PostgresDataSource } from './config/data-source';
 import logger from './config/logger';
 import container from './core/container/config.container';
-import TOKEN from './core/container/types.container';
 import {
   assignCorrelationId,
   CORRELATION_HEADER,
@@ -20,11 +19,10 @@ import {
   loggingPlugin,
 } from './core/logging';
 import { authChecker } from './core/middlewares/auth-checker.middleware';
+import { resolversOf } from './core/module';
 import { withErrorCodes } from './core/shared/error-code';
-import { linkedSignInRoutes } from './modules/linked-sign-in/linked-sign-in.routes';
-import { type LinkedSignInService } from './modules/linked-sign-in/linked-sign-in.service';
-import { type SessionService } from './modules/session/session.service';
-import { resolvers } from './resolvers';
+import { modules } from './modules';
+import { SessionService } from './modules/session/session.service';
 import { type Context } from './types';
 import { getEnv, webOrigin } from './utils/helpers';
 
@@ -37,7 +35,7 @@ export const bootstrap = async (): Promise<void> => {
   const schema = withErrorCodes(
     await buildSchema({
       validate: true,
-      resolvers,
+      resolvers: resolversOf(modules),
       authChecker,
       container,
     })
@@ -65,7 +63,11 @@ export const bootstrap = async (): Promise<void> => {
   await server.start();
   app.set('trust proxy', isProduction);
   app.use(cookieParser());
-  app.use(linkedSignInRoutes(container.get<LinkedSignInService>(TOKEN.Services.LinkedSignIn)));
+  for (const { routes } of modules) {
+    if (routes) {
+      app.use(routes((id) => container.get(id)));
+    }
+  }
   app.use(
     '/',
     cors<cors.CorsRequest>({
@@ -80,9 +82,7 @@ export const bootstrap = async (): Promise<void> => {
 
     expressMiddleware(server, {
       context: async ({ req, res }): Promise<Context> => {
-        const auth = await container
-          .get<SessionService>(TOKEN.Services.Session)
-          .authenticate(req.headers.authorization);
+        const auth = await container.get(SessionService).authenticate(req.headers.authorization);
         return { req, res, auth };
       },
     })

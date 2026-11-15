@@ -1,5 +1,6 @@
 import { resolve } from 'path';
 import { config } from 'dotenv';
+import { type CookieOptions } from 'express';
 import { type DeleteResult, type InsertResult, type UpdateResult } from 'typeorm';
 
 // One file per environment at the repo root: .env.local (docker on this machine), .env.development (hosted dev).
@@ -29,3 +30,17 @@ export const webOrigin = (): string => process.env.API_CORS_ORIGIN || 'http://lo
 /** Where browsers reach this API; providers redirect back to it, so it must match their registered callback URL. */
 export const apiPublicUrl = (): string =>
   process.env.API_PUBLIC_URL || `http://localhost:${getEnv('API_PORT')}`;
+
+/**
+ * For every cookie the API sets: httpOnly, and in production SameSite=None + Secure, because the web app calls the
+ * API cross-site there.
+ */
+export const cookieOptions = (options: CookieOptions): CookieOptions => {
+  const isProduction = getEnv('NODE_ENV') === 'production';
+  return {
+    ...options,
+    httpOnly: true,
+    sameSite: isProduction ? 'none' : 'lax',
+    secure: isProduction,
+  };
+};

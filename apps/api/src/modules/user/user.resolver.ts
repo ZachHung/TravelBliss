@@ -1,5 +1,5 @@
 import { Arg, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
-import TOKEN from '@/core/container/types.container';
+import { SignedInUser } from '@/core/middlewares/signed-in-user.decorator';
 import { SessionService } from '@/modules/session/session.service';
 import { UserTokens } from '@/modules/session/session.type';
 import type { Context } from '@/types';
@@ -19,13 +19,13 @@ import { UserService } from './user.service';
 @Resolver((_type) => User)
 export class UserResolver {
   constructor(
-    @Inject(TOKEN.Services.User) private readonly userService: UserService,
-    @Inject(TOKEN.Services.Session) private readonly sessionService: SessionService
+    @Inject(UserService) private readonly userService: UserService,
+    @Inject(SessionService) private readonly sessionService: SessionService
   ) {}
 
   @Authorized()
   @Query((_type) => User)
-  public me(@Ctx() { auth: { user } }: Required<Context>): User {
+  public me(@SignedInUser() user: User): User {
     return user;
   }
 
@@ -63,7 +63,7 @@ export class UserResolver {
   @Mutation((_type) => User)
   public async editInfoUser(
     @Arg('input') input: EditInfoInput,
-    @Ctx() { auth: { user } }: Required<Context>
+    @SignedInUser() user: User
   ): Promise<User> {
     const response = await this.userService.editInfo(input, user.id);
     return response;
@@ -85,7 +85,7 @@ export class UserResolver {
   @Mutation((_type) => User)
   public async setPassword(
     @Arg('input') input: SetPasswordInput,
-    @Ctx() { auth: { user } }: Required<Context>
+    @SignedInUser() user: User
   ): Promise<User> {
     return this.userService.setPassword(input.password, user.id);
   }
