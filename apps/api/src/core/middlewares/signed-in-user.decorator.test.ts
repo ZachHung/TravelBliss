@@ -16,6 +16,9 @@ const resolve = (auth: unknown) => {
 describe('SignedInUser', () => {
   it('is the signed-in user, and UNAUTHENTICATED for a guest', () => {
     expect(resolve({ user: { id: 'u1' } })()).toEqual({ id: 'u1' });
-    expect(resolve(undefined)).toThrow(/Access denied|authenticat/i);
+    // The exact code: the web app refreshes the session only on UNAUTHENTICATED
+    expect(resolve(undefined)).toThrow(
+      expect.objectContaining({ extensions: { code: 'UNAUTHENTICATED' } })
+    );
   });
 });

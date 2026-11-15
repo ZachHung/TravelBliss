@@ -152,3 +152,23 @@ describe('UserService.setPassword', () => {
     });
   });
 });
+
+describe('UserService.editInfo', () => {
+  it('moves updatedAt forward: TypeORM adds it to the UPDATE for @UpdateDateColumn', async () => {
+    // Real metadata and query builder, no connection: execute is caught and returns no row
+    const dataSource = new DataSource({ type: 'postgres', entities: [User] });
+    await (dataSource as unknown as { buildMetadatas: () => Promise<void> }).buildMetadatas();
+    let sql = '';
+    vi.spyOn(UpdateQueryBuilder.prototype, 'execute').mockImplementation(async function (
+      this: UpdateQueryBuilder<User>
+    ) {
+      sql = this.getQuery();
+      return { raw: [{}], generatedMaps: [] };
+    });
+
+    await new UserService(dataSource.getRepository(User)).editInfo({ fullName: 'An' }, 'u1');
+
+    expect(sql).toContain('"updatedAt" = CURRENT_TIMESTAMP');
+    vi.restoreAllMocks();
+  });
+});

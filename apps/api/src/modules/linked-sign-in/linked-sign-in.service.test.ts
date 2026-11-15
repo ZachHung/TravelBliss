@@ -236,6 +236,19 @@ describe('LinkedSignInService', () => {
     expect(links).toHaveLength(1);
   });
 
+  it('clears the state cookie with the attributes it was set with, as a cross-site clear needs', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const { service } = setup();
+
+    const { ctx } = await signIn(service, code());
+    vi.unstubAllEnvs();
+
+    expect(ctx.res.clearCookie).toHaveBeenCalledWith(
+      'tb_ls',
+      expect.objectContaining({ path: '/auth', sameSite: 'none', secure: true, httpOnly: true })
+    );
+  });
+
   it('keeps the last way to sign in', async () => {
     const { service, links } = setup();
     await signIn(service, code());
