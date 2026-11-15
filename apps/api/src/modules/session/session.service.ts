@@ -27,6 +27,24 @@ const refreshKey = (userId: string, token: string): string =>
 // authTime: when the user actually signed in (OpenID Connect's auth_time), carried through every rotation
 type TokenClaims = { userId: string; token: string; iat: number; exp: number; authTime: number };
 
+const encryptionKey = () => Buffer.from(getEnv('API_ENCRYPTION_KEY'));
+const GCM_PREFIX = 'gcm';
+
+/**
+ * Reads a refresh cookie written before cookies moved to AES-256-GCM; every refresh rewrites it as GCM.
+ * shortcut: unauthenticated CBC, kept only so existing sessions survive the switch; delete it once
+ * API_SESSION_MAX_AGE (90 days) has passed since the switch shipped, when no CBC cookie can still be valid.
+ */
+const legacyCbcDecrypt = (text: string): string => {
+  const [iv, ...rest] = text.split(':');
+
+  const decipher = createDecipheriv('aes-256-cbc', encryptionKey(), Buffer.from(iv, 'hex'));
+  return Buffer.concat([
+    decipher.update(Buffer.from(rest.join(':'), 'hex')),
+    decipher.final(),
+  ]).toString();
+};
+
 const nowInSeconds = () => Math.floor(Date.now() / 1000);
 
 /** A duration env var such as "30d" in seconds; a typo fails loudly instead of meaning "expired". */
@@ -243,28 +261,30 @@ export class SessionService {
     return value;
   }
 
+  // AES-256-GCM is authenticated: a tampered cookie fails to decrypt instead of decrypting to something else
   private aesEncrypt(text: string): string {
-    const iv = randomBytes(16);
-    const cipher = createCipheriv('aes-256-cbc', Buffer.from(getEnv('API_ENCRYPTION_KEY')), iv);
-
-    let encrypted = cipher.update(text);
-
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-
-    return `${iv.toString('hex')}:${encrypted.toString('hex')}`;
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', encryptionKey(), iv);
+    const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+    return [
+      GCM_PREFIX,
+      iv.toString('hex'),
+      cipher.getAuthTag().toString('hex'),
+      encrypted.toString('hex'),
+    ].join(':');
   }
 
   private aesDecrypt(text: string): string {
-    const textParts = text.split(':');
-    const iv = Buffer.from(textParts.shift()!, 'hex');
-    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-    const decipher = createDecipheriv('aes-256-cbc', Buffer.from(getEnv('API_ENCRYPTION_KEY')), iv);
-
-    let decrypted = decipher.update(encryptedText);
-
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-
-    return decrypted.toString();
+    const [prefix, iv, tag, encrypted] = text.split(':');
+    if (prefix !== GCM_PREFIX) {
+      return legacyCbcDecrypt(text);
+    }
+    const decipher = createDecipheriv('aes-256-gcm', encryptionKey(), Buffer.from(iv, 'hex'));
+    decipher.setAuthTag(Buffer.from(tag, 'hex'));
+    return Buffer.concat([
+      decipher.update(Buffer.from(encrypted, 'hex')),
+      decipher.final(),
+    ]).toString();
   }
 
   private async deleteByPattern(match: string): Promise<void> {

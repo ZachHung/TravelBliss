@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { createCipheriv, randomBytes } from 'crypto';
 import { sign } from 'jsonwebtoken';
 import { ErrorCode } from '@/core/shared/error-code';
 import { UserNotFoundException } from '@/modules/user/user.exception';
@@ -151,6 +152,45 @@ describe('SessionService', () => {
     expect(store.data.has('blacklist:access-token')).toBe(true);
   });
 
+  describe('refresh cookie encryption', () => {
+    // A cookie as written before the switch to AES-256-GCM
+    const legacyCbc = (text: string) => {
+      const iv = randomBytes(16);
+      const cipher = createCipheriv(
+        // eslint-disable-next-line sonarjs/encryption-secure-mode -- builds a pre-GCM cookie on purpose
+        'aes-256-cbc',
+        Buffer.from(process.env.API_ENCRYPTION_KEY!),
+        iv
+      );
+      const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+      return `${iv.toString('hex')}:${encrypted.toString('hex')}`;
+    };
+
+    it('still accepts a CBC cookie from before the switch, and rewrites it as GCM', async () => {
+      const { service, store } = setup();
+      const res = fakeRes();
+      await service.start('u1', { remember: true }, ctx(res));
+      const refreshToken = [...store.data.values()].find((value) => value.includes('.'))!;
+
+      const next = fakeRes();
+      await service.refresh(ctx(next, { tb_rf: legacyCbc(refreshToken) }));
+
+      expect(next.cookies.tb_rf).toMatch(/^gcm:/);
+    });
+
+    it('rejects a tampered cookie instead of decrypting it to something else', async () => {
+      const { service } = setup();
+      const res = fakeRes();
+      await service.start('u1', { remember: true }, ctx(res));
+      const cookie = res.cookies.tb_rf;
+      const flipped = `${cookie.slice(0, -1)}${cookie.endsWith('0') ? '1' : '0'}`;
+
+      await expect(service.refresh(ctx(fakeRes(), { tb_rf: flipped }))).rejects.toMatchObject({
+        extensions: { code: ErrorCode.INVALID_COOKIES },
+      });
+    });
+  });
+
   describe('endOtherSessions', () => {
     // Token times have one-second resolution, so the clock moves between "before" and "after"
     beforeEach(() => vi.useFakeTimers({ now: new Date('2026-11-14T10:00:00Z') }));
@@ -205,6 +245,16 @@ describe('SessionService', () => {
   });
 
   describe('session lifetime (idle 7d, absolute cap 20d in tests)', () => {
+    const day = 24 * 60 * 60 * 1000;
+    const start = new Date('2026-11-14T10:00:00Z');
+    beforeEach(() => vi.useFakeTimers({ now: start }));
+    afterEach(() => vi.useRealTimers());
+
+    const cookieExpiry = (res: ReturnType<typeof fakeRes>) =>
+      (res.options as Record<string, { expires: Date }>).tb_rf.expires.getTime();
+    const refreshKeyExpiry = (store: ReturnType<typeof setup>['store']) =>
+      [...store.expiresAt].find(([key]) => key.startsWith('refreshToken:'))![1] * 1000;
+
     // (idle timeout) nothing for longer than 7 days: the refresh token has expired
     it('ends an idle session after 7 days without a refresh', async () => {
       const { service } = setup();
@@ -216,16 +266,6 @@ describe('SessionService', () => {
         extensions: { code: ErrorCode.INVALID_TOKEN },
       });
     });
-
-    const day = 24 * 60 * 60 * 1000;
-    const start = new Date('2026-11-14T10:00:00Z');
-    beforeEach(() => vi.useFakeTimers({ now: start }));
-    afterEach(() => vi.useRealTimers());
-
-    const cookieExpiry = (res: ReturnType<typeof fakeRes>) =>
-      (res.options as Record<string, { expires: Date }>).tb_rf.expires.getTime();
-    const refreshKeyExpiry = (store: ReturnType<typeof setup>['store']) =>
-      [...store.expiresAt].find(([key]) => key.startsWith('refreshToken:'))![1] * 1000;
 
     it('expires the cookie, the refresh token and its Redis key together', async () => {
       const { service, store } = setup();

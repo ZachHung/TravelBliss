@@ -8,7 +8,8 @@ const env = (process.env.NODE_ENV ?? 'development').toUpperCase();
 // Dev: one readable line, extra fields as JSON, stack on the following lines
 const devLine = format.printf(({ timestamp, level, message, stack, ...fields }) => {
   const extra = Object.keys(fields).length ? ` ${JSON.stringify(fields)}` : '';
-  return `[${env}] ${timestamp} ${level}: ${message}${extra}${stack ? `\n${stack}` : ''}`;
+  const trace = stack ? `\n${stack}` : '';
+  return `[${env}] ${timestamp} ${level}: ${message}${extra}${trace}`;
 });
 
 // Stdout only: Docker and hosting platforms collect it, while a file inside a container is lost with it

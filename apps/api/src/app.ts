@@ -87,7 +87,7 @@ export const bootstrap = async (): Promise<void> => {
 
   httpServer.listen(+getEnv('API_PORT'), () =>
     logger.info(
-      `Server running in ${getEnv('NODE_ENV')} mode at http://localhost${getEnv('API_PORT') && `:${getEnv('API_PORT')}`}`
+      `Server running in ${getEnv('NODE_ENV')} mode at http://localhost:${getEnv('API_PORT')}`
     )
   );
 };
