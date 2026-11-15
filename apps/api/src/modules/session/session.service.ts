@@ -37,7 +37,7 @@ const GCM_PREFIX = 'gcm';
  */
 const legacyCbcDecrypt = (text: string): string => {
   const [iv, ...rest] = text.split(':');
-   
+
   const decipher = createDecipheriv('aes-256-cbc', encryptionKey(), Buffer.from(iv, 'hex'));
   return Buffer.concat([
     decipher.update(Buffer.from(rest.join(':'), 'hex')),
