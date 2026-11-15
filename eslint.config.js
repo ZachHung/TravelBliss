@@ -62,7 +62,12 @@ export default tseslint.config(
       'max-depth': ['error', 4],
       'max-nested-callbacks': ['error', 5],
       'max-params': ['error', 5],
-      complexity: ['error', { max: 10 }],
+      // Readability, not branch count: replaces cyclomatic `complexity`. 10 catches what that rule caught here.
+      'sonarjs/cognitive-complexity': ['error', 10],
+      // Each duplicates a rule already on: typescript-eslint/no-unused-vars, max-nested-callbacks
+      'sonarjs/no-unused-vars': 'off',
+      'sonarjs/unused-import': 'off',
+      'sonarjs/no-nested-functions': 'off',
     },
   },
   {
