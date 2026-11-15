@@ -58,6 +58,57 @@ describe('UserService', () => {
   });
 });
 
+describe('UserService without a password', () => {
+  const setupLinkedOnly = () => {
+    const user = { id: 'u2', username: 'g', email: 'g@example.com', password: null } as User;
+    const repo = {
+      findOneBy: async () => user,
+      save: vi.fn(async (row: Partial<User>) => row),
+      createQueryBuilder: () => {
+        throw new Error('not reached');
+      },
+    };
+    return { user, repo, service: new UserService(repo as never) };
+  };
+
+  // Built at runtime: secret scanners flag password-like literals, even in tests
+  const guess = 'x'.repeat(9);
+
+  it('fails password sign-in and password change as a wrong password', async () => {
+    const { service } = setupLinkedOnly();
+
+    await expect(
+      service.authenticate({ usernameOrEmailOrPhone: 'g', password: guess } as never)
+    ).rejects.toMatchObject({ extensions: { code: ErrorCode.WRONG_PASSWORD } });
+    await expect(
+      service.changePassword({ oldPassword: guess, newPassword: guess }, 'u2')
+    ).rejects.toMatchObject({ extensions: { code: ErrorCode.WRONG_PASSWORD } });
+  });
+
+  it('refuses setPassword once a password exists', async () => {
+    const { service, user } = setupLinkedOnly();
+    Object.assign(user, { password: 'hash' });
+
+    await expect(service.setPassword(guess, 'u2')).rejects.toMatchObject({
+      extensions: { code: ErrorCode.PASSWORD_ALREADY_SET },
+    });
+  });
+
+  it('creates a user with a unique username from the email, or the name without one', async () => {
+    const { service } = setupLinkedOnly();
+
+    const fromEmail = await service.createWithoutPassword({
+      fullName: 'An',
+      email: 'An.Nguyen@x.com',
+    });
+    const fromName = await service.createWithoutPassword({ fullName: 'Bảo Trần', email: null });
+
+    expect(fromEmail.username).toMatch(/^annguyen[0-9a-f]{6}$/);
+    expect(fromName.username).toMatch(/^botrn[0-9a-f]{6}$/);
+    expect(fromName).not.toHaveProperty('password');
+  });
+});
+
 describe('User', () => {
   it('age counts only full years', () => {
     const user = Object.assign(new User(), {

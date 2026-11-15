@@ -21,10 +21,12 @@ import {
 } from './core/logging';
 import { authChecker } from './core/middlewares/auth-checker.middleware';
 import { withErrorCodes } from './core/shared/error-code';
+import { linkedSignInRoutes } from './modules/linked-sign-in/linked-sign-in.routes';
+import { type LinkedSignInService } from './modules/linked-sign-in/linked-sign-in.service';
 import { type SessionService } from './modules/session/session.service';
 import { resolvers } from './resolvers';
 import { type Context } from './types';
-import { getEnv } from './utils/helpers';
+import { getEnv, webOrigin } from './utils/helpers';
 
 export const bootstrap = async (): Promise<void> => {
   const isProduction = getEnv('NODE_ENV') === 'production';
@@ -63,10 +65,11 @@ export const bootstrap = async (): Promise<void> => {
   await server.start();
   app.set('trust proxy', isProduction);
   app.use(cookieParser());
+  app.use(linkedSignInRoutes(container.get<LinkedSignInService>(TOKEN.Services.LinkedSignIn)));
   app.use(
     '/',
     cors<cors.CorsRequest>({
-      origin: process.env.API_CORS_ORIGIN || 'http://localhost:5173',
+      origin: webOrigin(),
       credentials: true,
       // Browsers hide non-standard response headers from JS unless they are listed here
       exposedHeaders: [CORRELATION_HEADER],

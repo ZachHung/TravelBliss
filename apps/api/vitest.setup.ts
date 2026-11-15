@@ -3,6 +3,7 @@ import 'reflect-metadata';
 
 // Fixed test values, so tests never depend on the root .env.* files.
 Object.assign(process.env, {
+  API_PORT: '8000',
   API_SALT_ROUND: '4',
   API_SECRET_JWT: 'jwt-secret',
   API_JWT_EXPIRED: '15m',

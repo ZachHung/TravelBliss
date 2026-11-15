@@ -6,7 +6,13 @@ import type { Context } from '@/types';
 import { Role } from '@/types/enums';
 import { Inject, Injectable } from '@/types/inversify';
 import { User } from './user.entity';
-import { ChangePasswordInput, EditInfoInput, LoginInput, RegisterInput } from './user.input';
+import {
+  ChangePasswordInput,
+  EditInfoInput,
+  LoginInput,
+  RegisterInput,
+  SetPasswordInput,
+} from './user.input';
 import { UserService } from './user.service';
 
 @Injectable()
@@ -72,5 +78,15 @@ export class UserResolver {
   ): Promise<UserTokens> {
     await this.userService.changePassword(input, ctx.auth.user.id);
     return this.sessionService.endOtherSessions(ctx);
+  }
+
+  // No other session to end: until now this user could only sign in through a linked sign-in
+  @Authorized()
+  @Mutation((_type) => User)
+  public async setPassword(
+    @Arg('input') input: SetPasswordInput,
+    @Ctx() { auth: { user } }: Required<Context>
+  ): Promise<User> {
+    return this.userService.setPassword(input.password, user.id);
   }
 }

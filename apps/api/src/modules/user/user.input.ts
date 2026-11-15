@@ -67,3 +67,10 @@ export class ChangePasswordInput {
   @Field()
   public readonly newPassword!: string;
 }
+
+@InputType()
+export class SetPasswordInput {
+  @MinLength(8)
+  @Field()
+  public readonly password!: string;
+}

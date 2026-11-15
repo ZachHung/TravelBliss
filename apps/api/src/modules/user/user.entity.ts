@@ -21,26 +21,34 @@ export class User extends BaseEntity {
     return this.fullName.split(' ').slice(-1)[0];
   }
 
-  @Field()
-  @Column()
-  public readonly birthday: Date;
+  // Null for users who joined through a linked sign-in: asked for when a booking needs it
+  @Field(() => Date, { nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
+  public readonly birthday: Date | null;
 
-  @Field((_type) => Int)
-  public age(): number {
-    return dayjs().diff(dayjs(this.birthday), 'year');
+  @Field((_type) => Int, { nullable: true })
+  public age(): number | null {
+    return this.birthday && dayjs().diff(dayjs(this.birthday), 'year');
   }
 
-  // Never a GraphQL field: no client, admin included, may read a password hash
-  @Column()
-  public readonly password: string;
+  // Never a GraphQL field: no client, admin included, may read a password hash.
+  // Null for a user who only signs in through linked sign-ins.
+  @Column({ type: 'varchar', nullable: true })
+  public readonly password: string | null;
 
   @Field()
-  @Column({ unique: true })
-  public readonly email: string;
+  public hasPassword(): boolean {
+    return !!this.password;
+  }
 
-  @Field()
-  @Column({ unique: true })
-  public readonly phoneNumber: string;
+  // Null when a provider shares no email (Facebook accounts registered by phone)
+  @Field(() => String, { nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  public readonly email: string | null;
+
+  @Field(() => String, { nullable: true })
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  public readonly phoneNumber: string | null;
 
   @Field()
   @Column({ unique: true })

@@ -1,11 +1,17 @@
 import dayjs from 'dayjs';
+import { randomBytes } from 'crypto';
 import { compare, hash } from 'bcrypt';
 import TOKEN from '@/core/container/types.container';
 import Service from '@/core/shared/service';
 import { Inject, Injectable } from '@/types/inversify';
 import { getEnv, mutationReturn } from '@/utils/helpers';
 import { User } from './user.entity';
-import { UserExistException, UserNotFoundException, WrongPassException } from './user.exception';
+import {
+  PasswordAlreadySetException,
+  UserExistException,
+  UserNotFoundException,
+  WrongPassException,
+} from './user.exception';
 import { ChangePasswordInput, LoginInput, RegisterInput } from './user.input';
 import { UserRepository } from './user.repository';
 
@@ -19,6 +25,10 @@ export class UserService implements Service<User> {
       throw new UserNotFoundException();
     }
     return user;
+  }
+
+  public async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOneBy({ email });
   }
 
   public async register(input: RegisterInput): Promise<User> {
@@ -49,8 +59,8 @@ export class UserService implements Service<User> {
     if (!user) {
       throw new UserNotFoundException();
     }
-    const isValidPass = await compare(password, user.password);
-    if (!isValidPass) {
+    // No password (linked sign-ins only) fails like a wrong one, so it reveals nothing more
+    if (!user.password || !(await compare(password, user.password))) {
       throw new WrongPassException();
     }
     return user;
@@ -86,14 +96,42 @@ export class UserService implements Service<User> {
 
   public async changePassword(input: ChangePasswordInput, userId: string): Promise<User> {
     const user = await this.findById(userId);
-    // Check password hash
-    const isValidPass = await compare(input.oldPassword, user.password);
-    if (!isValidPass) {
+    if (!user.password || !(await compare(input.oldPassword, user.password))) {
       throw new WrongPassException();
     }
 
     const newPassword = await hash(input.newPassword, +getEnv('API_SALT_ROUND'));
     return this.editInfo({ password: newPassword }, userId);
+  }
+
+  /** A first password for a user who joined through a linked sign-in; changing one goes through changePassword. */
+  public async setPassword(password: string, userId: string): Promise<User> {
+    if ((await this.findById(userId)).password) {
+      throw new PasswordAlreadySetException();
+    }
+    return this.editInfo({ password: await hash(password, +getEnv('API_SALT_ROUND')) }, userId);
+  }
+
+  /** A user with no password, phone or birthday, as a linked sign-in creates one. */
+  public async createWithoutPassword({
+    fullName,
+    email,
+  }: {
+    fullName: string;
+    email: string | null;
+  }): Promise<User> {
+    // Usernames are unique and the provider has none: a readable stem plus a random suffix
+    const stem =
+      (email?.split('@')[0] ?? fullName).toLowerCase().replace(/[^a-z0-9]+/g, '') || 'user';
+    try {
+      return await this.userRepository.save({
+        fullName,
+        email,
+        username: `${stem}${randomBytes(3).toString('hex')}`,
+      });
+    } catch (error) {
+      throw this.toUserExist(error);
+    }
   }
 
   // Postgres unique violation (23505) -> the same error the pre-check gives, with the column name.

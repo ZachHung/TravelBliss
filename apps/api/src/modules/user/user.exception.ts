@@ -19,3 +19,9 @@ export class WrongPassException extends BaseException<User> {
     super('Wrong password', ErrorCode.WRONG_PASSWORD);
   }
 }
+
+export class PasswordAlreadySetException extends BaseException<User> {
+  constructor() {
+    super('This user already has a password', ErrorCode.PASSWORD_ALREADY_SET, 'password');
+  }
+}

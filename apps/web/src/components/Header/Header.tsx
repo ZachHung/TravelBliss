@@ -1,4 +1,5 @@
-import { IconLogout, IconMoon, IconSun, IconWorld } from '@tabler/icons-react';
+import { IconLogout, IconMoon, IconSun, IconUserCircle, IconWorld } from '@tabler/icons-react';
+import { Link } from 'react-router';
 import { ActionIcon, Burger, Flex, Group, useMantineColorScheme } from '@mantine/core';
 import Logo from '@/components/Logo/Logo';
 import NavLink from '@/components/NavLink/NavLink';
@@ -38,6 +39,17 @@ const Header = ({ opened, toggle }: HeaderProps) => {
           >
             {colorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
           </ActionIcon>
+          {user && (
+            <ActionIcon
+              component={Link}
+              to={ROUTES.ACCOUNT}
+              variant="light"
+              size="lg"
+              aria-label="Account"
+            >
+              <IconUserCircle size={20} />
+            </ActionIcon>
+          )}
           {user && (
             <ActionIcon variant="light" size="lg" onClick={signOut} aria-label="Sign out">
               <IconLogout size={20} />

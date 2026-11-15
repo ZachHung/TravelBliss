@@ -22,3 +22,10 @@ export const mutationReturn = async <T>(
   const result = await mutation;
   return result.raw[0];
 };
+
+/** The web app's origin: CORS allows it, and linked sign-in sends the browser back to it. */
+export const webOrigin = (): string => process.env.API_CORS_ORIGIN || 'http://localhost:5173';
+
+/** Where browsers reach this API; providers redirect back to it, so it must match their registered callback URL. */
+export const apiPublicUrl = (): string =>
+  process.env.API_PUBLIC_URL || `http://localhost:${getEnv('API_PORT')}`;
