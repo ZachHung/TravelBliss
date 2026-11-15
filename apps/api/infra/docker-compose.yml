@@ -1,6 +1,7 @@
 # Env comes from the repo root .env.local. From apps/api:
 #   pnpm docker:local:up   Postgres + Redis only (what `pnpm dev:local` uses)
 #   pnpm docker:serve:up   the same plus the API image (`serve` profile)
+# `pnpm e2e` runs a second copy from .env.e2e: its own project (COMPOSE_PROJECT_NAME) and host ports
 volumes:
   redis_data:
     driver: local
@@ -12,7 +13,6 @@ services:
     build:
       context: ../../..
       dockerfile: apps/api/Dockerfile
-    container_name: travel-bliss-app
     profiles: [serve]
     env_file:
       - ../../../.env.local
@@ -31,9 +31,8 @@ services:
 
   db:
     image: postgres:16.6-alpine
-    container_name: travel-bliss-postgres
     ports:
-      - 5432:5432
+      - ${API_POSTGRES_PORT:-5432}:5432
     environment:
       POSTGRES_USER: ${API_POSTGRES_USER}
       POSTGRES_PASSWORD: ${API_POSTGRES_PASSWORD}
@@ -45,12 +44,14 @@ services:
       interval: 15s
       timeout: 5s
       retries: 20
+      # Check every second while starting, so `up --wait` doesn't sit out a whole 15s interval
+      start_period: 30s
+      start_interval: 1s
 
   cache:
     image: redis:7.4.1-alpine
-    container_name: travel-bliss-redis
     ports:
-      - '6379:6379'
+      - '${API_REDIS_PORT:-6379}:6379'
     environment:
       REDIS_PASSWORD: ${API_REDIS_PASSWORD}
     command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"

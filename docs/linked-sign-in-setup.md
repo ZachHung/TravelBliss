@@ -8,7 +8,8 @@ review: only the accounts you list can sign in. Keep the apps in that mode; you 
 
 ## No registration: the Dev provider
 
-`pnpm dev:local` runs with `NODE_ENV=local`, which offers a **Continue with Dev test user** button. It opens a form
+`pnpm dev:local` runs with `NODE_ENV=local` (and `pnpm e2e` with `NODE_ENV=e2e`), which offers a **Continue with Dev
+test user** button. It opens a form
 on the API where you choose the provider user id, name and email, then follows the same callback as a real provider.
 Use it to try:
 

@@ -70,7 +70,8 @@ describe('linked sign-in routes', () => {
 describe('configuredProviders', () => {
   const names = (env: Record<string, string>) => configuredProviders(env).map(({ name }) => name);
 
-  it('offers each provider with credentials, and the dev provider only on a local machine', () => {
+  it('offers each provider with credentials, and the dev provider only on a local machine or in e2e', () => {
+    expect(names({ NODE_ENV: 'e2e' })).toEqual([SignInProviderName.DEV]);
     expect(names({ NODE_ENV: 'development' })).toEqual([]);
     expect(
       names({

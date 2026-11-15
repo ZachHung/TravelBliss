@@ -4,21 +4,6 @@ import { expect, test, type Page } from '@playwright/test';
 const id = Date.now().toString().slice(-8);
 const user = { username: `e2e${id}`, phone: `09${id}`, password: 'secret1234' };
 
-// The web server is up before the API finishes connecting; wait until the API answers
-test.beforeAll(async ({ request }) => {
-  await expect
-    .poll(
-      async () =>
-        (
-          await request
-            .post('http://localhost:8000/', { data: { query: '{ __typename }' } })
-            .catch(() => null)
-        )?.ok() ?? false,
-      { timeout: 60_000 }
-    )
-    .toBe(true);
-});
-
 const signIn = async (page: Page, remember: boolean) => {
   // The URL changes before the lazy page renders (router transitions keep the old page up), so wait for the form
   await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();

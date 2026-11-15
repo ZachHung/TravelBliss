@@ -50,7 +50,7 @@ plain logs so a failure stays in your scrollback.
 | `pnpm dev`       | Start the API and the Vite dev server.                                                          |
 | `pnpm dev:local` | Same, against Postgres and Redis in docker using `.env.local`. `dev:local:down` stops them.     |
 | `pnpm test`      | Everything CI runs: typecheck, lint, tests, build and prettier, one task at a time.             |
-| `pnpm e2e`       | Browser test (Playwright): register, sign in, reload, sign out. Starts `pnpm dev:local` itself. |
+| `pnpm e2e`       | Browser test (Playwright) on its own docker stack, removed afterwards. Runs beside `dev:local`. |
 | `pnpm build`     | Build both apps into their `dist/`.                                                             |
 | `pnpm typecheck` | Run `tsc --noEmit` in both apps.                                                                |
 | `pnpm lint`      | Run ESLint (and Stylelint for web).                                                             |
@@ -112,7 +112,8 @@ logs for it to find the real cause. See `docs/adr/0002-api-logging.md`.
 ### Docker
 
 `apps/api/infra/docker-compose.yml` reads the root `.env.local`. The API container is in the `serve` profile, so plain
-`up` starts only Postgres and Redis.
+`up` starts only Postgres and Redis. `pnpm e2e` runs a second copy of it from `.env.e2e`, on other ports, and removes it
+afterwards.
 
 ```sh
 pnpm --filter @travelbliss/api docker:local:up    # Postgres + Redis only (what `pnpm dev:local` uses)

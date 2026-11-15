@@ -23,3 +23,6 @@ playwright-report
 !.env.example
 
 .DS_Store
+
+# Committed: dummy values for the throwaway e2e stack
+!.env.e2e
