@@ -25,7 +25,8 @@ in `SessionService.start`, which sets the `rf` cookie the web app refreshes from
 - **One `SignInProvider` per provider, built on `arctic`.** Each turns a code into a profile (`providerUserId`,
   `email`, `fullName`). A new provider is one file, one entry in `providers/index.ts`, one `SignInProviderName` value
   and one UI entry; the rules live once, in `LinkedSignInService`. A provider is offered only when its credentials are
-  set; a fake `DEV` provider is offered only with `NODE_ENV=local`.
+  set; a fake `DEV` provider is offered only on a developer's machine: `NODE_ENV=local`, or `NODE_ENV=e2e` for the
+  throwaway stack `pnpm e2e` starts (amended 2026-11-15). Never in a hosted environment.
   - Chosen over passport, whose Express-session model clashes with JWT plus the `rf` cookie.
 - **Matched on the provider's user id, never on email.** Table `linked_sign_in`, unique on
   `(provider, providerUserId)`, many per user.
