@@ -4,7 +4,7 @@ import { apiPublicUrl } from '@/utils/helpers';
 import { SignInProviderName, type ProviderProfile, type SignInProvider } from './sign-in-provider';
 
 /**
- * A fake provider for a local machine (NODE_ENV=local, see providers/index.ts): its "consent page" is a form on this
+ * A fake provider for a local machine (NODE_ENV=local or e2e, see providers/index.ts): its "consent page" is a form on this
  * API, and the code it hands back is the chosen profile itself. Lets every linking rule be tried without registering
  * an app with Google or Facebook.
  */

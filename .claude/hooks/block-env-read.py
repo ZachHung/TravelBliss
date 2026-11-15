@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Keeps real secrets out of the agent's context: blocks reading root/app .env* files (except .env.example)."""
+"""Keeps real secrets out of the agent's context: blocks reading root/app .env* files (except .env.example, .env.e2e)."""
 import json, re, sys
 
 payload = json.load(sys.stdin)
 tool, args = payload.get('tool_name', ''), payload.get('tool_input', {})
 
-# A .env file name: .env, .env.local, .env.development, ... but not .env.example
-ENV_FILE = r'(?:^|[\s/\'"=])\.env(?:\.(?!example\b)[\w.-]+)?(?=$|[\s\'";|&)])'
+# A .env file name: .env, .env.local, .env.development, ... but not .env.example or .env.e2e (committed, dummy values)
+ENV_FILE = r'(?:^|[\s/\'"=])\.env(?:\.(?!(?:example|e2e)\b)[\w.-]+)?(?=$|[\s\'";|&)])'
 READERS = r'\b(?:cat|head|tail|less|more|bat|grep|rg|ugrep|sed|awk|cut|sort|uniq|diff|xxd|od|strings|base64|cp|source|python3?|node|perl|ruby)\b|(?:^|[;&|]\s*)\.\s'
 
 def blocked(text: str) -> bool:

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The Dev provider (NODE_ENV=local, as pnpm dev:local runs) stands in for Google: same start mutation, state cookie,
+// The Dev provider (NODE_ENV=e2e, as the e2e stack runs) stands in for Google: same start mutation, state cookie,
 // callback, session and refresh on page load, with a consent form on the API instead of Google's page
 const id = Date.now().toString().slice(-8);
 const profile = {
@@ -9,20 +9,6 @@ const profile = {
   fullName: 'Linked User',
 };
 const password = 'x'.repeat(10);
-
-test.beforeAll(async ({ request }) => {
-  await expect
-    .poll(
-      async () =>
-        (
-          await request
-            .post('http://localhost:8000/', { data: { query: '{ linkedSignInProviders }' } })
-            .catch(() => null)
-        )?.ok() ?? false,
-      { timeout: 60_000 }
-    )
-    .toBe(true);
-});
 
 /** Through the Dev provider's consent page and back, as a provider redirect would go. */
 const continueWithDev = async (page: Page, email = profile.email) => {
@@ -40,7 +26,7 @@ test('sign in through a provider, set a password, disconnect, and be refused by 
 }) => {
   await test.step('a first sign-in creates the user and signs in', async () => {
     await continueWithDev(page);
-    await expect(page).toHaveURL('http://localhost:5173/');
+    await expect(page).toHaveURL('/');
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
   });
 
