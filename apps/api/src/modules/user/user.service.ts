@@ -110,14 +110,26 @@ export class UserService implements Service<User> {
 
   /** A first password for a user who joined through a linked sign-in; changing one goes through changePassword. */
   public async setPassword(password: string, userId: string): Promise<User> {
-    if ((await this.findById(userId)).password) {
+    const hashed = await hash(password, +getEnv('API_SALT_ROUND'));
+    // One conditional UPDATE, not read-then-write: of two concurrent calls only the first finds no password
+    const result = await this.userRepository
+      .createQueryBuilder()
+      .update(User)
+      .set({ password: hashed, updatedAt: dayjs().toISOString() })
+      .where('id = :id AND password IS NULL', { id: userId })
+      .returning('*')
+      .execute();
+    if (!result.affected) {
+      await this.findById(userId); // UserNotFoundException for an unknown user
       throw new PasswordAlreadySetException();
     }
-    return this.editInfo({ password: await hash(password, +getEnv('API_SALT_ROUND')) }, userId);
+    return result.raw[0];
   }
 
-  /** A user with no password, phone or birthday, as a linked sign-in creates one. */
-  /** Pass `manager` to create the user inside the caller's transaction. */
+  /**
+   * A user with no password, phone or birthday, as a linked sign-in creates one. Pass `manager` to create it inside
+   * the caller's transaction.
+   */
   public async createWithoutPassword(
     { fullName, email }: { fullName: string; email: string | null },
     manager?: EntityManager

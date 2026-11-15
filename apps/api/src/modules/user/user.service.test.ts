@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { hash } from 'bcrypt';
 import { validate } from 'class-validator';
+import { DataSource, UpdateQueryBuilder } from 'typeorm';
 import { ErrorCode } from '@/core/shared/error-code';
 import { User } from './user.entity';
 import { EditInfoInput } from './user.input';
@@ -85,15 +86,6 @@ describe('UserService without a password', () => {
     ).rejects.toMatchObject({ extensions: { code: ErrorCode.WRONG_PASSWORD } });
   });
 
-  it('refuses setPassword once a password exists', async () => {
-    const { service, user } = setupLinkedOnly();
-    Object.assign(user, { password: 'hash' });
-
-    await expect(service.setPassword(guess, 'u2')).rejects.toMatchObject({
-      extensions: { code: ErrorCode.PASSWORD_ALREADY_SET },
-    });
-  });
-
   it('creates a user with a unique username from the email, or the name without one', async () => {
     const { service } = setupLinkedOnly();
 
@@ -122,5 +114,41 @@ describe('EditInfoInput', () => {
   it('accepts a partial update', async () => {
     const input = Object.assign(new EditInfoInput(), { fullName: 'An Nguyen' });
     expect(await validate(input)).toEqual([]);
+  });
+});
+
+describe('UserService.setPassword', () => {
+  const guess = 'x'.repeat(9);
+  // Real metadata and query builder, no connection: execute is caught and answers as Postgres would
+  const setupSql = async (affected: number) => {
+    const dataSource = new DataSource({ type: 'postgres', entities: [User] });
+    await (dataSource as unknown as { buildMetadatas: () => Promise<void> }).buildMetadatas();
+    const repository = dataSource.getRepository(User);
+    vi.spyOn(repository, 'findOneBy').mockResolvedValue({ id: 'u2' } as User);
+    const sql: string[] = [];
+    vi.spyOn(UpdateQueryBuilder.prototype, 'execute').mockImplementation(async function (
+      this: UpdateQueryBuilder<User>
+    ) {
+      sql.push(this.getQuery());
+      return { affected, raw: affected ? [{ id: 'u2' }] : [], generatedMaps: [] };
+    });
+    return { service: new UserService(repository), sql };
+  };
+  afterEach(() => vi.restoreAllMocks());
+
+  it('sets the password in one UPDATE that only matches while none is set', async () => {
+    const { service, sql } = await setupSql(1);
+
+    await expect(service.setPassword(guess, 'u2')).resolves.toEqual({ id: 'u2' });
+    expect(sql).toHaveLength(1);
+    expect(sql[0]).toContain('WHERE "id" = :id AND "password" IS NULL');
+  });
+
+  it('refuses once a password exists, including one a concurrent call set first', async () => {
+    const { service } = await setupSql(0);
+
+    await expect(service.setPassword(guess, 'u2')).rejects.toMatchObject({
+      extensions: { code: ErrorCode.PASSWORD_ALREADY_SET },
+    });
   });
 });
