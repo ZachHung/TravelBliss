@@ -48,7 +48,10 @@ const fakeRes = () => {
     (res.options as Record<string, { expires?: Date }>)[name] = options;
     res.cookies[name] = value;
   };
-  res.clearCookie = (name: string) => res.cleared.push(name);
+  res.clearCookie = (name: string, options?: object) => {
+    res.cleared.push(name);
+    (res.options as Record<string, object | undefined>)[`cleared:${name}`] = options;
+  };
   return res;
 };
 const ctx = (res: ReturnType<typeof fakeRes>, cookies = {}) =>
@@ -150,6 +153,28 @@ describe('SessionService', () => {
 
     expect(ok).toBe(true);
     expect(store.data.has('blacklist:access-token')).toBe(true);
+  });
+
+  it('clears the refresh cookie with the attributes it was set with, as a cross-site clear needs', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const { service } = setup();
+    const res = fakeRes();
+    const { accessToken } = await service.start('u1', { remember: true }, ctx(res));
+
+    const out = fakeRes();
+    await service.end({
+      auth: { user: { id: 'u1' }, token: accessToken, exp: dayjs().add(1, 'hour').unix() },
+      req: { cookies: res.cookies },
+      res: out,
+    } as never);
+    vi.unstubAllEnvs();
+
+    const options = out.options as Record<string, object>;
+    expect(options['cleared:tb_rf']).toMatchObject({
+      sameSite: 'none',
+      secure: true,
+      httpOnly: true,
+    });
   });
 
   describe('refresh cookie encryption', () => {

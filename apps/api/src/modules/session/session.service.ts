@@ -179,7 +179,8 @@ export class SessionService {
         await this.store.del(refreshKey(userId, refreshToken));
       }
 
-      res.clearCookie(cookieName);
+      // Same attributes as when set: a cross-site clear without SameSite=None; Secure is ignored by the browser
+      res.clearCookie(cookieName, cookieOptions({}));
       return true;
     } catch (error) {
       logger.error('Logout failed', error instanceof Error ? error : { error });

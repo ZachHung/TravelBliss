@@ -169,7 +169,7 @@ export class LinkedSignInService {
   /** The state cookie set by start (cleared now: it is single-use), and whether that flow was a connect. */
   private takeStateCookie({ req, res }: Context): { state?: string; connecting: boolean } {
     const [mode, state] = String(req.cookies?.[stateCookieName()] ?? '').split(':');
-    res.clearCookie(stateCookieName(), { path: stateCookiePath });
+    res.clearCookie(stateCookieName(), cookieOptions({ path: stateCookiePath }));
     return { state: state || undefined, connecting: mode === 'connect' };
   }
 
