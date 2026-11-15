@@ -57,3 +57,9 @@ Use it to try:
 Restart `pnpm dev:local`. The sign-in page shows one button per provider whose two values are set. A provider error
 page that mentions `redirect_uri` means the URL registered in step 5 differs from `API_PUBLIC_URL`'s callback, port
 included.
+
+If Google shows "400. The server cannot process the request because it is malformed" after you pick an account, the
+request was fine (a bad client id or redirect URI fails earlier, with a named error) but the browser's Google
+session is not. Try a private window. If that works, a browser extension is rewriting Google's URLs: ClearURLs
+strips parameters Google's consent step needs. Disable it for `accounts.google.com`, or use an extension that leaves
+Google's sign-in alone.
