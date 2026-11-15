@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Linked sign-in: TravelBliss sign-in course</title>
+    <link rel="stylesheet" href="../../assets/course.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="course">
+        <a href="../../index.html">TravelBliss sign-in course</a> ·
+        <a href="../0005-linked-sign-in.html">Lesson 5</a> · <a href="glossary.html">Glossary</a> ·
+        <a href="web-session.html">Web session</a>
+      </nav>
+      <p class="kicker">Reference</p>
+      <h1>Linked sign-in</h1>
+      <p class="lede">
+        Google or Facebook instead of a password. Module
+        <code>apps/api/src/modules/linked-sign-in/</code>; decisions in
+        <code>docs/adr/0005-linked-sign-in.md</code>.
+      </p>
+
+      <h2>The round trip</h2>
+      <table>
+        <tr>
+          <th>Step</th>
+          <th>Where</th>
+          <th>What</th>
+        </tr>
+        <tr>
+          <td>1 Start</td>
+          <td><code>startLinkedSignIn</code> mutation → <code>LinkedSignInService.start</code></td>
+          <td>
+            Redis <code>linkedSignInFlow:&lt;state&gt;</code> =
+            <code>{ provider, codeVerifier, userId? }</code>, 10 min · cookie
+            <code>travelBliss_ls</code> = <code>sign-in|connect:&lt;state&gt;</code>, path
+            <code>/auth</code> · returns the consent URL
+          </td>
+        </tr>
+        <tr>
+          <td>2 Consent</td>
+          <td>Google / Facebook</td>
+          <td>redirects to <code>/auth/&lt;provider&gt;/callback?code&amp;state</code></td>
+        </tr>
+        <tr>
+          <td>3 Callback</td>
+          <td><code>linked-sign-in.routes.ts</code> → <code>finish</code></td>
+          <td>three checks → code + verifier → profile → <code>userFor</code></td>
+        </tr>
+        <tr>
+          <td>4 Session</td>
+          <td><code>SessionService.start(userId, { remember: true })</code></td>
+          <td>sets <code>rf</code> (sign-in only; connect starts no session)</td>
+        </tr>
+        <tr>
+          <td>5 Land</td>
+          <td>302 to the web app</td>
+          <td>
+            <code>/</code> · <code>/account</code> when connecting ·
+            <code>?error=&lt;ErrorCode&gt;</code> on failure; reload refresh gives the access token
+          </td>
+        </tr>
+      </table>
+
+      <h2>Checks on the callback</h2>
+      <ol>
+        <li>
+          URL <code>state</code> = cookie state (binds the trip to this browser; RFC 6749 §10.12)
+        </li>
+        <li><code>GETDEL</code> finds the flow, for this provider (once, within 10 min)</li>
+        <li>
+          <code>code</code> is present (missing = cancelled) and trades with the PKCE verifier
+        </li>
+      </ol>
+
+      <h2>Which user (<code>userFor</code>)</h2>
+      <table>
+        <tr>
+          <th>Situation</th>
+          <th>Signing in</th>
+          <th>Connecting (as Ann)</th>
+        </tr>
+        <tr>
+          <td>sub linked to X</td>
+          <td>sign in as X</td>
+          <td>X = Ann: nothing changes · else <code>LINKED_SIGN_IN_TAKEN</code></td>
+        </tr>
+        <tr>
+          <td>sub not linked, email belongs to a user</td>
+          <td><code>EMAIL_TAKEN_SIGN_IN_TO_LINK</code></td>
+          <td>link to Ann</td>
+        </tr>
+        <tr>
+          <td>sub not linked, email new or absent</td>
+          <td>new passwordless user + link (one transaction)</td>
+          <td>link to Ann</td>
+        </tr>
+      </table>
+      <p>
+        Match on <code>(provider, providerUserId)</code>, unique. Never on email (OIDC Core §5.7;
+        registration does not verify emails).
+      </p>
+
+      <h2>Error codes</h2>
+      <table>
+        <tr>
+          <th>Code</th>
+          <th>Means</th>
+        </tr>
+        <tr>
+          <td><code>LINKED_SIGN_IN_FAILED</code></td>
+          <td>cancelled, expired, replayed, forged state, or the provider refused</td>
+        </tr>
+        <tr>
+          <td><code>EMAIL_TAKEN_SIGN_IN_TO_LINK</code></td>
+          <td>sign in with your password, then connect from the account page</td>
+        </tr>
+        <tr>
+          <td><code>LINKED_SIGN_IN_TAKEN</code></td>
+          <td>this provider account belongs to another user</td>
+        </tr>
+        <tr>
+          <td><code>LAST_SIGN_IN_METHOD</code></td>
+          <td>disconnect would leave no password and no linked sign-in</td>
+        </tr>
+      </table>
+
+      <h2>Adding a provider</h2>
+      <p>
+        One file implementing <code>SignInProvider</code> (<code>authorizationUrl</code>,
+        <code>fetchProfile</code>), one entry in <code>providers/index.ts</code>, one
+        <code>SignInProviderName</code>, one <code>providerDetails</code> entry on the web. Offered
+        only when its credentials are set; <code>DEV</code> only under
+        <code>NODE_ENV=local|e2e</code>.
+      </p>
+    </main>
+  </body>
+</html>
