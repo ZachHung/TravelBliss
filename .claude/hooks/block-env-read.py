@@ -5,8 +5,10 @@ import json, re, sys
 payload = json.load(sys.stdin)
 tool, args = payload.get('tool_name', ''), payload.get('tool_input', {})
 
-# A .env file name: .env, .env.local, .env.development, ... but not .env.example or .env.e2e (committed, dummy values)
-ENV_FILE = r'(?:^|[\s/\'"=])\.env(?:\.(?!(?:example|e2e)\b)[\w.-]+)?(?=$|[\s\'";|&)])'
+# A .env file name: .env, .env.local, .env.development, ... but not .env.example or .env.e2e (committed, dummy values).
+# The exclusions must end where the name ends, or .env.e2e.local would slip through.
+END = r'(?=$|[\s\'";|&)])'
+ENV_FILE = rf'(?:^|[\s/\'"=])\.env(?:\.(?!(?:example|e2e){END})[\w.-]+)?{END}'
 READERS = r'\b(?:cat|head|tail|less|more|bat|grep|rg|ugrep|sed|awk|cut|sort|uniq|diff|xxd|od|strings|base64|cp|source|python3?|node|perl|ruby)\b|(?:^|[;&|]\s*)\.\s'
 
 def blocked(text: str) -> bool:
