@@ -1,4 +1,5 @@
 import mantine from 'eslint-config-mantine';
+import sonarjs from 'eslint-plugin-sonarjs';
 import tseslint from 'typescript-eslint';
 
 // Wrapper types and `{}`/`Object` mean "any non-nullish value"; use the primitive, Record<string, unknown> or unknown.
@@ -26,6 +27,8 @@ export default tseslint.config(
   },
   // Shared base for both apps. The React and a11y rules only fire on JSX, so the API is unaffected by them.
   ...mantine,
+  // Code smells: duplicated branches and functions, cognitive complexity, dead stores, redundant code
+  sonarjs.configs.recommended,
   {
     // "detect" fails when ESLint runs from the repo root (lint-staged), where react is not installed
     settings: { react: { version: '19.3' } },

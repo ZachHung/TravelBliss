@@ -1,0 +1,52 @@
+name: Claude review
+
+# Judgement calls a linter cannot make, as PR comments. Mechanical rules (lint, sonarjs, knip, types) gate merges in
+# test_pull_request.yml; this job only comments and never blocks.
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Drafts are still moving; fork PRs get no secrets, so the job could not authenticate
+    if: >-
+      !github.event.pull_request.draft &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        with:
+          # Set by `/install-github-app` in Claude Code
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request against this repository's own rules, not generic advice. Read first:
+            - CODING_STANDARDS.md: the judgement calls reviewers check
+            - GLOSSARY.md: the domain language; flag a term used against its definition
+            - docs/adr/: decisions already made; flag a change that contradicts one without a new ADR
+            - AGENTS.md: conventions, e.g. how an API module is declared
+
+            Look for, in this order: bugs and broken edge cases; security (auth, sessions, tokens, cookies, input at
+            trust boundaries); a CODING_STANDARDS.md rule broken; behaviour without a test; duplication a shared
+            helper already covers; code that a simpler or existing construct replaces.
+
+            Lint, types, formatting, unused code and sonarjs smells are checked by CI: leave those out.
+
+            Post each finding as an inline comment on the line, with the concrete failure (input → wrong result) and
+            the fix. Then post one short summary comment with `gh pr comment`. When nothing is worth raising, the
+            summary says so in one line. Report only findings you are confident in; three real ones beat ten guesses.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
