@@ -18,7 +18,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@apollo/client": "^4.3.7",
+    "@apollo/client": "^4.3.8",
     "@graphql-typed-document-node/core": "^3.2.0",
     "@mantine/core": "^9.8.0",
     "@mantine/dates": "^9.8.0",
