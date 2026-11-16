@@ -35,7 +35,7 @@
     "dayjs": "^1.11.23",
     "dotenv": "^16.6.1",
     "express": "^4.22.3",
-    "graphql": "^16.15.0",
+    "graphql": "^17.1.0",
     "inversify": "^6.2.2",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
