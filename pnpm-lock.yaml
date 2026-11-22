@@ -90,8 +90,8 @@ importers:
         specifier: ^16.15.0
         version: 16.15.0
       graphql-scalars:
-        specifier: ^1.26.0
-        version: 1.26.0(graphql@16.15.0)
+        specifier: ^2.0.1
+        version: 2.0.1(graphql@16.15.0)
       inversify:
         specifier: ^6.2.2
         version: 6.2.2(reflect-metadata@0.2.2)
@@ -112,7 +112,7 @@ importers:
         version: 0.2.2
       type-graphql:
         specifier: 2.0.0-rc.3
-        version: 2.0.0-rc.3(class-validator@0.14.4)(graphql-scalars@1.26.0(graphql@16.15.0))(graphql@16.15.0)
+        version: 2.0.0-rc.3(class-validator@0.14.4)(graphql-scalars@2.0.1(graphql@16.15.0))(graphql@16.15.0)
       typeorm:
         specifier: ^0.3.31
         version: 0.3.31(ioredis@5.11.1)(pg@8.23.1)(ts-node@10.9.2(@swc/core@1.16.22)(@types/node@26.6.6)(typescript@6.0.3))
@@ -3974,11 +3974,11 @@ packages:
     peerDependencies:
       graphql: ^15.0.0 || ^16.0.0
 
-  graphql-scalars@1.26.0:
-    resolution: {integrity: sha512-o7BnU5yxAFUWTMKpC5yshB12DjzzoxLgEBO9OpOAcxodWrL3sPldD/fqVQoIfcqPH8OclyQilLtg3/7ZRqQUVQ==}
+  graphql-scalars@2.0.1:
+    resolution: {integrity: sha512-/BkY0J5/1L9e+mTfCTzmpV78mNh95ZpiJWfAkaIYHE5B7hrvgRpB5//rXVTFD1aaKGcRUCHj/vpNcgtrenwZNA==}
     engines: {node: '>=10'}
     peerDependencies:
-      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+      graphql: ^16.0.0 || ^17.0.0
 
   graphql-tag@2.12.7:
     resolution: {integrity: sha512-xnE/NFzy+0eIesvAsREJZ284zTl/wYuBAvpsFSDhRGRdRHdnE90M21Q3xAWyYInb0J756c6x0pIQ62+vtvOs1Q==}
@@ -10161,7 +10161,7 @@ snapshots:
       graphql: 16.15.0
       lodash.get: 4.4.2
 
-  graphql-scalars@1.26.0(graphql@16.15.0):
+  graphql-scalars@2.0.1(graphql@16.15.0):
     dependencies:
       graphql: 16.15.0
       tslib: 2.9.1
@@ -12167,14 +12167,14 @@ snapshots:
     dependencies:
       tagged-tag: 1.0.0
 
-  type-graphql@2.0.0-rc.3(class-validator@0.14.4)(graphql-scalars@1.26.0(graphql@16.15.0))(graphql@16.15.0):
+  type-graphql@2.0.0-rc.3(class-validator@0.14.4)(graphql-scalars@2.0.1(graphql@16.15.0))(graphql@16.15.0):
     dependencies:
       '@graphql-yoga/subscription': 5.1.1
       '@types/node': 22.20.5
       '@types/semver': 7.8.0
       graphql: 16.15.0
       graphql-query-complexity: 1.1.1(graphql@16.15.0)
-      graphql-scalars: 1.26.0(graphql@16.15.0)
+      graphql-scalars: 2.0.1(graphql@16.15.0)
       semver: 7.8.6
       tslib: 2.9.1
     optionalDependencies:
