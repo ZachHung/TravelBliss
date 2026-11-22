@@ -4,48 +4,21 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    # Majors stay out of groups so each arrives as its own PR, titled with the version jump
+    # At most two version-update PRs a week. Majors get their own group so they can't hide among safe updates,
+    # and a major that breaks CI doesn't hold back the rest. Related majors (e.g. stylelint and its config)
+    # arrive in the same PR.
     groups:
-      mantine:
-        patterns:
-          - '@mantine/*'
-          - 'postcss-preset-mantine'
-          - 'mantine-form-zod-resolver'
+      npm-minor-patch:
+        patterns: ['*']
         update-types: ['minor', 'patch']
-      eslint:
-        patterns:
-          - '*eslint*'
-        update-types: ['minor', 'patch']
-      storybook:
-        patterns:
-          - '@storybook/*'
-          - '@chromatic-com/storybook'
-          - 'storybook'
-          - 'storybook-dark-mode'
-        update-types: ['minor', 'patch']
-      react:
-        patterns:
-          - 'react'
-          - 'react-dom'
-          - '@types/react'
-          - '@types/react-dom'
-        update-types: ['minor', 'patch']
-      vitest:
-        patterns:
-          - 'vitest'
-          - '@vitest/*'
-        update-types: ['minor', 'patch']
-      stylelint:
-        patterns:
-          - 'stylelint'
-          - 'stylelint-*'
-        update-types: ['minor', 'patch']
-      graphql:
-        patterns:
-          - '@graphql-codegen/*'
-          - 'graphql'
-          - '@graphql-typed-document-node/*'
-        update-types: ['minor', 'patch']
+      npm-major:
+        patterns: ['*']
+        update-types: ['major']
+      # Security fixes come as soon as an alert opens, not weekly; this batches the alerts open at the time
+      # into one PR.
+      npm-security:
+        applies-to: security-updates
+        patterns: ['*']
     ignore:
       # type-graphql's peer dependency is graphql ^16; remove once it supports 17 (#133).
       # Majors only: apps/web is already on 17 and should keep getting its minor and patch updates.
@@ -58,3 +31,6 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    groups:
+      github-actions:
+        patterns: ['*']
