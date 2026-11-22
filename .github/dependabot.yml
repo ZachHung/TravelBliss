@@ -47,9 +47,10 @@ updates:
           - '@graphql-typed-document-node/*'
         update-types: ['minor', 'patch']
     ignore:
-      # type-graphql's peer dependency is graphql ^16; remove once it supports 17 (#133)
+      # type-graphql's peer dependency is graphql ^16; remove once it supports 17 (#133).
+      # Majors only: apps/web is already on 17 and should keep getting its minor and patch updates.
       - dependency-name: 'graphql'
-        versions: ['>=17']
+        update-types: ['version-update:semver-major']
       # type-graphql's peer dependency is graphql-scalars ^1.25; remove with the one above (#133)
       - dependency-name: 'graphql-scalars'
         versions: ['>=2']
