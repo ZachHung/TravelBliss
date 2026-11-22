@@ -1,5 +1,7 @@
 {
   "cSpell.words": ["codegen", "Mantine", "stylelint", "tabler", "travelbliss", "typecheck"],
   "a-file-icon-vscode.arrowTheme": "triangle",
-  "python.terminal.useEnvFile": true
+  "python.terminal.useEnvFile": true,
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true
 }
