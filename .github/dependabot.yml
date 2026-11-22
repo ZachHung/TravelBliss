@@ -45,6 +45,9 @@ updates:
       # type-graphql's peer dependency is graphql ^16; remove once it supports 17 (#133)
       - dependency-name: 'graphql'
         versions: ['>=17']
+      # type-graphql's peer dependency is graphql-scalars ^1.25; remove with the one above (#133)
+      - dependency-name: 'graphql-scalars'
+        versions: ['>=2']
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
