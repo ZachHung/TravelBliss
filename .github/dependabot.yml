@@ -34,6 +34,10 @@ updates:
           - '@graphql-codegen/*'
           - 'graphql'
           - '@graphql-typed-document-node/*'
+    ignore:
+      # type-graphql's peer dependency is graphql ^16; remove once it supports 17 (#133)
+      - dependency-name: 'graphql'
+        versions: ['>=17']
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
