@@ -33,5 +33,7 @@ updates:
     schedule:
       interval: 'weekly'
     groups:
+      # Majors included on purpose, unlike npm: action majors are mostly Node runtime bumps, and one PR a week
+      # beats a separate majors PR. If one breaks CI, `@dependabot ignore <name> major version` drops it.
       github-actions:
         patterns: ['*']
