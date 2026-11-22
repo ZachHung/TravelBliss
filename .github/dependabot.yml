@@ -35,6 +35,11 @@ updates:
           - 'vitest'
           - '@vitest/*'
         update-types: ['minor', 'patch']
+      stylelint:
+        patterns:
+          - 'stylelint'
+          - 'stylelint-*'
+        update-types: ['minor', 'patch']
       graphql:
         patterns:
           - '@graphql-codegen/*'
