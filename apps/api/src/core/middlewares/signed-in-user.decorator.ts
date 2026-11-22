@@ -1,4 +1,4 @@
-import { AuthenticationError, createParamDecorator } from 'type-graphql';
+import { AuthenticationError, createParameterDecorator } from 'type-graphql';
 import { type Context } from '@/types';
 
 /**
@@ -6,7 +6,7 @@ import { type Context } from '@/types';
  * UNAUTHENTICATED, as from `@Authorized()`, so a resolver never sees a missing user.
  */
 export const SignedInUser = () =>
-  createParamDecorator<Context>(({ context: { auth } }) => {
+  createParameterDecorator<Context>(({ context: { auth } }) => {
     if (!auth) {
       throw new AuthenticationError();
     }
