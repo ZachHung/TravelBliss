@@ -4,9 +4,10 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    # At most two version-update PRs a week. Majors get their own group so they can't hide among safe updates,
-    # and a major that breaks CI doesn't hold back the rest. Related majors (e.g. stylelint and its config)
-    # arrive in the same PR.
+    # At most two npm version-update PRs a week (GitHub Actions adds a third). Majors get their own group so they
+    # can't hide among safe updates, and a failing major doesn't hold back minor and patch updates. Related majors
+    # (e.g. stylelint and its config) arrive in the same PR. Majors do wait on each other: when one breaks CI,
+    # comment `@dependabot ignore <name> major version` on the PR and the next run rebuilds it without that one.
     groups:
       npm-minor-patch:
         patterns: ['*']
