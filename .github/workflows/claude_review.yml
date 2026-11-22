@@ -12,10 +12,11 @@ concurrency:
 
 jobs:
   review:
-    # Drafts are still moving; fork PRs get no secrets, so the job could not authenticate
+    # Drafts are still moving; fork and Dependabot PRs get no repo secrets, so the job could not authenticate
     if: >-
       !github.event.pull_request.draft &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
