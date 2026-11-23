@@ -31,9 +31,6 @@ updates:
       # typescript-eslint and ts-node don't run on TypeScript 7 yet (#164)
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
-      # 8 is an API migration of the DI wiring, not a bump (#165)
-      - dependency-name: 'inversify'
-        update-types: ['version-update:semver-major']
       # Follows the Node runtime (.nvmrc, Dockerfile), not npm: bump its major together with Node
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']

@@ -1,5 +1,5 @@
 import { type Router } from 'express';
-import { ContainerModule, type Container, type interfaces } from 'inversify';
+import { ContainerModule, type Bind, type Container, type ServiceIdentifier } from 'inversify';
 import { type DataSource, type ObjectLiteral } from 'typeorm';
 import TOKEN from '@/core/container/types.container';
 import { Inject } from '@/types/inversify';
@@ -16,9 +16,9 @@ export interface ApiModule {
   /** type-graphql resolvers: bound like services and added to the schema. */
   resolvers?: Class[];
   /** Express routes outside GraphQL (e.g. a provider callback), built from the container. */
-  routes?: (get: <T>(id: interfaces.ServiceIdentifier<T>) => T) => Router;
+  routes?: (get: <T>(id: ServiceIdentifier<T>) => T) => Router;
   /** Escape hatch for bindings that are not classes, such as a constant list. */
-  bind?: (bind: interfaces.Bind) => void;
+  bind?: (bind: Bind) => void;
 }
 
 /** Declares a module; the app lists every module once, in src/modules/index.ts. */
@@ -32,12 +32,12 @@ export const InjectRepository = (entity: EntityClass) => Inject(repositoryToken(
 
 export const loadModules = (container: Container, modules: ApiModule[]): void => {
   container.load(
-    new ContainerModule((bind) => {
+    new ContainerModule(({ bind }) => {
       for (const { entities = [], services = [], resolvers = [], bind: bindMore } of modules) {
         for (const entity of entities) {
           // Resolved on first use, after the data source is initialised
-          bind(repositoryToken(entity)).toDynamicValue(({ container: c }) =>
-            c.get<DataSource>(TOKEN.DataSource.Postgres).getRepository(entity)
+          bind(repositoryToken(entity)).toDynamicValue((context) =>
+            context.get<DataSource>(TOKEN.DataSource.Postgres).getRepository(entity)
           );
         }
         for (const target of [...services, ...resolvers]) {
