@@ -12,7 +12,8 @@ import { defineConfig } from 'vitest/config';
 const runApiAfterBuild = (): Plugin => {
   let server: ChildProcess | undefined;
   const stop = async () => {
-    if (!server || server.exitCode !== null) {
+    // A server killed by a signal has exitCode null but signalCode set; 'exit' already fired either way
+    if (!server || server.exitCode !== null || server.signalCode !== null) {
       return;
     }
     const exited = new Promise((done) => server!.once('exit', done));
