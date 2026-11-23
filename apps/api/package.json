@@ -21,6 +21,7 @@
     "docker:serve:down": "docker compose --env-file ../../.env.local -f infra/docker-compose.yml --profile serve down",
     "typeorm": "pnpm build && typeorm-ts-node-commonjs -d ./dist/config/data-source.js",
     "migration:generate": "pnpm typeorm migration:generate ./src/migration/migration",
+    "migration:check": "pnpm typeorm migration:generate ./src/migration/migration --check",
     "migration:up": "pnpm typeorm migration:run",
     "migration:down": "pnpm typeorm migration:revert"
   },
