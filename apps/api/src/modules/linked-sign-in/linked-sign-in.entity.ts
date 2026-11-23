@@ -7,7 +7,8 @@ import { SignInProviderName } from './providers/sign-in-provider';
 /** One way a user signs in through an outside provider (GLOSSARY: Linked sign-in). */
 @ObjectType()
 @Entity()
-@Unique(['provider', 'providerUserId'])
+// Constraint names match the ones the table was created with, so migration:generate sees no difference
+@Unique('UQ_linked_sign_in_provider_user', ['provider', 'providerUserId'])
 export class LinkedSignIn extends BaseEntity {
   @Field(() => SignInProviderName)
   @Column({ type: 'varchar' })
@@ -21,6 +22,6 @@ export class LinkedSignIn extends BaseEntity {
   public readonly userId: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'userId', foreignKeyConstraintName: 'FK_linked_sign_in_user' })
   public readonly user?: User;
 }
