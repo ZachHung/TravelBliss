@@ -93,8 +93,8 @@ importers:
         specifier: ^1.26.0
         version: 1.26.0(graphql@16.15.0)
       inversify:
-        specifier: ^6.2.2
-        version: 6.2.2(reflect-metadata@0.2.2)
+        specifier: ^8.3.0
+        version: 8.3.0(reflect-metadata@0.2.2)
       ioredis:
         specifier: ^6.0.0
         version: 6.0.0
@@ -1405,16 +1405,27 @@ packages:
       '@types/node':
         optional: true
 
-  '@inversifyjs/common@1.4.0':
-    resolution: {integrity: sha512-qfRJ/3iOlCL/VfJq8+4o5X4oA14cZSBbpAmHsYj8EsIit1xDndoOl0xKOyglKtQD4u4gdNVxMHx4RWARk/I4QA==}
+  '@inversifyjs/common@2.0.2':
+    resolution: {integrity: sha512-k7bXb6SVHEfUarVwYW6eNVLWXUcCSJKb+ilTpJ4OL5az3eDpLbkEzlrYAEix14PvTdA+k/1RSw5DaBpvRu1GGw==}
 
-  '@inversifyjs/core@1.3.5':
-    resolution: {integrity: sha512-B4MFXabhNTAmrfgB+yeD6wd/GIvmvWC6IQ8Rh/j2C3Ix69kmqwz9pr8Jt3E+Nho9aEHOQCZaGmrALgtqRd+oEQ==}
-
-  '@inversifyjs/reflect-metadata-utils@0.2.4':
-    resolution: {integrity: sha512-u95rV3lKfG+NT2Uy/5vNzoDujos8vN8O18SSA5UyhxsGYd4GLQn/eUsGXfOsfa7m34eKrDelTKRUX1m/BcNX5w==}
+  '@inversifyjs/container@3.2.0':
+    resolution: {integrity: sha512-WZFPUbPxIC7zMNkUrSTXjBr91sYhHJF6Zk3bwZ6f3TDkO4wfmMO76eluXEFgOA+5ixRJn3u2hK7lpgXW6XhinQ==}
     peerDependencies:
-      reflect-metadata: 0.2.2
+      reflect-metadata: ~0.2.2
+
+  '@inversifyjs/core@15.1.0':
+    resolution: {integrity: sha512-aO3piH+DGqS2rUveiseTJWzsHlK++Tf9RaGbtEEM/XCGNmvxjFcCRG5gcxsBUEoGGec5xlu+oouD/ExpvoRhIQ==}
+
+  '@inversifyjs/plugin@0.3.2':
+    resolution: {integrity: sha512-1s3Jdnv/rtrTjN1WlfwLlNRUf5OJIaxvThIi05EkYhlxqZTsH1cfpR3INzEZyFyNTEf58eYdIvDh9J9iXiTtIg==}
+
+  '@inversifyjs/prototype-utils@0.2.2':
+    resolution: {integrity: sha512-0Z8jXDuzT3gJ6o0lk9brfZJwlwdumDJIXKq8x52sDK0cymShYQ+C1MqqxSyDDiWKQBkrOHQ7cUW4kYk1h9Rpeg==}
+
+  '@inversifyjs/reflect-metadata-utils@1.5.1':
+    resolution: {integrity: sha512-Vd8Twf20rbIQqGyH69wEHJN91JQ1jMbNp/ezdXqaagbgSyvfeWaZ0ULS0u/whfh2IXWbop+noFZZyLBhkXZ6nA==}
+    peerDependencies:
+      reflect-metadata: ~0.2.2
 
   '@ioredis/commands@2.0.0':
     resolution: {integrity: sha512-vrx0AE/T0h7cRZwfo1M39Cr+ZhZrkf0V8mQN75wucKCxCLD9l/VX6no3gFvrLqD1IlG/1LtzWovqEw3t0Vr9zg==}
@@ -3885,10 +3896,8 @@ packages:
   invariant@2.2.4:
     resolution: {integrity: sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==}
 
-  inversify@6.2.2:
-    resolution: {integrity: sha512-KB836KHbZ9WrUnB8ax5MtadOwnqQYa+ZJO3KWbPFgcr4RIEnHM621VaqFZzOZd9+U7ln6upt9n0wJei7x2BNqw==}
-    peerDependencies:
-      reflect-metadata: ~0.2.2
+  inversify@8.3.0:
+    resolution: {integrity: sha512-ow0zbGCAjfklUjarM3vY6FE2UAwTj1fKGXo5a5HMBJ/9aKK0fZqxCu69ne2UzABfaCl/X+9F5kvV+K+jcM8UOA==}
 
   ioredis@6.0.0:
     resolution: {integrity: sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w==}
@@ -7214,16 +7223,31 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.6.6
 
-  '@inversifyjs/common@1.4.0': {}
+  '@inversifyjs/common@2.0.2': {}
 
-  '@inversifyjs/core@1.3.5(reflect-metadata@0.2.2)':
+  '@inversifyjs/container@3.2.0(reflect-metadata@0.2.2)':
     dependencies:
-      '@inversifyjs/common': 1.4.0
-      '@inversifyjs/reflect-metadata-utils': 0.2.4(reflect-metadata@0.2.2)
+      '@inversifyjs/common': 2.0.2
+      '@inversifyjs/core': 15.1.0(reflect-metadata@0.2.2)
+      '@inversifyjs/plugin': 0.3.2
+      '@inversifyjs/reflect-metadata-utils': 1.5.1(reflect-metadata@0.2.2)
+      reflect-metadata: 0.2.2
+
+  '@inversifyjs/core@15.1.0(reflect-metadata@0.2.2)':
+    dependencies:
+      '@inversifyjs/common': 2.0.2
+      '@inversifyjs/prototype-utils': 0.2.2
+      '@inversifyjs/reflect-metadata-utils': 1.5.1(reflect-metadata@0.2.2)
     transitivePeerDependencies:
       - reflect-metadata
 
-  '@inversifyjs/reflect-metadata-utils@0.2.4(reflect-metadata@0.2.2)':
+  '@inversifyjs/plugin@0.3.2': {}
+
+  '@inversifyjs/prototype-utils@0.2.2':
+    dependencies:
+      '@inversifyjs/common': 2.0.2
+
+  '@inversifyjs/reflect-metadata-utils@1.5.1(reflect-metadata@0.2.2)':
     dependencies:
       reflect-metadata: 0.2.2
 
@@ -9581,11 +9605,13 @@ snapshots:
     dependencies:
       loose-envify: 1.4.0
 
-  inversify@6.2.2(reflect-metadata@0.2.2):
+  inversify@8.3.0(reflect-metadata@0.2.2):
     dependencies:
-      '@inversifyjs/common': 1.4.0
-      '@inversifyjs/core': 1.3.5(reflect-metadata@0.2.2)
-      reflect-metadata: 0.2.2
+      '@inversifyjs/common': 2.0.2
+      '@inversifyjs/container': 3.2.0(reflect-metadata@0.2.2)
+      '@inversifyjs/core': 15.1.0(reflect-metadata@0.2.2)
+    transitivePeerDependencies:
+      - reflect-metadata
 
   ioredis@6.0.0:
     dependencies:

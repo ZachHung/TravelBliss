@@ -37,7 +37,8 @@ export const bootstrap = async (): Promise<void> => {
       validate: true,
       resolvers: resolversOf(modules),
       authChecker,
-      container,
+      // inversify's get takes GetOptions second; type-graphql passes its ResolverData there
+      container: { get: (resolver) => container.get(resolver) },
     })
   );
 
