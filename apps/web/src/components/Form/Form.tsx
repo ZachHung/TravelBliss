@@ -1,8 +1,8 @@
 import React, { useCallback } from 'react';
 import { CombinedGraphQLErrors } from '@apollo/client';
 import { type ErrorCode } from '@generated/codegen/enums';
-import isEmpty from 'lodash/isEmpty';
-import isFunction from 'lodash/isFunction';
+import { isFunction } from 'es-toolkit';
+import { isEmpty } from 'es-toolkit/compat';
 import { Box, Button, Center, Stack, type MantineStyleProps } from '@mantine/core';
 import { useForm, type UseFormInput, type UseFormReturnType } from '@mantine/form';
 
