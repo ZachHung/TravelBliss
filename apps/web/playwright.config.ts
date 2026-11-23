@@ -26,6 +26,8 @@ export default defineConfig({
         `${compose} up -d --wait db cache`,
         // migration:up builds dist; run that build, not the restarting `dev` watcher
         'NODE_ENV=e2e pnpm --filter @travelbliss/api migration:up',
+        // On this fresh database the migrations must leave nothing for migration:generate (CODING_STANDARDS.md)
+        'NODE_ENV=e2e pnpm --filter @travelbliss/api migration:check',
         'NODE_ENV=e2e pnpm --filter @travelbliss/api start',
       ].join(' && ')}; } || { ${down}; exit 1; }`,
       cwd: '../..',

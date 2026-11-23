@@ -18,6 +18,8 @@ Monorepo for TravelBliss, a passenger rail booking service. pnpm workspace + Tur
 - API module: a folder in `apps/api/src/modules/` whose `index.ts` calls `defineModule` (`src/core/module.ts`), plus
   one entry in `src/modules/index.ts`. Inject classes by class, repositories with `@InjectRepository(Entity)`, the
   signed-in user with `@SignedInUser()`.
+- Migrations: change the entity, then `pnpm dev:local` and `pnpm --filter @travelbliss/api migration:generate`. Never
+  hand-edit a generated migration; the few hand-written ones are in [CODING_STANDARDS.md](CODING_STANDARDS.md).
 - Code review: [CODING_STANDARDS.md](CODING_STANDARDS.md).
 
 ## Agent skills

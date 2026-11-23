@@ -12,6 +12,17 @@ reported a Postgres outage as "access denied".
 In the API, an error a client should react to is a `BaseException` with an `ErrorCode`; everything else propagates
 and is logged as unexpected (`docs/adr/0002-api-logging.md`).
 
+## Generate migrations
+
+Change the entity, then generate the migration (`migration:generate`) and keep its SQL as generated. A hand-written
+migration drifts from the entities: one created constraints under names the entity didn't declare, so every later
+`migration:generate` proposed renaming them.
+
+Hand-write one only for what TypeORM cannot generate: moving or backfilling data, or database objects that entities
+don't describe (an extension, a trigger, a function). Its first line says why: `// Hand-written: <reason>`. A schema
+change never goes in a hand-written migration. e2e runs `migration:check` on a fresh database, which fails when the
+migrations and entities disagree.
+
 ## Derive, don't copy
 
 Compute a value from its source during render. Copying query data or props into `useState` through `useEffect` lags
