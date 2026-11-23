@@ -1,9 +1,50 @@
+import { spawn, type ChildProcess } from 'node:child_process';
 import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
 import swc from 'unplugin-swc';
+import { type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
+/**
+ * `pnpm dev` (`vite build --watch`): restart the API once each rebuild is fully written. One process, so
+ * stopping the watcher stops the server; the old server exits before the new one binds its port.
+ */
+const runApiAfterBuild = (): Plugin => {
+  let server: ChildProcess | undefined;
+  const stop = async () => {
+    if (!server || server.exitCode !== null) {
+      return;
+    }
+    const exited = new Promise((done) => server!.once('exit', done));
+    server.kill('SIGTERM');
+    await exited;
+  };
+  // A signal kills Vite without running 'exit' handlers, which would orphan the server (`pnpm dev:stop`, turbo)
+  const stopWithVite = () => {
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+      process.once(signal, () => void stop().finally(() => process.exit(0)));
+    }
+  };
+  return {
+    name: 'run-api-after-build',
+    apply: 'build',
+    async closeBundle() {
+      if (!this.meta.watchMode) {
+        return;
+      }
+      if (!server) {
+        stopWithVite();
+      }
+      await stop();
+      server = spawn(process.execPath, ['--enable-source-maps', 'dist/index.js'], {
+        stdio: 'inherit',
+      });
+    },
+  };
+};
+
 // One entry per source file, so dist/ mirrors src/: TypeORM finds migrations by a __dirname glob.
+// shortcut: read once when Vite starts, so `pnpm dev` picks up a new file only after a restart; fine for now.
 const entries = Object.fromEntries(
   globSync('src/**/*.ts')
     .filter((file) => !file.endsWith('.test.ts'))
@@ -25,6 +66,7 @@ export default defineConfig({
         },
       },
     }),
+    runApiAfterBuild(),
   ],
   build: {
     ssr: true,
