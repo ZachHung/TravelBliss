@@ -85,9 +85,10 @@ jobs:
           SHA: ${{ needs.check.outputs.sha }}
         run: |
           ssh_vm() { ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 root@travelbliss "$@"; }
-          # The VM keeps no copy of the repo: compose.yml and deploy.sh travel with each deploy
+          # The VM keeps no copy of the repo: compose.yml and the scripts travel with each deploy
           ssh_vm 'cat > /opt/travelbliss/compose.yml' < infra/oracle/compose.yml
           ssh_vm 'cat > /opt/travelbliss/deploy.sh && chmod 755 /opt/travelbliss/deploy.sh' < infra/oracle/deploy.sh
+          ssh_vm 'cat > /opt/travelbliss/backup.sh && chmod 755 /opt/travelbliss/backup.sh' < infra/oracle/backup.sh
           # A manual run redeploys even an already-live commit: that's what it's for
           force=$([ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && echo --force || true)
           ssh_vm "/opt/travelbliss/deploy.sh $SHA $force"

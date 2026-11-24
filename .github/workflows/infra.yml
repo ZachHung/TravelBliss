@@ -51,5 +51,7 @@ jobs:
     runs-on: ${{ vars.DEPLOY_ARCH == 'amd64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
     steps:
       - uses: actions/checkout@v7
-      - name: Every deploy.sh path against a throwaway stack
+      - name: rclone, for the backup checks
+        run: sudo apt-get install -y -qq rclone >/dev/null
+      - name: Every deploy.sh and backup.sh path against a throwaway stack
         run: infra/oracle/test-deploy.sh
