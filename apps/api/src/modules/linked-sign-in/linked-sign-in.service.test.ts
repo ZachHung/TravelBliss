@@ -236,7 +236,7 @@ describe('LinkedSignInService', () => {
     expect(links).toHaveLength(1);
   });
 
-  it('clears the state cookie with the attributes it was set with, as a cross-site clear needs', async () => {
+  it('clears the state cookie with the attributes it was set with', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     const { service } = setup();
 
