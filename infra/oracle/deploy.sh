@@ -6,11 +6,9 @@ set -euo pipefail
 NEW=${1:?usage: deploy.sh <tag> [--force]}
 FORCE=${2:-}
 cd /opt/travelbliss
+# What's live now: the version to switch back to, even on a --force redeploy of it (an older build could predate
+# the live one's migrations). Its images and NEW's are the only ones a switch back can need.
 OLD=$(cat .deployed-tag 2>/dev/null || echo main)
-# Redeploying the live tag: the version to keep and to switch back to is the one before it
-if [ "$NEW" = "$OLD" ] && [ -f .previous-tag ]; then
-  OLD=$(cat .previous-tag)
-fi
 compose() { TAG=$1 docker compose --env-file .env.production "${@:2}"; }
 # Through Caddy, as a visitor would: checks web and api together
 site_answers() {
@@ -23,14 +21,13 @@ site_answers() {
   return 1
 }
 
-# Both "Run test" and "Images" trigger the workflow, so the same commit can arrive twice. Deploying it again would
-# restart a live site, and make it its own "previous" version, so the real previous images would be pruned.
-if [ "$FORCE" != --force ] && [ "$NEW" = "$(cat .deployed-tag 2>/dev/null)" ] && site_answers 10; then
+# Both "Run test" and "Images" trigger the workflow, so the same commit can arrive twice: don't touch a live site
+if [ "$FORCE" != --force ] && [ "$NEW" = "$OLD" ] && site_answers 10; then
   echo "== $NEW is already live (run the Deploy workflow manually to redeploy it)"
   exit 0
 fi
 
-echo "== Deploying $NEW (running: $(cat .deployed-tag 2>/dev/null || echo main); fallback: $OLD)"
+echo "== Deploying $NEW (running: $OLD)"
 compose "$NEW" pull web api
 # Before `up`: up replaces the api container before migrate finishes, so a failed migration would take the site down.
 # Here it stops the deploy with the old version still serving. Migrations only move forward.
@@ -40,10 +37,9 @@ up_ok=true
 compose "$NEW" up -d --remove-orphans || up_ok=false
 
 if $up_ok && site_answers; then
-  [ "$OLD" != "$NEW" ] && echo "$OLD" >.previous-tag
   echo "$NEW" >.deployed-tag
   echo "== Live: $NEW"
-  # Keep the new and previous images (and :main, which first boot runs) for a switch back; the disk is small
+  # Keep the new images and the ones they replaced (and :main, which first boot runs); the disk is small
   stale=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^ghcr.io/zachhung/travelbliss-' |
     grep -vE ":($NEW|$OLD|main)$" || true)
   if [ -n "$stale" ]; then
