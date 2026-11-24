@@ -47,15 +47,13 @@ const Form = <V extends Record<string, any>>({
         where: graphError.extensions?.where as keyof V,
       }));
 
-      for (const exceptionInfo of exceptions) {
-        const errors = formErrors[exceptionInfo.code];
-        if (errors) {
-          for (const exception of errors) {
-            form.setFieldError(
-              String(exceptionInfo.where || exception.fieldName),
-              exception.message
-            );
-          }
+      for (const { code, where } of exceptions) {
+        // `where` names the one field at fault, so only its message applies
+        const errors = (formErrors[code] ?? []).filter(
+          ({ fieldName }) => !where || fieldName === where
+        );
+        for (const { fieldName, message } of errors) {
+          form.setFieldError(String(fieldName), message);
         }
       }
     },
