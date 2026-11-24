@@ -1,0 +1,5 @@
+# State holds every production secret and the Tailscale key; tfvars holds the provider secrets.
+terraform.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
