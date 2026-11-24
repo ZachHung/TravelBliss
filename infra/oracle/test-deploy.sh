@@ -133,7 +133,8 @@ psql_db "create table backup_probe (x text); insert into backup_probe values ('k
 check 'backup' 0 -- "$WORK/backup.sh" backup
 psql_db 'drop table backup_probe' >/dev/null
 check 'restore the newest backup' 0 -- "$WORK/backup.sh" restore
-dc up -d >/dev/null 2>&1 # restore leaves api and web stopped
+dc up -d >/dev/null 2>&1 # restore leaves api and web stopped; wait for them, or the next step sees the site down
+for _ in $(seq 60); do if answers; then break; fi; sleep 2; done
 check 'restore brought the data back' 0 -- test "$(psql_db 'select x from backup_probe')" = kept
 
 export TRAVELBLISS_BACKUP_REMOTE=gdrive:/proc/travelbliss-no-such-drive # can't be written or listed

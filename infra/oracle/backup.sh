@@ -12,6 +12,9 @@ export ENV_FILE=${TRAVELBLISS_ENV_FILE:-.env.production}
 REMOTE=${TRAVELBLISS_BACKUP_REMOTE:-gdrive:travelbliss-backups}
 PASS=${TRAVELBLISS_BACKUP_PASS:-/root/.travelbliss-backup-pass}
 export RCLONE_CONFIG=${RCLONE_CONFIG:-/root/.config/rclone/rclone.conf}
+BACKUPS='travelbliss-*.dump.enc' # retention and listing touch only these, never other files in the folder
+tmp=
+trap '[ -z "$tmp" ] || rm -f -- "$tmp"' EXIT # also when a step fails partway
 cd "$DIR"
 # TAG only names images; db and cache don't use it
 compose() { TAG=${TAG:-main} docker compose --env-file "$ENV_FILE" "$@"; }
@@ -22,12 +25,12 @@ configured() { [ -f "$RCLONE_CONFIG" ] && rclone listremotes | grep -qx "${REMOT
 newest() {
   local list
   rclone mkdir "$REMOTE" || return 2 # a brand-new remote has no folder yet: that is "no backups", not an error
-  list=$(rclone lsf "$REMOTE" --include 'travelbliss-*.dump.enc') || return 2
+  list=$(rclone lsf "$REMOTE" --include "$BACKUPS") || return 2
   sort <<<"$list" | tail -1
 }
 
 backup() {
-  local name tmp
+  local name
   name=travelbliss-$(date -u +%Y%m%dT%H%M%SZ).dump.enc
   tmp=$(mktemp)
   # -Fc: pg_restore's custom format, compressed; the db container knows its own user and database
@@ -35,13 +38,12 @@ backup() {
   compose exec -T db sh -c 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"' |
     openssl enc -aes-256-cbc -pbkdf2 -salt -pass "file:$PASS" -out "$tmp"
   rclone copyto "$tmp" "$REMOTE/$name"
-  rm -f -- "$tmp"
-  rclone delete "$REMOTE" --min-age 15d
+  rclone delete "$REMOTE" --include "$BACKUPS" --min-age 15d
   echo "== Backed up: $REMOTE/$name"
 }
 
 restore() {
-  local name=${1:-} tmp
+  local name=${1:-}
   if [ -z "$name" ]; then
     name=$(newest)
   fi
@@ -56,7 +58,6 @@ restore() {
   # shellcheck disable=SC2016 # expands inside the db container
   openssl enc -d -aes-256-cbc -pbkdf2 -pass "file:$PASS" -in "$tmp" |
     compose exec -T db sh -c 'pg_restore --clean --if-exists --no-owner -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
-  rm -f -- "$tmp"
   echo "== Restored: $REMOTE/$name. api and web are stopped: start them with TAG=\$(cat .deployed-tag) docker compose --env-file $ENV_FILE up -d"
 }
 
