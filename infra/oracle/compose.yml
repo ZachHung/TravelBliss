@@ -10,6 +10,19 @@ x-logging: &logging
     max-size: 10m
     max-file: '3'
 
+# The API image and its settings, shared by migrate and api
+x-api-image: &api-image
+  image: ghcr.io/zachhung/travelbliss-api:${TAG:?set TAG to the commit to run}
+  env_file: ${ENV_FILE:-.env.production}
+  environment:
+    NODE_ENV: production
+    API_PORT: 8000
+    API_POSTGRES_HOST: db
+    API_POSTGRES_PORT: 5432
+    API_POSTGRES_SSL: 'false'
+    API_REDIS_URI: redis://default:${API_REDIS_PASSWORD}@cache:6379
+  logging: *logging
+
 services:
   web:
     image: ghcr.io/zachhung/travelbliss-web:${TAG:?set TAG to the commit to run}
@@ -20,23 +33,28 @@ services:
     restart: unless-stopped
     logging: *logging
 
+  # The image's migrations (forward only). api waits for them, so it never starts on an unmigrated schema. But `up`
+  # replaces api's container before migrate finishes, so a deploy runs `docker compose run --rm migrate` with the new
+  # TAG first and only then `up -d`: a failed migration then leaves the running API untouched.
+  migrate:
+    <<: *api-image
+    command:
+      ['node', 'node_modules/typeorm/cli.js', '-d', 'dist/config/data-source.js', 'migration:run']
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
   api:
-    image: ghcr.io/zachhung/travelbliss-api:${TAG:?set TAG to the commit to run}
-    env_file: ${ENV_FILE:-.env.production}
-    environment:
-      NODE_ENV: production
-      API_PORT: 8000
-      API_POSTGRES_HOST: db
-      API_POSTGRES_PORT: 5432
-      API_POSTGRES_SSL: 'false'
-      API_REDIS_URI: redis://default:${API_REDIS_PASSWORD}@cache:6379
+    <<: *api-image
     depends_on:
       db:
         condition: service_healthy
       cache:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
-    logging: *logging
 
   db:
     image: postgres:16.6-alpine
