@@ -72,7 +72,9 @@ describe('configuredProviders', () => {
 
   it('offers each provider with credentials, and the dev provider only on a local machine or in e2e', () => {
     expect(names({ NODE_ENV: 'e2e' })).toEqual([SignInProviderName.DEV]);
+    expect(names({ NODE_ENV: 'production' })).toEqual([]);
     expect(names({ NODE_ENV: 'development' })).toEqual([]);
+    expect(names({})).toEqual([]);
     expect(
       names({
         NODE_ENV: 'local',
