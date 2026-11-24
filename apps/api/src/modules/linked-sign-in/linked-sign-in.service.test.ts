@@ -236,7 +236,7 @@ describe('LinkedSignInService', () => {
     expect(links).toHaveLength(1);
   });
 
-  it('clears the state cookie with the attributes it was set with, as a cross-site clear needs', async () => {
+  it('clears the state cookie with the attributes it was set with', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     const { service } = setup();
 
@@ -245,7 +245,7 @@ describe('LinkedSignInService', () => {
 
     expect(ctx.res.clearCookie).toHaveBeenCalledWith(
       'tb_ls',
-      expect.objectContaining({ path: '/auth', sameSite: 'none', secure: true, httpOnly: true })
+      expect.objectContaining({ path: '/auth', sameSite: 'lax', secure: true, httpOnly: true })
     );
   });
 

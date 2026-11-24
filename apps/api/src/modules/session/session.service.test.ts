@@ -155,7 +155,7 @@ describe('SessionService', () => {
     expect(store.data.has('blacklist:access-token')).toBe(true);
   });
 
-  it('clears the refresh cookie with the attributes it was set with, as a cross-site clear needs', async () => {
+  it('clears the refresh cookie with the attributes it was set with', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     const { service } = setup();
     const res = fakeRes();
@@ -171,7 +171,7 @@ describe('SessionService', () => {
 
     const options = out.options as Record<string, object>;
     expect(options['cleared:tb_rf']).toMatchObject({
-      sameSite: 'none',
+      sameSite: 'lax',
       secure: true,
       httpOnly: true,
     });

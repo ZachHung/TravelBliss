@@ -43,9 +43,9 @@ The owner already runs an unrelated app on an Oracle Always Free VM reached over
   Pay As You Go (which makes billing possible) or faking load: a scheduled GitHub Action checks the site every
   6 hours and opens an issue while it is down.
 - Funnel traffic goes through Tailscale's relays, with their bandwidth limits: fine for a demo, not for real load.
-- Production cookies stay `SameSite=None; Secure` (`cookieOptions`) for now, though one origin no longer needs it.
-  Tightening them to `Lax` is #188. Not `Strict`: the provider's redirect back to `/auth/<provider>/callback` is a
-  cross-site navigation that must carry the `state` cookie.
+- Production cookies are `SameSite=Lax; Secure` (`cookieOptions`, #188): with one origin, none needs to travel
+  cross-site. Not `Strict`: the provider's redirect back to `/auth/<provider>/callback` is a cross-site navigation
+  that must carry the `state` cookie.
 - Google sign-in stays in **Testing** mode (listed test users only) until #126 stops storing unverified emails.
   Publishing it also needs a verified domain, which may not be possible for `*.ts.net`: a real domain would then be a
   cost decision. Facebook stays off until there is a privacy-policy page.
