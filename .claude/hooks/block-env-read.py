@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Keeps real secrets out of the agent's context: blocks reading root/app .env* files (except .env.example, .env.e2e)."""
+"""Keeps real secrets out of the agent's context by accident: blocks tool calls that name a root/app .env* file
+(except .env.example, .env.e2e).
+
+A guard against accidental reads, not a security boundary. It matches text, and shell can build any file name at run
+time (`.e*`, `.en[v].local`, `.e""nv.local`, printf ...), so a command written to get around it will. Those known
+gaps are listed in block-env-read.test.py. Real protection is that production secrets live only on the VM (ADR 0006).
+"""
 import json, re, sys
 
 payload = json.load(sys.stdin)
@@ -7,8 +13,9 @@ tool, args = payload.get('tool_name', ''), payload.get('tool_input', {})
 
 # A .env file word: `.env` not glued to a name before it (so config.env and block-env-read.py don't count), then any
 # name or glob characters: .env, .env.local, .env*, .env.loca[l], against any shell syntax (<.env.x, {.env.x}, `.env.x`).
-# Every such word is a real .env file unless it is exactly one of the committed, dummy-value ones. Checking for the
-# safe names, not for the dangerous ones, is what keeps globs and new spellings blocked.
+# Every such word is a real .env file unless it is exactly one of the committed, dummy-value ones: checking for the
+# safe names, not the dangerous ones, blocks any spelling that writes out `.env` (globs after it included). Names
+# that never write out `.env` are the known gaps (see the docstring).
 ENV_WORD = re.compile(r'(?<![\w.-])\.env[\w.*?\[\]-]*')
 SAFE = {'.env.example', '.env.e2e'}
 

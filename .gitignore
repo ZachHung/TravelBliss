@@ -30,5 +30,7 @@ playwright-report
 # Terraform state and variables hold production secrets, wherever a Terraform directory ends up
 terraform.tfstate
 terraform.tfstate.*
-terraform.tfvars
+# every variables file Terraform loads (terraform.tfvars, *.auto.tfvars, prod.tfvars, *.tfvars.json); .example stays
+*.tfvars
+*.tfvars.json
 .terraform/
