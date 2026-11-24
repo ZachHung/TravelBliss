@@ -1,4 +1,4 @@
-# Linked sign-in setup (local)
+# Linked sign-in setup
 
 How to make "Continue with Google / Facebook" work on your machine. Why it works this way:
 [ADR 0005](adr/0005-linked-sign-in.md).
@@ -64,3 +64,29 @@ request was fine (a bad client id or redirect URI fails earlier, with a named er
 session is not. Try a private window. If that works, a browser extension is rewriting Google's URLs: ClearURLs
 strips parameters Google's consent step needs. Disable it for `accounts.google.com`, or use an extension that leaves
 Google's sign-in alone.
+
+## Production
+
+The deployed site (ADR 0006, [deploy guide](deploy.md)) gets its own Google project, so the local client's secret,
+which sits on your machine, can't reach production, and each project keeps its own test users.
+
+1. In the [Google Cloud console](https://console.cloud.google.com/), create a project named `travelbliss`.
+2. **Branding**:
+   - app name `TravelBliss`, with your email as the support and developer contact
+   - home page `https://travelbliss.<tailnet>.ts.net`
+   - **authorized domain** `<tailnet>.ts.net`
+   - leave the privacy policy and terms links empty: they're only needed to publish (#185)
+3. **Audience**: **External**, kept at **Testing**. Add each Google account that may sign in under **Test users** (up
+   to 100). Anyone else gets "Access blocked", which also keeps #126's email problem contained.
+4. **Data access**: the same three scopes as above.
+5. **Clients → Create client**, type **Web application**:
+   - **Authorized JavaScript origins:** leave empty. The flow runs on the server.
+   - **Authorized redirect URIs:** exactly `https://travelbliss.<tailnet>.ts.net/auth/google/callback`. That's
+     `API_PUBLIC_URL`'s callback: `https`, no port, no trailing slash.
+6. Put the client ID and secret in `infra/oracle/terraform.tfvars` (`google_client_id`, `google_client_secret`)
+   **before the first `terraform apply`**. The VM reads them on first boot only. To add or change them on a running
+   VM, edit its env file and restart `api` ([deploy guide › Changing a secret](deploy.md#changing-a-secret-or-setting-later)).
+7. Check it in a private window:
+   - a test user signs in
+   - an account that isn't a test user gets "Access blocked"
+   - `redirect_uri_mismatch` means step 5's URI differs from `API_PUBLIC_URL`
