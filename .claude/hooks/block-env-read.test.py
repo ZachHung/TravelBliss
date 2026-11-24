@@ -26,11 +26,19 @@ cases = {
            # the name against shell syntax, and reads with no reading command
            bash('cat <.env.local'), bash('cat {.env.local}'), bash('cat {.env.local,.env}'), bash('echo $(<.env.local)'),
            bash('while read l; do echo "$l"; done <.env.local'), bash('mapfile -t lines <.env.local'),
-           bash('diff <(sort .env.local) x'), bash('echo `cat .env.local`'), bash('cat .env.local>/tmp/copy')],
+           bash('diff <(sort .env.local) x'), bash('echo `cat .env.local`'), bash('cat .env.local>/tmp/copy'),
+           # readers no list would name: any command naming a real .env file is blocked
+           bash('tac .env.local'), bash('nl .env.local'), bash('paste .env.local'), bash('tee x < .env.local'),
+           bash('jq . .env.local'), bash('vim .env.local'), bash('nano .env.local'), bash('wc -c .env.local'),
+           bash('echo .env.local | xargs cat'), bash('env $(xargs < .env.local) printenv'),
+           bash('docker compose --env-file .env.production config'),
+           # ...including when it is only text: that goes through a file (the block message says how)
+           bash('gh issue create --body "secrets live in .env.production"')],
     False: [bash('cat .env.example'), bash('cat .env.e2e'), bash('docker compose --env-file .env.e2e up'),
             bash('ls -a'), read('/repo/.env.example'), read('/repo/.env.e2e'),
-            # a heredoc is not a read; a redirect into a committed file is fine
-            bash("cat > notes.md <<'EOF'\nhello\nEOF"), bash('cat <.env.example'), bash('echo $(<.env.e2e)')],
+            bash("cat > notes.md <<'EOF'\nhello\nEOF"), bash('cat <.env.example'), bash('echo $(<.env.e2e)'),
+            bash('pnpm dev:local'), bash('gh issue create --body-file /tmp/body.md'),
+            bash('grep -n env AGENTS.md'), bash('ls .claude/hooks/block-env-read.py')],
 }
 failures = [(want, p) for want, payloads in cases.items() for p in payloads if blocked(p) != want]
 for want, p in failures:
