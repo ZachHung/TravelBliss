@@ -13,9 +13,12 @@ The owner already runs an unrelated app on an Oracle Always Free VM reached over
 - **One environment, `production`, deployed on every merge to `main` that passes CI.** No staging until there are
   users whose data must not break. It runs with `NODE_ENV=production` even before real users, because it is public:
   unexpected errors are masked (ADR 0002) and cookies are `Secure`. There is no hosted `development` environment.
-- **Its own Oracle Always Free VM**, ARM (2 OCPU / 12 GB of the free 4 / 24) when Oracle has capacity, the free AMD
+- **Its own Oracle Always Free VM**, ARM (1 OCPU / 2 GB of the free 4 / 24) when Oracle has capacity, the free AMD
   micro (1 GB) otherwise. Not shared with the other app. Defined by Terraform in this repo, with state only on the
   owner's machine, so a reclaimed VM is rebuilt with one command. Images are built for the VM's architecture only.
+  - Small on purpose: Oracle counts an ARM VM as idle when its memory use, among other things, stays under 20%. The
+    stack uses roughly 0.7 GB, which keeps a 2 GB VM above that line; on 12 GB it would look idle and be reclaimed
+    sooner.
 - **Public through Tailscale Funnel at `https://travelbliss.<tailnet>.ts.net`**, with no inbound port open on the VM.
   - Chosen over a bought domain (not free) and over a free dynamic-DNS name with ports 80/443 open and Caddy
     fetching certificates (more exposed, and a public IP to keep pointed at).
