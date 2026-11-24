@@ -6,8 +6,12 @@ import { type DeleteResult, type InsertResult, type UpdateResult } from 'typeorm
 // One file per environment at the repo root: .env.local (docker on this machine, the default), .env.e2e, and on the
 // VM .env.production (ADR 0006).
 // src/utils and dist/utils are both 4 levels deep. A missing file is skipped, so deploys can use real env vars.
-process.env.NODE_ENV ||= 'local';
-config({ path: resolve(__dirname, '../../../..', `.env.${process.env.NODE_ENV}`), quiet: true });
+// Unset, .env.local is read but NODE_ENV stays unset: the app refuses to start and the Dev provider stays off, so a
+// host that forgets NODE_ENV fails closed. Migration and schema scripts only need the file.
+config({
+  path: resolve(__dirname, '../../../..', `.env.${process.env.NODE_ENV || 'local'}`),
+  quiet: true,
+});
 
 export const getEnv = (name: string): string => {
   const value = process.env[name];

@@ -39,7 +39,8 @@ variable):
 | `.env.e2e`        | `pnpm e2e` (committed: dummy values for its throwaway stack)         |
 | `.env.production` | the VM only, written by Terraform (`infra/oracle`, ADR 0006)         |
 
-The API loads exactly `.env.${NODE_ENV}`, and `NODE_ENV` defaults to `local`. Web variables start with `VITE_` (the
+The API loads exactly `.env.${NODE_ENV}` (`.env.local` when unset). `pnpm dev` and `pnpm dev:local` set `NODE_ENV=local`;
+the API itself refuses to start without it, so a misconfigured host never acts as a local machine. Web variables start with `VITE_` (the
 only ones that reach the browser). API variables start with `API_`.
 
 ## Scripts

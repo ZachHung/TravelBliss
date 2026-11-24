@@ -74,6 +74,7 @@ describe('configuredProviders', () => {
     expect(names({ NODE_ENV: 'e2e' })).toEqual([SignInProviderName.DEV]);
     expect(names({ NODE_ENV: 'production' })).toEqual([]);
     expect(names({ NODE_ENV: 'development' })).toEqual([]);
+    expect(names({})).toEqual([]);
     expect(
       names({
         NODE_ENV: 'local',
