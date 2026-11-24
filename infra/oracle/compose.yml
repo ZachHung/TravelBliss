@@ -27,7 +27,8 @@ services:
   web:
     image: ghcr.io/zachhung/travelbliss-web:${TAG:?set TAG to the commit to run}
     ports:
-      - 127.0.0.1:8080:8080
+      # WEB_BIND only for test-deploy.sh, beside a machine's own :8080
+      - ${WEB_BIND:-127.0.0.1:8080}:8080
     depends_on:
       - api
     restart: unless-stopped

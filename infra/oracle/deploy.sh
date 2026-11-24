@@ -5,16 +5,21 @@
 set -euo pipefail
 NEW=${1:?usage: deploy.sh <tag> [--force]}
 FORCE=${2:-}
-cd /opt/travelbliss
+# The VM's values; test-deploy.sh points them at a throwaway stack
+DIR=${TRAVELBLISS_DIR:-/opt/travelbliss}
+SITE=${TRAVELBLISS_SITE:-http://127.0.0.1:8080}
+# Exported: compose.yml's env_file reads ENV_FILE too
+export ENV_FILE=${TRAVELBLISS_ENV_FILE:-.env.production}
+cd "$DIR"
 # What's live now: the version to switch back to, even on a --force redeploy of it (an older build could predate
 # the live one's migrations). Its images and NEW's are the only ones a switch back can need.
 OLD=$(cat .deployed-tag 2>/dev/null || echo main)
-compose() { TAG=$1 docker compose --env-file .env.production "${@:2}"; }
+compose() { TAG=$1 docker compose --env-file "$ENV_FILE" "${@:2}"; }
 # Through Caddy, as a visitor would: checks web and api together
 site_answers() {
   local deadline=$((SECONDS + ${1:-60}))
   while ((SECONDS < deadline)); do
-    curl -sf -m 2 -X POST http://127.0.0.1:8080/graphql -H 'content-type: application/json' \
+    curl -sf -m 2 -X POST "$SITE/graphql" -H 'content-type: application/json' \
       -H 'apollo-require-preflight: true' -d '{"query":"{ __typename }"}' | grep -q '"Query"' && return 0
     sleep 2
   done
@@ -28,7 +33,11 @@ if [ "$FORCE" != --force ] && [ "$NEW" = "$OLD" ] && site_answers 10; then
 fi
 
 echo "== Deploying $NEW (running: $OLD)"
-compose "$NEW" pull web api
+# A failed pull stops the deploy: a stale local copy of a moving tag (:main) must never go live as if current.
+# TRAVELBLISS_NO_PULL is for test-deploy.sh only, whose test images exist only locally.
+if [ -z "${TRAVELBLISS_NO_PULL:-}" ]; then
+  compose "$NEW" pull web api
+fi
 # Before `up`: up replaces the api container before migrate finishes, so a failed migration would take the site down.
 # Here it stops the deploy with the old version still serving. Migrations only move forward.
 compose "$NEW" run --rm migrate

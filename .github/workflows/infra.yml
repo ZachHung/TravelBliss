@@ -1,0 +1,55 @@
+name: Infra
+
+# Checks for what `pnpm test` doesn't cover: the deploy scripts, Terraform, the VM's compose file, the workflows and
+# the agent hooks (ADR 0006). The deploy test runs deploy.sh through every path against a throwaway stack.
+on:
+  push:
+    branches:
+      - main
+    paths: &paths
+      - 'infra/**'
+      - '.github/workflows/**'
+      - '.claude/hooks/**'
+  pull_request:
+    branches:
+      - '**'
+    paths: *paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: shellcheck
+        run: shellcheck infra/oracle/*.sh .claude/hooks/*.sh
+      - name: actionlint
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
+          ./actionlint -color
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+      - name: terraform fmt and validate
+        run: |
+          terraform -chdir=infra/oracle fmt -check -diff
+          terraform -chdir=infra/oracle init -backend=false -input=false
+          terraform -chdir=infra/oracle validate
+      - name: compose config
+        run: TAG=ci ENV_FILE=/dev/null docker compose -f infra/oracle/compose.yml --env-file /dev/null config -q
+      - name: hook tests
+        run: python3 .claude/hooks/block-env-read.test.py
+
+  deploy-test:
+    # On the architecture the published :main images are built for (DEPLOY_ARCH, as in images.yml)
+    runs-on: ${{ vars.DEPLOY_ARCH == 'amd64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Every deploy.sh path against a throwaway stack
+        run: infra/oracle/test-deploy.sh
