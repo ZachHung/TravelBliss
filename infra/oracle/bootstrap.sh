@@ -24,9 +24,14 @@ command -v tailscale >/dev/null || curl -fsSL https://tailscale.com/install.sh |
 # --ssh: deploys (#180) and you reach the VM over Tailscale SSH; no port is open to the internet
 tailscale up --auth-key="$TS_AUTHKEY" --hostname="$TS_NAME" --advertise-tags=tag:travelbliss --ssh
 TS_HOST=$(tailscale status --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')
+# Fatal, before anything stores the name: API_PUBLIC_URL, CORS and Google's redirect URI are all built from it, and
+# an old '$TS_NAME' machine still in the tailnet makes Tailscale hand out '$TS_NAME-1' instead
 case "$TS_HOST" in
   "$TS_NAME".*) ;;
-  *) echo "WARNING: got $TS_HOST, not $TS_NAME.<tailnet>.ts.net. Delete the old '$TS_NAME' machine in Tailscale, then rebuild." ;;
+  *)
+    echo "ERROR: got $TS_HOST, not $TS_NAME.<tailnet>.ts.net. Delete the old '$TS_NAME' machine in Tailscale, then rebuild." >&2
+    exit 1
+    ;;
 esac
 
 echo "== .env.production"
@@ -48,8 +53,8 @@ echo "== TravelBliss (newest main)"
 export TAG=main
 compose() { docker compose --env-file .env.production "$@"; }
 compose pull
-compose up -d --wait db cache
-compose run --rm --no-deps api node node_modules/typeorm/cli.js -d dist/config/data-source.js migration:run
+# up runs the migrate service first and starts api only once it succeeds (compose.yml). No --wait: older
+# Compose releases (Ubuntu's docker-compose-v2) may count migrate's intended exit as a failure.
 compose up -d
 echo "$TAG" >.deployed-tag
 
