@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Runs deploy.sh against a throwaway copy of the production stack and checks every path it can take: a fresh
 # deploy, a duplicate, a --force redeploy, a good deploy and its pruning, a failing migration, an API that crashes,
-# and an `up` that fails. Needs Docker; uses the published :main images (pulled if missing) as the known-good build.
+# a build answering as another commit, and an `up` that fails. Needs Docker; uses the :main images as the known-good
+# build: pulled if missing, which is the last published one. CI builds them from the checkout instead, so a change to
+# the images is tested before it's published; to do the same locally, build both from the repo root first:
+#   docker build -f apps/api/Dockerfile -t ghcr.io/zachhung/travelbliss-api:main .   (and apps/web, ...-web:main)
 #   infra/oracle/test-deploy.sh            # CI and local; removes its stack and its t-* test images afterwards
 # deploy.sh prunes every local travelbliss image but the new, the live and :main, so on a machine holding other
 # travelbliss tags (a pulled SHA, a local build) this refuses to run, outside CI, rather than delete them.
@@ -52,15 +55,13 @@ EOF
 docker image inspect "$A:main" >/dev/null 2>&1 || docker pull -q "$A:main" >/dev/null
 docker image inspect "$W:main" >/dev/null 2>&1 || docker pull -q "$W:main" >/dev/null
 
-# Test builds, made just before each step: a deploy prunes every tag but the new, the live and :main
-good() { docker tag "$A:main" "$A:$1" && docker tag "$W:main" "$W:$1"; }
+# Test builds, made just before each step: a deploy prunes every tag but the new, the live and :main.
+# GIT_SHA is the tag, as images.yml bakes in the commit: deploy.sh only accepts a build reporting the tag it deployed.
+good() { derived "$1" "ENV GIT_SHA=$1"; }
 derived() { # <tag> <Dockerfile line>: an API image that differs from :main by one line
   printf 'FROM %s:main\n%s\n' "$A" "$2" | docker build -q -t "$A:$1" - >/dev/null && docker tag "$W:main" "$W:$1"
 }
-answers() {
-  curl -sf -m 3 -X POST "$TRAVELBLISS_SITE/graphql" -H 'content-type: application/json' \
-    -H 'apollo-require-preflight: true' -d '{"query":"{ __typename }"}' | grep -q '"Query"'
-}
+answers() { curl -sf -m 3 "$TRAVELBLISS_SITE/health" | grep -q '"status":"pass"'; }
 # Both fall back, so a step that fails before deploying anything still prints its FAIL line and deploy.sh's output
 api_tag() { docker inspect -f '{{.Config.Image}}' "$COMPOSE_PROJECT_NAME-api-1" 2>/dev/null | sed 's/.*://' || echo none; }
 live_tag() { cat "$WORK/.deployed-tag" 2>/dev/null || echo none; }
@@ -85,12 +86,35 @@ step() {
   fi
 }
 
+# check <name> <expected exit> -- <command...>
+check() {
+  local name=$1 want=$2 rc=0
+  shift 3
+  "$@" >"$WORK/out.log" 2>&1 || rc=$?
+  if [ "$rc" = "$want" ]; then echo "ok    $name"; else
+    failures=$((failures + 1))
+    echo "FAIL  $name: exit $rc (want $want)"
+    sed 's/^/      | /' "$WORK/out.log"
+  fi
+}
+# compose.yml's healthcheck on api: healthy within a minute of a good deploy
+api_healthy() {
+  for _ in $(seq 30); do
+    [ "$(docker inspect -f '{{.State.Health.Status}}' "$COMPOSE_PROJECT_NAME-api-1")" = healthy ] && return 0
+    sleep 2
+  done
+  return 1
+}
+
 good t-a
 step 'fresh deploy, warning that backups are not set up' 0 t-a "backups aren.t set up" -- t-a
 step 'same commit again is a no-op' 0 t-a 'already live' -- t-a
 step '--force redeploys the live commit' 0 t-a '== Live: t-a' -- t-a --force
 good t-b
 step 'good deploy' 0 t-b '== Live: t-b' -- t-b
+check 'api container reports healthy' 0 -- api_healthy
+derived t-stale 'ENV GIT_SHA=some-other-commit' # healthy, but not the build that was deployed
+step 'build answering as another commit is switched back' 1 t-b 'switching back to t-b' -- t-stale
 derived t-badmig "RUN printf 'exports.M9999999999999 = class { name = \"M9999999999999\"; async up() { throw new Error(\"broken on purpose\"); } };\n' > dist/migration/9999999999999-broken.js"
 step 'failing migration stops before switching' 1 t-b 'broken on purpose' -- t-badmig
 derived t-crash 'CMD ["node", "-e", "process.exit(1)"]'
@@ -111,17 +135,6 @@ printf '[gdrive]\ntype = local\n' >"$RCLONE_CONFIG"
 echo test-passphrase >"$TRAVELBLISS_BACKUP_PASS"
 dc() { (cd "$WORK" && TAG=$(live_tag) docker compose --env-file test.vars "$@"); }
 psql_db() { dc exec -T db sh -c "psql -qtA -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c \"$1\""; }
-# check <name> <expected exit> -- <command...>
-check() {
-  local name=$1 want=$2 rc=0
-  shift 3
-  "$@" >"$WORK/out.log" 2>&1 || rc=$?
-  if [ "$rc" = "$want" ]; then echo "ok    $name"; else
-    failures=$((failures + 1))
-    echo "FAIL  $name: exit $rc (want $want)"
-    sed 's/^/      | /' "$WORK/out.log"
-  fi
-}
 check 'has-backups: none yet' 1 -- "$WORK/backup.sh" has-backups
 good t-d
 step 'deploy backs up before migrating' 0 t-d '== Backed up: ' -- t-d

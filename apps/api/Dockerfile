@@ -15,4 +15,7 @@ RUN pnpm deploy --filter @travelbliss/api --prod --legacy /app
 FROM base
 COPY --from=build /app /app
 WORKDIR /app
+# The commit this image was built from, reported by GET /health (#201); images.yml passes it, a local build reports "dev"
+ARG GIT_SHA
+ENV GIT_SHA=$GIT_SHA
 CMD ["node", "dist/index.js"]

@@ -55,6 +55,20 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    # Shows in `docker ps` (#201); Compose doesn't restart a container for failing it. The image has no curl.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:8000/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 2s
     restart: unless-stopped
 
   db:
