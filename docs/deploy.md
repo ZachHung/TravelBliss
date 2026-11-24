@@ -100,8 +100,8 @@ terraform apply          # read the plan, type yes
       `terraform output -raw backup_passphrase; echo`.
 - [ ] Open the site from any device, with or without Tailscale.
 
-Every variable is documented in `terraform.tfvars.example`: `tenancy_ocid`, `tailscale_auth_key`,
-`ssh_public_key_path`, `ssh_source`, `availability_domain`, `shape`, `arm_ocpus`, `arm_memory_gbs`, the Google and
+Every variable is declared, with its default, in `infra/oracle/main.tf`: `oci_profile`, `tenancy_ocid`,
+`tailscale_auth_key`, `ssh_public_key_path`, `ssh_source`, `availability_domain`, `shape`, `arm_ocpus`, `arm_memory_gbs`, the Google and
 Facebook client ID and secret, and `rclone_conf_path`. The state and `terraform.tfvars` hold every production secret:
 they're git-ignored, so keep them only on your machine.
 
