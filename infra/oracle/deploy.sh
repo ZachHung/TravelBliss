@@ -33,9 +33,11 @@ if [ "$FORCE" != --force ] && [ "$NEW" = "$OLD" ] && site_answers 10; then
 fi
 
 echo "== Deploying $NEW (running: $OLD)"
-# A tag that is already local needs no pull. One that is missing and can't be pulled fails `run` below, before anything
-# switches, so a failed pull never reaches the live site.
-compose "$NEW" pull --ignore-pull-failures web api
+# A failed pull stops the deploy: a stale local copy of a moving tag (:main) must never go live as if current.
+# TRAVELBLISS_NO_PULL is for test-deploy.sh only, whose test images exist only locally.
+if [ -z "${TRAVELBLISS_NO_PULL:-}" ]; then
+  compose "$NEW" pull web api
+fi
 # Before `up`: up replaces the api container before migrate finishes, so a failed migration would take the site down.
 # Here it stops the deploy with the old version still serving. Migrations only move forward.
 compose "$NEW" run --rm migrate

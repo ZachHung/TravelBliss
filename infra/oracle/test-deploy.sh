@@ -22,6 +22,7 @@ WORK=$(mktemp -d)
 
 export COMPOSE_PROJECT_NAME=tbdeploytest ENV_FILE=test.vars WEB_BIND=127.0.0.1:$PORT
 export TRAVELBLISS_DIR=$WORK TRAVELBLISS_ENV_FILE=test.vars TRAVELBLISS_SITE=http://127.0.0.1:$PORT
+export TRAVELBLISS_NO_PULL=1 # the t-* images exist only locally
 
 cleanup() {
   (cd "$WORK" && TAG=none docker compose --env-file test.vars down -v --remove-orphans >/dev/null 2>&1) || true
