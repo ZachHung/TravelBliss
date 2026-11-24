@@ -32,15 +32,13 @@ export const apiPublicUrl = (): string =>
   process.env.API_PUBLIC_URL || `http://localhost:${getEnv('API_PORT')}`;
 
 /**
- * For every cookie the API sets: httpOnly, and in production SameSite=None + Secure, because the web app calls the
- * API cross-site there.
+ * For every cookie the API sets: httpOnly, SameSite=Lax, and Secure in production. The web app and the API share one
+ * origin there (ADR 0006), and localhost ports are one site, so no cookie needs to travel cross-site. Lax, not Strict:
+ * a provider's redirect back to /auth/<provider>/callback is a cross-site navigation that must carry the state cookie.
  */
-export const cookieOptions = (options: CookieOptions): CookieOptions => {
-  const isProduction = getEnv('NODE_ENV') === 'production';
-  return {
-    ...options,
-    httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax',
-    secure: isProduction,
-  };
-};
+export const cookieOptions = (options: CookieOptions): CookieOptions => ({
+  ...options,
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: getEnv('NODE_ENV') === 'production',
+});

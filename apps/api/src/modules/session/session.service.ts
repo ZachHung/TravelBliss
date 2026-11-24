@@ -179,7 +179,7 @@ export class SessionService {
         await this.store.del(refreshKey(userId, refreshToken));
       }
 
-      // Same attributes as when set: a cross-site clear without SameSite=None; Secure is ignored by the browser
+      // Same attributes as when set (cookieOptions), so the browser treats the clear like the cookie it replaces
       res.clearCookie(cookieName, cookieOptions({}));
       return true;
     } catch (error) {
