@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs deploy.sh against a throwaway copy of the production stack and checks every path it can take: a fresh
-# deploy, a duplicate, a --force redeploy, a good deploy and its pruning, a failing migration, an API that crashes,
+# deploy, a duplicate, a --force redeploy, a good deploy and its pruning, a missing setting, a failing migration, an API that crashes,
 # a build answering as another commit, and an `up` that fails. Needs Docker; uses the :main images as the known-good
 # build: pulled if missing, which is the last published one. CI builds them from the checkout instead, so a change to
 # the images is tested before it's published; to do the same locally, build both from the repo root first:
@@ -51,6 +51,8 @@ API_SECRET_REFRESH=test-refresh
 API_REFRESH_EXPIRED=30d
 API_SESSION_MAX_AGE=90d
 API_COOKIE_NAME=travelBliss
+API_PUBLIC_URL=http://127.0.0.1:18080
+API_CORS_ORIGIN=http://127.0.0.1:18080
 EOF
 
 docker image inspect "$A:main" >/dev/null 2>&1 || docker pull -q "$A:main" >/dev/null
@@ -115,6 +117,11 @@ step '--force redeploys the live commit' 0 t-a '== Live: t-a' -- t-a --force
 good t-b
 step 'good deploy' 0 t-b '== Live: t-b' -- t-b
 check 'api container reports healthy' 0 -- api_healthy
+# A build that needs a variable this VM doesn't set (#215)
+grep -v '^API_COOKIE_NAME=' "$WORK/test.vars" >"$WORK/incomplete.vars"
+good t-envless
+TRAVELBLISS_ENV_FILE=incomplete.vars step 'missing variable stops before backing up or migrating' 1 t-b \
+  'missing API_COOKIE_NAME' -- t-envless
 derived t-stale 'ENV GIT_SHA=some-other-commit' # healthy, but not the build that was deployed
 step 'build answering as another commit is switched back' 1 t-b 'switching back to t-b' -- t-stale
 derived t-badmig "RUN printf 'exports.M9999999999999 = class { name = \"M9999999999999\"; async up() { throw new Error(\"broken on purpose\"); } };\n' > dist/migration/9999999999999-broken.js"

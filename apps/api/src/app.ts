@@ -10,6 +10,7 @@ import cors from 'cors';
 import express, { json } from 'express';
 import { buildSchema } from 'type-graphql';
 import { PostgresDataSource } from './config/data-source';
+import { assertEnv } from './config/env';
 import logger from './config/logger';
 import container from './core/container/config.container';
 import {
@@ -27,6 +28,8 @@ import { type Context } from './types';
 import { getEnv, webOrigin } from './utils/helpers';
 
 export const bootstrap = async (): Promise<void> => {
+  // Before anything connects: a missing variable otherwise fails only when a request first reads it
+  assertEnv();
   const isProduction = getEnv('NODE_ENV') === 'production';
   const app = express();
   const httpServer = http.createServer(app);

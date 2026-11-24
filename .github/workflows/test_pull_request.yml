@@ -82,7 +82,8 @@ jobs:
             -e API_REDIS_URI=redis://localhost:6379 -e API_SALT_ROUND=4 \
             -e API_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef \
             -e API_SECRET_JWT=ci -e API_JWT_EXPIRED=5m -e API_SECRET_REFRESH=ci -e API_REFRESH_EXPIRED=1d -e API_SESSION_MAX_AGE=7d \
-            -e API_COOKIE_NAME=ci travelbliss-api:ci
+            -e API_COOKIE_NAME=ci -e API_PUBLIC_URL=http://localhost:8000 -e API_CORS_ORIGIN=http://localhost:8000 \
+            travelbliss-api:ci
           timeout 60 sh -c 'until docker logs api 2>&1 | grep -q "Server running"; do sleep 1; done' || { docker logs api; exit 1; }
           curl -sf localhost:8000/health | jq -e '.status == "pass"' >/dev/null || { curl -s localhost:8000/health; docker logs api; exit 1; }
 
