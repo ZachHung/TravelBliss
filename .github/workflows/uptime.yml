@@ -1,0 +1,77 @@
+name: Uptime
+
+# Oracle may stop an idle Always Free VM, and nothing else would notice (ADR 0006, #182). Every 6 hours this asks the
+# site for `{ __typename }`: while it doesn't answer, one open issue labelled `outage` says so; once it answers again,
+# that issue is closed.
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SITE_URL: ${{ vars.SITE_URL }}
+    steps:
+      - name: Does the site answer?
+        id: probe
+        run: |
+          # Three tries a minute apart, so a short blip doesn't open an issue
+          for try in 1 2 3; do
+            if out=$(curl -sS -m 20 -X POST "$SITE_URL/graphql" -H 'content-type: application/json' \
+              -H 'apollo-require-preflight: true' -d '{"query":"{ __typename }"}' 2>&1) &&
+              grep -q '"Query"' <<<"$out"; then
+              echo "up=true" >>"$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Try $try: ${out:-no response}"
+            [ "$try" = 3 ] || sleep 60
+          done
+          echo "up=false" >>"$GITHUB_OUTPUT"
+          { echo 'error<<EOF'; echo "${out:-no response}" | head -c 1000; echo; echo EOF; } >>"$GITHUB_OUTPUT"
+
+      - name: Open or close the outage issue
+        env:
+          UP: ${{ steps.probe.outputs.up }}
+          ERROR: ${{ steps.probe.outputs.error }}
+        run: |
+          gh label create outage --color B60205 --description 'The deployed site is down' --force >/dev/null
+          open=$(gh issue list --label outage --state open --json number --jq '.[0].number // empty')
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          if [ "$UP" = true ]; then
+            if [ -n "$open" ]; then
+              gh issue close "$open" --comment "Back up: $SITE_URL answers again ($run_url)."
+            fi
+            echo "$SITE_URL is up"
+            exit 0
+          fi
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "Still down at $(date -u +'%F %R UTC') ($run_url): \`${ERROR//$'\n'/ }\`"
+          else
+            gh issue create --label outage --title 'TravelBliss is down' --body "$(cat <<EOF
+          $SITE_URL didn't answer \`{ __typename }\` on /graphql in 3 tries a minute apart ($run_url).
+
+          \`\`\`
+          $ERROR
+          \`\`\`
+
+          What to try:
+          1. Oracle console → Compute → Instances → \`travelbliss\`: if it's **Stopped** (Oracle reclaims idle Always Free VMs), press **Start**.
+          2. \`ssh ubuntu@travelbliss\`, then \`sudo docker ps\` in /opt/travelbliss: are web, api, db and cache up?
+          3. Gone for good: rebuild with Terraform and restore the newest backup (deployment guide, #183).
+
+          This issue closes itself once the site answers again.
+          EOF
+          )"
+          fi
+          exit 1
