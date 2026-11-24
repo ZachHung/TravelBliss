@@ -16,10 +16,42 @@ def read(path: str) -> dict:
 cases = {
     True: [bash('cat .env'), bash('cat .env.local'), bash('cat .env.e2e.local'), bash('cat .env.e2e-prod'),
            bash('cat .env.example.local'), bash('grep KEY apps/api/.env.development'), read('/repo/.env.local'),
-           read('/repo/.env.e2e.local')],
+           read('/repo/.env.e2e.local'),
+           bash('cat .env.local | head -3'), bash('docker compose --env-file .env.production config | cat'),
+           bash('head -5 < .env.local'), bash('ls; source .env.local'), bash('ls && . .env.local'),
+           bash('echo ok\ngrep SECRET apps/api/.env.production'),
+           # the name and its reader in different shell words: only a whole-script check sees both
+           bash('for f in .env.local; do cat "$f"; done'), bash('cat \\\n.env.local'), bash('f=.env.local; cat "$f"'),
+           bash('echo "$(cat "$(ls -a | grep -m1 .env.local)")"'),
+           # the name against shell syntax, and reads with no reading command
+           bash('cat <.env.local'), bash('cat {.env.local}'), bash('cat {.env.local,.env}'), bash('echo $(<.env.local)'),
+           bash('while read l; do echo "$l"; done <.env.local'), bash('mapfile -t lines <.env.local'),
+           bash('diff <(sort .env.local) x'), bash('echo `cat .env.local`'), bash('cat .env.local>/tmp/copy'),
+           # readers no list would name: any command naming a real .env file is blocked
+           bash('tac .env.local'), bash('nl .env.local'), bash('paste .env.local'), bash('tee x < .env.local'),
+           bash('jq . .env.local'), bash('vim .env.local'), bash('nano .env.local'), bash('wc -c .env.local'),
+           bash('echo .env.local | xargs cat'), bash('env $(xargs < .env.local) printenv'),
+           bash('docker compose --env-file .env.production config'),
+           # ...including when it is only text: that goes through a file (the block message says how)
+           bash('gh issue create --body "secrets live in .env.production"'),
+           # globs: only the exact committed names are safe
+           bash('cat .env*'), bash('cat .env.*'), bash('cat .env.l*'), bash('cat .env.l?cal'), bash('cat .env.loca[l]'),
+           bash('cat apps/api/.env.*'), bash('cat .env.e2e*'), bash('cat .env.e?e'), read('/repo/.env.e2e.local')],
     False: [bash('cat .env.example'), bash('cat .env.e2e'), bash('docker compose --env-file .env.e2e up'),
-            bash('ls -a'), read('/repo/.env.example'), read('/repo/.env.e2e')],
+            bash('ls -a'), read('/repo/.env.example'), read('/repo/.env.e2e'),
+            bash("cat > notes.md <<'EOF'\nhello\nEOF"), bash('cat <.env.example'), bash('echo $(<.env.e2e)'),
+            bash('pnpm dev:local'), bash('gh issue create --body-file /tmp/body.md'),
+            bash('grep -n env AGENTS.md'), bash('ls .claude/hooks/block-env-read.py'),
+            # a .env glued to a name before it is some other file
+            bash('cat config.env'), bash('source venv/.venv/bin/activate'), bash('cat apps/api/.env.example')],
 }
+# Known gaps, asserted so a change in them is noticed: names that never write out `.env` get through. The hook guards
+# against accidental reads, not deliberate ones (see its docstring); widening it to these would block far more.
+known_gaps = [bash('cat .e*'), bash('cat .??v.local'), bash('cat .en[v].local'), bash('cat .e""nv.local')]
+cases[False] += [bash('git commit -m "copy .env.example."'), bash('gh pr comment --body "see .env.e2e."')]
+# a trailing period never makes a real name safe; .envrc (direnv) usually exports secrets, so it stays blocked
+cases[True] += [bash('git commit -m "see .env.local."'), bash('cat .env.'), bash('cat .envrc')]
+cases[False] += known_gaps
 failures = [(want, p) for want, payloads in cases.items() for p in payloads if blocked(p) != want]
 for want, p in failures:
     print(f"expected {'blocked' if want else 'allowed'}: {p['tool_input']}")

@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
-"""Keeps real secrets out of the agent's context: blocks reading root/app .env* files (except .env.example, .env.e2e)."""
+"""Keeps real secrets out of the agent's context by accident: blocks tool calls that name a root/app .env* file
+(except .env.example, .env.e2e).
+
+A guard against accidental reads, not a security boundary. It matches text, and shell can build any file name at run
+time (`.e*`, `.en[v].local`, `.e""nv.local`, printf ...), so a command written to get around it will. Those known
+gaps are listed in block-env-read.test.py. Real protection is that production secrets live only on the VM (ADR 0006).
+"""
 import json, re, sys
 
 payload = json.load(sys.stdin)
 tool, args = payload.get('tool_name', ''), payload.get('tool_input', {})
 
-# A .env file name: .env, .env.local, .env.development, ... but not .env.example or .env.e2e (committed, dummy values).
-# The exclusions must end where the name ends, or .env.e2e.local would slip through.
-END = r'(?=$|[\s\'";|&)])'
-ENV_FILE = rf'(?:^|[\s/\'"=])\.env(?:\.(?!(?:example|e2e){END})[\w.-]+)?{END}'
-READERS = r'\b(?:cat|head|tail|less|more|bat|grep|rg|ugrep|sed|awk|cut|sort|uniq|diff|xxd|od|strings|base64|cp|source|python3?|node|perl|ruby)\b|(?:^|[;&|]\s*)\.\s'
+# A .env file word: `.env` not glued to a name before it (so config.env and block-env-read.py don't count), then any
+# name or glob characters: .env, .env.local, .env*, .env.loca[l], against any shell syntax (<.env.x, {.env.x}, `.env.x`).
+# Every such word is a real .env file unless it is exactly one of the committed, dummy-value ones: checking for the
+# safe names, not the dangerous ones, blocks any spelling that writes out `.env` (globs after it included). Names
+# that never write out `.env` are the known gaps (see the docstring).
+ENV_WORD = re.compile(r'(?<![\w.-])\.env[\w.*?\[\]-]*')
+SAFE = {'.env.example', '.env.e2e'}
 
 def blocked(text: str) -> bool:
-    return bool(re.search(ENV_FILE, text))
+    # rstrip: a sentence can end right after a safe name ("copy .env.example."); .env.local. is still not safe
+    return any(word.rstrip('.') not in SAFE for word in ENV_WORD.findall(text))
 
 if tool in ('Read', 'Edit', 'Write', 'NotebookEdit'):
     path = args.get('file_path', '')
@@ -20,14 +29,19 @@ if tool in ('Read', 'Edit', 'Write', 'NotebookEdit'):
 elif tool == 'Grep':
     hit = blocked(' ' + args.get('path', '')) or blocked(' ' + args.get('glob', ''))
 elif tool == 'Bash':
-    command = args.get('command', '')
-    hit = blocked(command) and bool(re.search(READERS, command))
+    # Any command that names one: no list of reading commands is complete (tac, jq, vim, tee, xargs, env, ...), and
+    # shell joins a name to its reader too many ways (loops, `\` continuations, $(...)). Text that only mentions a
+    # .env file goes through a file instead (see the message below).
+    hit = blocked(args.get('command', ''))
 else:
     hit = False
 
 if hit:
     print(
-        'Blocked: .env files hold real secrets. Use .env.example for variable names, or ask the user for a value.',
+        'Blocked: .env files hold real secrets. Use .env.example for variable names, or ask the user for a value. '
+        'A Bash command may not name one at all. If the name is only text (an issue body, a commit message), write '
+        'that text to a file with the Write tool and pass the file (--body-file, git commit -F). To run something '
+        'that uses one, use the script that already names it (a pnpm script, infra/oracle/deploy.sh).',
         file=sys.stderr,
     )
     sys.exit(2)
