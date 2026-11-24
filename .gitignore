@@ -26,3 +26,9 @@ playwright-report
 
 # Committed: dummy values for the throwaway e2e stack
 !.env.e2e
+
+# Terraform state and variables hold production secrets, wherever a Terraform directory ends up
+terraform.tfstate
+terraform.tfstate.*
+terraform.tfvars
+.terraform/

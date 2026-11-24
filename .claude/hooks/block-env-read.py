@@ -20,8 +20,10 @@ if tool in ('Read', 'Edit', 'Write', 'NotebookEdit'):
 elif tool == 'Grep':
     hit = blocked(' ' + args.get('path', '')) or blocked(' ' + args.get('glob', ''))
 elif tool == 'Bash':
-    command = args.get('command', '')
-    hit = blocked(command) and bool(re.search(READERS, command))
+    # A reader and a .env name must share one command: a .env name in an issue body or a `test -f` elsewhere in the
+    # script reads nothing. A pipeline stays one command, so `... --env-file .env.x config | cat` is still blocked.
+    commands = re.split(r'\n|;|&&|\|\|', args.get('command', ''))
+    hit = any(blocked(c) and re.search(READERS, c.strip()) for c in commands)
 else:
     hit = False
 
