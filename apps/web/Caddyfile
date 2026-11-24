@@ -1,0 +1,21 @@
+# Production (ADR 0006): one origin for the web app and the API. Tailscale Funnel terminates TLS and forwards here.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	encode zstd gzip
+
+	@api path /graphql /graphql/* /auth/*
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		# Client-side routes (/sign-in, /account, ...) all load the app
+		try_files {path} /index.html
+		file_server
+	}
+}
