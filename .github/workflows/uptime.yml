@@ -26,6 +26,8 @@ jobs:
       - name: Does the site answer?
         id: probe
         run: |
+          # A missing variable is a config error, not an outage: fail here so the issue step is skipped
+          [ -n "$SITE_URL" ] || { echo "::error::repository variable SITE_URL is not set"; exit 1; }
           # Three tries a minute apart, so a short blip doesn't open an issue
           for try in 1 2 3; do
             if out=$(curl -sS -m 20 -X POST "$SITE_URL/graphql" -H 'content-type: application/json' \
