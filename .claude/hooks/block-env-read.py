@@ -20,7 +20,8 @@ ENV_WORD = re.compile(r'(?<![\w.-])\.env[\w.*?\[\]-]*')
 SAFE = {'.env.example', '.env.e2e'}
 
 def blocked(text: str) -> bool:
-    return any(word not in SAFE for word in ENV_WORD.findall(text))
+    # rstrip: a sentence can end right after a safe name ("copy .env.example."); .env.local. is still not safe
+    return any(word.rstrip('.') not in SAFE for word in ENV_WORD.findall(text))
 
 if tool in ('Read', 'Edit', 'Write', 'NotebookEdit'):
     path = args.get('file_path', '')

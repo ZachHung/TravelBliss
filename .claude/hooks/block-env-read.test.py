@@ -48,6 +48,9 @@ cases = {
 # Known gaps, asserted so a change in them is noticed: names that never write out `.env` get through. The hook guards
 # against accidental reads, not deliberate ones (see its docstring); widening it to these would block far more.
 known_gaps = [bash('cat .e*'), bash('cat .??v.local'), bash('cat .en[v].local'), bash('cat .e""nv.local')]
+cases[False] += [bash('git commit -m "copy .env.example."'), bash('gh pr comment --body "see .env.e2e."')]
+# a trailing period never makes a real name safe; .envrc (direnv) usually exports secrets, so it stays blocked
+cases[True] += [bash('git commit -m "see .env.local."'), bash('cat .env.'), bash('cat .envrc')]
 cases[False] += known_gaps
 failures = [(want, p) for want, payloads in cases.items() for p in payloads if blocked(p) != want]
 for want, p in failures:
