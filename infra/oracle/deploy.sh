@@ -15,13 +15,26 @@ cd "$DIR"
 # the live one's migrations). Its images and NEW's are the only ones a switch back can need.
 OLD=$(cat .deployed-tag 2>/dev/null || echo main)
 compose() { TAG=$1 docker compose --env-file "$ENV_FILE" "${@:2}"; }
-# healthy <seconds> [tag]: GET /health through Caddy, as a visitor would, answers 200 (Postgres and Redis reachable),
-# and with a tag, from the image built from that commit (#201): an old container still answering doesn't count.
+# healthy <seconds> <tag>: GET /health through Caddy, as a visitor would, answers 200 (Postgres and Redis reachable)
+# from the image built from that commit (#201): an old container still answering doesn't count.
 healthy() {
   local deadline=$((SECONDS + $1))
   while ((SECONDS < deadline)); do
-    curl -sf -m 3 "$SITE/health" |
-      jq -e --arg tag "${2:-}" '.status == "pass" and ($tag == "" or .version == $tag)' >/dev/null && return 0
+    curl -sf -m 3 "$SITE/health" | jq -e --arg tag "$2" '.status == "pass" and .version == $tag' >/dev/null &&
+      return 0
+    sleep 2
+  done
+  return 1
+}
+# answers <seconds>: after a switch back, any working build will do. OLD may be :main, whose commit isn't its tag, or
+# a build from before /health, which only answers GraphQL.
+# shortcut: the GraphQL probe is only for builds from before #201; drop it once none can be switched back to.
+answers() {
+  local deadline=$((SECONDS + $1))
+  while ((SECONDS < deadline)); do
+    curl -sf -m 3 "$SITE/health" | jq -e '.status == "pass"' >/dev/null && return 0
+    curl -sf -m 3 -X POST "$SITE/graphql" -H 'content-type: application/json' -H 'apollo-require-preflight: true' \
+      -d '{"query":"{ __typename }"}' | jq -e '.data.__typename == "Query"' >/dev/null && return 0
     sleep 2
   done
   return 1
@@ -84,6 +97,5 @@ compose "$NEW" logs --tail 50 api >&2 || true
 # --no-deps: the old image's migrate must not run against the schema the new one already moved forward.
 # The old images now run under this deploy's compose.yml; fine while compose.yml changes stay compatible with them.
 compose "$OLD" up -d --no-deps api web
-# Any healthy build will do here: OLD may be :main, whose commit isn't its tag
-healthy 60 && echo "== Back on $OLD" >&2 || echo "== $OLD isn't answering either: check the VM" >&2
+answers 60 && echo "== Back on $OLD" >&2 || echo "== $OLD isn't answering either: check the VM" >&2
 exit 1

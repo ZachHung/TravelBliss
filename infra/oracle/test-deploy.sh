@@ -132,6 +132,16 @@ if [ "$kept" = "t-b t-c " ]; then echo "ok    pruning kept only t-b t-c"; else
   failures=$((failures + 1)) && echo "FAIL  pruning kept: $kept(want t-b t-c)"
 fi
 
+# A live build from before /health (#201): its Caddyfile doesn't route it, so only GraphQL answers. A failed deploy
+# must still recognise it as back up. Started by hand, as deploy.sh wouldn't accept it as live.
+docker tag "$A:main" "$A:t-old"
+printf 'FROM %s:main\nRUN sed -i "s| /health||" /etc/caddy/Caddyfile\n' "$W" | docker build -q -t "$W:t-old" - >/dev/null
+(cd "$WORK" && TAG=t-old docker compose --env-file test.vars up -d --no-deps api web >/dev/null 2>&1)
+echo t-old >"$WORK/.deployed-tag"
+derived t-crash2 'CMD ["node", "-e", "process.exit(1)"]'
+bash "$HERE/deploy.sh" t-crash2 >"$WORK/old.log" 2>&1 || true
+check 'switch back to a build from before /health is recognised' 0 -- grep -q '== Back on t-old' "$WORK/old.log"
+
 # Backups (#181), with rclone now configured
 printf '[gdrive]\ntype = local\n' >"$RCLONE_CONFIG"
 echo test-passphrase >"$TRAVELBLISS_BACKUP_PASS"
