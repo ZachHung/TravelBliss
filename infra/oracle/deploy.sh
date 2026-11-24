@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# Runs on the VM, as root: deploy.sh <tag>. Copied here with compose.yml by .github/workflows/deploy.yml (#180).
+# Runs on the VM, as root: deploy.sh <tag> [--force]. Copied here with compose.yml by .github/workflows/deploy.yml.
 # Migrates with the new image first, switches to it, and switches back if the site doesn't answer (ADR 0006).
+# --force (a manual run of the workflow) redeploys even when <tag> is already live.
 set -euo pipefail
-NEW=${1:?usage: deploy.sh <tag>}
+NEW=${1:?usage: deploy.sh <tag> [--force]}
+FORCE=${2:-}
 cd /opt/travelbliss
+# What's live now: the version to switch back to, even on a --force redeploy of it (an older build could predate
+# the live one's migrations). Its images and NEW's are the only ones a switch back can need.
 OLD=$(cat .deployed-tag 2>/dev/null || echo main)
 compose() { TAG=$1 docker compose --env-file .env.production "${@:2}"; }
 # Through Caddy, as a visitor would: checks web and api together
@@ -17,10 +21,9 @@ site_answers() {
   return 1
 }
 
-# Both "Run test" and "Images" trigger the workflow, so the same commit can arrive twice. Deploying it again would
-# restart a live site, and make it its own "previous" version, so the real previous images would be pruned.
-if [ "$NEW" = "$OLD" ] && site_answers 10; then
-  echo "== $NEW is already live"
+# Both "Run test" and "Images" trigger the workflow, so the same commit can arrive twice: don't touch a live site
+if [ "$FORCE" != --force ] && [ "$NEW" = "$OLD" ] && site_answers 10; then
+  echo "== $NEW is already live (run the Deploy workflow manually to redeploy it)"
   exit 0
 fi
 
@@ -36,7 +39,7 @@ compose "$NEW" up -d --remove-orphans || up_ok=false
 if $up_ok && site_answers; then
   echo "$NEW" >.deployed-tag
   echo "== Live: $NEW"
-  # Keep the new and previous images (and :main, which first boot runs) for a switch back; the disk is small
+  # Keep the new images and the ones they replaced (and :main, which first boot runs); the disk is small
   stale=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^ghcr.io/zachhung/travelbliss-' |
     grep -vE ":($NEW|$OLD|main)$" || true)
   if [ -n "$stale" ]; then
