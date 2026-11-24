@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Runs deploy.sh against a throwaway copy of the production stack and checks every path it can take: a fresh
 # deploy, a duplicate, a --force redeploy, a good deploy and its pruning, a failing migration, an API that crashes,
-# and an `up` that fails. Needs Docker; uses the published :main images (pulled if missing) as the known-good build.
+# a build answering as another commit, and an `up` that fails. Needs Docker; uses the :main images as the known-good
+# build: pulled if missing, which is the last published one. CI builds them from the checkout instead, so a change to
+# the images is tested before it's published; to do the same locally, build both from the repo root first:
+#   docker build -f apps/api/Dockerfile -t ghcr.io/zachhung/travelbliss-api:main .   (and apps/web, ...-web:main)
 #   infra/oracle/test-deploy.sh            # CI and local; removes its stack and its t-* test images afterwards
 # deploy.sh prunes every local travelbliss image but the new, the live and :main, so on a machine holding other
 # travelbliss tags (a pulled SHA, a local build) this refuses to run, outside CI, rather than delete them.
@@ -11,6 +14,7 @@ A=ghcr.io/zachhung/travelbliss-api
 W=ghcr.io/zachhung/travelbliss-web
 PORT=${TEST_PORT:-18080}
 
+command -v jq >/dev/null || { echo "Needs jq: deploy.sh's health check uses it (apt-get install jq)" >&2; exit 2; }
 others=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^($A|$W):" | grep -vE ':(main|t-.*)$' || true)
 if [ -n "$others" ] && [ -z "${CI:-}" ]; then
   echo "Refusing to run: deploy.sh's pruning would delete these local images:" >&2
@@ -52,15 +56,14 @@ EOF
 docker image inspect "$A:main" >/dev/null 2>&1 || docker pull -q "$A:main" >/dev/null
 docker image inspect "$W:main" >/dev/null 2>&1 || docker pull -q "$W:main" >/dev/null
 
-# Test builds, made just before each step: a deploy prunes every tag but the new, the live and :main
-good() { docker tag "$A:main" "$A:$1" && docker tag "$W:main" "$W:$1"; }
+# Test builds, made just before each step: a deploy prunes every tag but the new, the live and :main.
+# GIT_SHA is the tag, as images.yml bakes in the commit: deploy.sh only accepts a build reporting the tag it deployed.
+good() { derived "$1" "ENV GIT_SHA=$1"; }
 derived() { # <tag> <Dockerfile line>: an API image that differs from :main by one line
   printf 'FROM %s:main\n%s\n' "$A" "$2" | docker build -q -t "$A:$1" - >/dev/null && docker tag "$W:main" "$W:$1"
 }
-answers() {
-  curl -sf -m 3 -X POST "$TRAVELBLISS_SITE/graphql" -H 'content-type: application/json' \
-    -H 'apollo-require-preflight: true' -d '{"query":"{ __typename }"}' | grep -q '"Query"'
-}
+# deploy.sh's rule without a tag: GET /health through Caddy is 200 and passes
+healthy() { curl -sf -m 3 "$TRAVELBLISS_SITE/health" | jq -e '.status == "pass"' >/dev/null; }
 # Both fall back, so a step that fails before deploying anything still prints its FAIL line and deploy.sh's output
 api_tag() { docker inspect -f '{{.Config.Image}}' "$COMPOSE_PROJECT_NAME-api-1" 2>/dev/null | sed 's/.*://' || echo none; }
 live_tag() { cat "$WORK/.deployed-tag" 2>/dev/null || echo none; }
@@ -75,14 +78,34 @@ step() {
   live=$(live_tag)
   api=$(api_tag)
   [ "$rc" = "$want_rc" ] && [ "$live" = "$want_live" ] && [ "$api" = "$want_live" ] &&
-    answers && grep -qE "$want_out" "$WORK/out.log" || ok=false
+    healthy && grep -qE "$want_out" "$WORK/out.log" || ok=false
   if $ok; then
     echo "ok    $name"
   else
     failures=$((failures + 1))
-    echo "FAIL  $name: exit $rc (want $want_rc), live $live, api $api (want $want_live), site $(answers && echo up || echo DOWN)"
+    echo "FAIL  $name: exit $rc (want $want_rc), live $live, api $api (want $want_live), site $(healthy && echo up || echo DOWN)"
     sed 's/^/      | /' "$WORK/out.log"
   fi
+}
+
+# check <name> <expected exit> -- <command...>
+check() {
+  local name=$1 want=$2 rc=0
+  shift 3
+  "$@" >"$WORK/out.log" 2>&1 || rc=$?
+  if [ "$rc" = "$want" ]; then echo "ok    $name"; else
+    failures=$((failures + 1))
+    echo "FAIL  $name: exit $rc (want $want)"
+    sed 's/^/      | /' "$WORK/out.log"
+  fi
+}
+# compose.yml's healthcheck on api: healthy within a minute of a good deploy
+api_healthy() {
+  for _ in $(seq 30); do
+    [ "$(docker inspect -f '{{.State.Health.Status}}' "$COMPOSE_PROJECT_NAME-api-1")" = healthy ] && return 0
+    sleep 2
+  done
+  return 1
 }
 
 good t-a
@@ -91,6 +114,9 @@ step 'same commit again is a no-op' 0 t-a 'already live' -- t-a
 step '--force redeploys the live commit' 0 t-a '== Live: t-a' -- t-a --force
 good t-b
 step 'good deploy' 0 t-b '== Live: t-b' -- t-b
+check 'api container reports healthy' 0 -- api_healthy
+derived t-stale 'ENV GIT_SHA=some-other-commit' # healthy, but not the build that was deployed
+step 'build answering as another commit is switched back' 1 t-b 'switching back to t-b' -- t-stale
 derived t-badmig "RUN printf 'exports.M9999999999999 = class { name = \"M9999999999999\"; async up() { throw new Error(\"broken on purpose\"); } };\n' > dist/migration/9999999999999-broken.js"
 step 'failing migration stops before switching' 1 t-b 'broken on purpose' -- t-badmig
 derived t-crash 'CMD ["node", "-e", "process.exit(1)"]'
@@ -106,22 +132,21 @@ if [ "$kept" = "t-b t-c " ]; then echo "ok    pruning kept only t-b t-c"; else
   failures=$((failures + 1)) && echo "FAIL  pruning kept: $kept(want t-b t-c)"
 fi
 
+# A live build from before /health (#201): its Caddyfile doesn't route it, so only GraphQL answers. A failed deploy
+# must still recognise it as back up. Started by hand, as deploy.sh wouldn't accept it as live.
+docker tag "$A:main" "$A:t-old"
+printf 'FROM %s:main\nRUN sed -i "s| /health||" /etc/caddy/Caddyfile\n' "$W" | docker build -q -t "$W:t-old" - >/dev/null
+(cd "$WORK" && TAG=t-old docker compose --env-file test.vars up -d --no-deps api web >/dev/null 2>&1)
+echo t-old >"$WORK/.deployed-tag"
+derived t-crash2 'CMD ["node", "-e", "process.exit(1)"]'
+bash "$HERE/deploy.sh" t-crash2 >"$WORK/old.log" 2>&1 || true
+check 'switch back to a build from before /health is recognised' 0 -- grep -q '== Back on t-old' "$WORK/old.log"
+
 # Backups (#181), with rclone now configured
 printf '[gdrive]\ntype = local\n' >"$RCLONE_CONFIG"
 echo test-passphrase >"$TRAVELBLISS_BACKUP_PASS"
 dc() { (cd "$WORK" && TAG=$(live_tag) docker compose --env-file test.vars "$@"); }
 psql_db() { dc exec -T db sh -c "psql -qtA -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c \"$1\""; }
-# check <name> <expected exit> -- <command...>
-check() {
-  local name=$1 want=$2 rc=0
-  shift 3
-  "$@" >"$WORK/out.log" 2>&1 || rc=$?
-  if [ "$rc" = "$want" ]; then echo "ok    $name"; else
-    failures=$((failures + 1))
-    echo "FAIL  $name: exit $rc (want $want)"
-    sed 's/^/      | /' "$WORK/out.log"
-  fi
-}
 check 'has-backups: none yet' 1 -- "$WORK/backup.sh" has-backups
 good t-d
 step 'deploy backs up before migrating' 0 t-d '== Backed up: ' -- t-d
@@ -134,7 +159,7 @@ check 'backup' 0 -- "$WORK/backup.sh" backup
 psql_db 'drop table backup_probe' >/dev/null
 check 'restore the newest backup' 0 -- "$WORK/backup.sh" restore
 dc up -d >/dev/null 2>&1 # restore leaves api and web stopped; wait for them, or the next step sees the site down
-for _ in $(seq 60); do if answers; then break; fi; sleep 2; done
+for _ in $(seq 60); do if healthy; then break; fi; sleep 2; done
 check 'restore brought the data back' 0 -- test "$(psql_db 'select x from backup_probe')" = kept
 
 export TRAVELBLISS_BACKUP_REMOTE=gdrive:/proc/travelbliss-no-such-drive # can't be written or listed

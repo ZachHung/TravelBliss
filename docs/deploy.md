@@ -12,10 +12,15 @@ What you end up with:
 - Every merge to `main` that passes CI deploys itself (`.github/workflows/deploy.yml`):
   1. migrations run with the new image
   2. the stack switches to it
-  3. it switches back if the site doesn't answer
+  3. it switches back unless `GET /health` is healthy and reports the commit it just deployed
 - A nightly encrypted Postgres backup to Google Drive, plus one before every migration. A rebuilt VM restores the
   newest.
-- A check every 6 hours that opens an `outage` issue while the site is down (`.github/workflows/uptime.yml`).
+- A check of `GET /health` every 6 hours that opens an `outage` issue while the site is down
+  (`.github/workflows/uptime.yml`).
+
+`https://<site>/health` shows what's live and whether it can reach its database:
+`{"status":"pass","version":"<commit SHA>","checks":{"postgres":"pass","redis":"pass"}}`, or a 503 with `"fail"`
+next to the dependency that's down (the API log says why).
 
 Everything below happens in WSL on your PC, except the parts in a browser.
 
@@ -140,7 +145,9 @@ See [Linked sign-in setup › Production](linked-sign-in-setup.md#production).
 - **The site is down** (an `outage` issue opened):
   1. Oracle console → Compute → Instances → `travelbliss`. If it's **Stopped** (Oracle reclaims idle Always Free
      VMs), press **Start**.
-  2. Otherwise `ssh ubuntu@travelbliss`, then `cd /opt/travelbliss && sudo docker ps -a`.
+  2. Otherwise read the issue: a JSON answer names the dependency that's down (`postgres`, `redis`). Then
+     `ssh ubuntu@travelbliss`, `cd /opt/travelbliss && sudo docker ps -a`: `api` should be `(healthy)`, and
+     `sudo docker compose --env-file .env.production logs --tail 50 api` says why it isn't.
   3. If the VM is gone: `terraform apply`. First boot restores the newest backup before migrating, and **stops**
      rather than start empty if it can't list the backups.
 - **Deploy by hand, or redeploy:** Actions → Deploy → Run workflow redeploys the tip of `main`, even when it's

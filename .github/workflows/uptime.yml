@@ -1,8 +1,8 @@
 name: Uptime
 
 # Oracle may stop an idle Always Free VM, and nothing else would notice (ADR 0006, #182). Every 6 hours this asks the
-# site for `{ __typename }`: while it doesn't answer, one open issue labelled `outage` says so; once it answers again,
-# that issue is closed.
+# site's GET /health (#201): while it isn't healthy, one open issue labelled `outage` says so, with which dependency
+# failed; once it is healthy again, that issue is closed.
 on:
   schedule:
     - cron: '17 */6 * * *'
@@ -30,9 +30,8 @@ jobs:
           [ -n "$SITE_URL" ] || { echo "::error::repository variable SITE_URL is not set"; exit 1; }
           # Three tries a minute apart, so a short blip doesn't open an issue
           for try in 1 2 3; do
-            if out=$(curl -sS -m 20 -X POST "$SITE_URL/graphql" -H 'content-type: application/json' \
-              -H 'apollo-require-preflight: true' -d '{"query":"{ __typename }"}' 2>&1) &&
-              grep -q '"Query"' <<<"$out"; then
+            # Not -f: a 503's body says which check failed, and goes into the issue
+            if out=$(curl -sS -m 20 "$SITE_URL/health" 2>&1) && jq -e '.status == "pass"' <<<"$out" >/dev/null 2>&1; then
               echo "up=true" >>"$GITHUB_OUTPUT"
               exit 0
             fi
@@ -52,7 +51,7 @@ jobs:
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           if [ "$UP" = true ]; then
             if [ -n "$open" ]; then
-              gh issue close "$open" --comment "Back up: $SITE_URL answers again ($run_url)."
+              gh issue close "$open" --comment "Back up: $SITE_URL/health is healthy again ($run_url)."
             fi
             echo "$SITE_URL is up"
             exit 0
@@ -61,7 +60,7 @@ jobs:
             gh issue comment "$open" --body "Still down at $(date -u +'%F %R UTC') ($run_url): \`${ERROR//$'\n'/ }\`"
           else
             gh issue create --label outage --title 'TravelBliss is down' --body "$(cat <<EOF
-          $SITE_URL didn't answer \`{ __typename }\` on /graphql in 3 tries a minute apart ($run_url).
+          $SITE_URL/health wasn't healthy in 3 tries a minute apart ($run_url). A JSON answer names the failed check (postgres, redis); anything else means the API or the VM isn't answering.
 
           \`\`\`
           $ERROR

@@ -7,7 +7,7 @@
 :8080 {
 	encode zstd gzip
 
-	@api path /graphql /graphql/* /auth/*
+	@api path /graphql /graphql/* /auth/* /health
 	handle @api {
 		reverse_proxy api:8000
 	}

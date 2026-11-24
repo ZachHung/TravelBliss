@@ -45,7 +45,11 @@ jobs:
           tags: |
             ghcr.io/zachhung/travelbliss-${{ matrix.app }}:${{ github.sha }}
             ghcr.io/zachhung/travelbliss-${{ matrix.app }}:main
-          # Links the package to this repo on GHCR
-          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          # GET /health reports GIT_SHA, so a deploy can check which commit answers (#201)
+          build-args: GIT_SHA=${{ github.sha }}
+          # source links the package to this repo on GHCR
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ vars.DEPLOY_ARCH || 'arm64' }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ vars.DEPLOY_ARCH || 'arm64' }}
