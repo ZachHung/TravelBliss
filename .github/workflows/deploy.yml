@@ -4,6 +4,7 @@ name: Deploy
 # Each of the two triggers this when it completes; the first to finish finds the other still running and stops.
 on:
   workflow_run:
+    # By `name:`, as workflow_run requires. The same two are checked by file in the check job: change both together.
     workflows: ['Run test', 'Images']
     types: [completed]
     branches: [main]
@@ -37,7 +38,7 @@ jobs:
           if [ "$SHA" != "$main" ]; then
             echo "Skip: $SHA is no longer the tip of main ($main); its own run deploys that one."; exit 0
           fi
-          for wf in test_pull_request.yml images.yml; do
+          for wf in test_pull_request.yml images.yml; do # "Run test" and "Images" in on.workflow_run
             result=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --commit "$SHA" --event push --limit 1 \
               --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"')
             if [ "$result" != "completed/success" ]; then
