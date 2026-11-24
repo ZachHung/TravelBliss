@@ -25,9 +25,6 @@ updates:
       # Majors only: apps/web is already on 17 and should keep getting its minor and patch updates.
       - dependency-name: 'graphql'
         update-types: ['version-update:semver-major']
-      # type-graphql's peer dependency is graphql-scalars ^1.25; remove with the one above (#133)
-      - dependency-name: 'graphql-scalars'
-        versions: ['>=2']
       # typescript-eslint and ts-node don't run on TypeScript 7 yet (#164)
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
