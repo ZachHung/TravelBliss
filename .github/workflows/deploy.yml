@@ -1,0 +1,78 @@
+name: Deploy
+
+# Deploys main to production (ADR 0006, #180) once both "Run test" and "Images" passed for the same commit.
+# Each of the two triggers this when it completes; the first to finish finds the other still running and stops.
+on:
+  workflow_run:
+    workflows: ['Run test', 'Images']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+# One deploy at a time. A newer commit waits for the running one instead of cancelling it half-way.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.ready.outputs.sha }}
+    steps:
+      - name: Is this commit ready, and still the newest on main?
+        id: ready
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          main=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$SHA" != "$main" ]; then
+            echo "Skip: $SHA is no longer the tip of main ($main); its own run deploys that one."; exit 0
+          fi
+          for wf in test_pull_request.yml images.yml; do
+            result=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --commit "$SHA" --event push --limit 1 \
+              --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"')
+            if [ "$result" != "completed/success" ]; then
+              echo "Skip: $wf is $result for $SHA; its completion triggers this again."; exit 0
+            fi
+          done
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.sha != ''
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.SITE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+
+      # An ephemeral tag:ci node: the tailnet policy lets it reach only tag:travelbliss, over SSH (#183)
+      - uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: travelbliss
+
+      - name: Deploy ${{ needs.check.outputs.sha }}
+        env:
+          SHA: ${{ needs.check.outputs.sha }}
+        run: |
+          ssh_vm() { ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 root@travelbliss "$@"; }
+          # The VM keeps no copy of the repo: compose.yml and deploy.sh travel with each deploy
+          ssh_vm 'cat > /opt/travelbliss/compose.yml' < infra/oracle/compose.yml
+          ssh_vm 'cat > /opt/travelbliss/deploy.sh && chmod 755 /opt/travelbliss/deploy.sh' < infra/oracle/deploy.sh
+          ssh_vm "/opt/travelbliss/deploy.sh $SHA"
+          echo "Deployed \`$SHA\` to ${{ vars.SITE_URL }}" >> "$GITHUB_STEP_SUMMARY"
