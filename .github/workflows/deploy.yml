@@ -48,12 +48,16 @@ jobs:
           done
           # Both triggers usually find the commit ready. The second run starts once the first has finished (the
           # concurrency group), so a successful deployment of it is already recorded: skip instead of recording
-          # another. A failed deploy has no success status, so it can be retried.
-          for id in $(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=production&sha=$SHA" --jq '.[].id'); do
-            if gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" --jq '.[].state' | grep -qx success; then
-              echo "Skip: $SHA is already deployed to production."; exit 0
-            fi
-          done
+          # another. A failed deploy has no success status, so it can be retried. A manual run always deploys
+          # (e.g. after the VM was rebuilt, or its compose or env changed), so it skips this check.
+          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
+            for id in $(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=production&sha=$SHA" --jq '.[].id'); do
+              if gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" --jq '.[].state' | grep -qx success; then
+                echo "Skip: $SHA is already deployed to production. To redeploy it, run this workflow manually."
+                exit 0
+              fi
+            done
+          fi
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
   deploy:
@@ -84,5 +88,7 @@ jobs:
           # The VM keeps no copy of the repo: compose.yml and deploy.sh travel with each deploy
           ssh_vm 'cat > /opt/travelbliss/compose.yml' < infra/oracle/compose.yml
           ssh_vm 'cat > /opt/travelbliss/deploy.sh && chmod 755 /opt/travelbliss/deploy.sh' < infra/oracle/deploy.sh
-          ssh_vm "/opt/travelbliss/deploy.sh $SHA"
+          # A manual run redeploys even an already-live commit: that's what it's for
+          force=$([ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && echo --force || true)
+          ssh_vm "/opt/travelbliss/deploy.sh $SHA $force"
           echo "Deployed \`$SHA\` to ${{ vars.SITE_URL }}" >> "$GITHUB_STEP_SUMMARY"

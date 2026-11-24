@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# Runs on the VM, as root: deploy.sh <tag>. Copied here with compose.yml by .github/workflows/deploy.yml (#180).
+# Runs on the VM, as root: deploy.sh <tag> [--force]. Copied here with compose.yml by .github/workflows/deploy.yml.
 # Migrates with the new image first, switches to it, and switches back if the site doesn't answer (ADR 0006).
+# --force (a manual run of the workflow) redeploys even when <tag> is already live.
 set -euo pipefail
-NEW=${1:?usage: deploy.sh <tag>}
+NEW=${1:?usage: deploy.sh <tag> [--force]}
+FORCE=${2:-}
 cd /opt/travelbliss
 OLD=$(cat .deployed-tag 2>/dev/null || echo main)
+# Redeploying the live tag: the version to keep and to switch back to is the one before it
+if [ "$NEW" = "$OLD" ] && [ -f .previous-tag ]; then
+  OLD=$(cat .previous-tag)
+fi
 compose() { TAG=$1 docker compose --env-file .env.production "${@:2}"; }
 # Through Caddy, as a visitor would: checks web and api together
 site_answers() {
@@ -19,12 +25,12 @@ site_answers() {
 
 # Both "Run test" and "Images" trigger the workflow, so the same commit can arrive twice. Deploying it again would
 # restart a live site, and make it its own "previous" version, so the real previous images would be pruned.
-if [ "$NEW" = "$OLD" ] && site_answers 10; then
-  echo "== $NEW is already live"
+if [ "$FORCE" != --force ] && [ "$NEW" = "$(cat .deployed-tag 2>/dev/null)" ] && site_answers 10; then
+  echo "== $NEW is already live (run the Deploy workflow manually to redeploy it)"
   exit 0
 fi
 
-echo "== Deploying $NEW (running: $OLD)"
+echo "== Deploying $NEW (running: $(cat .deployed-tag 2>/dev/null || echo main); fallback: $OLD)"
 compose "$NEW" pull web api
 # Before `up`: up replaces the api container before migrate finishes, so a failed migration would take the site down.
 # Here it stops the deploy with the old version still serving. Migrations only move forward.
@@ -34,6 +40,7 @@ up_ok=true
 compose "$NEW" up -d --remove-orphans || up_ok=false
 
 if $up_ok && site_answers; then
+  [ "$OLD" != "$NEW" ] && echo "$OLD" >.previous-tag
   echo "$NEW" >.deployed-tag
   echo "== Live: $NEW"
   # Keep the new and previous images (and :main, which first boot runs) for a switch back; the disk is small
