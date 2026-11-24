@@ -33,12 +33,17 @@ cases = {
            bash('echo .env.local | xargs cat'), bash('env $(xargs < .env.local) printenv'),
            bash('docker compose --env-file .env.production config'),
            # ...including when it is only text: that goes through a file (the block message says how)
-           bash('gh issue create --body "secrets live in .env.production"')],
+           bash('gh issue create --body "secrets live in .env.production"'),
+           # globs: only the exact committed names are safe
+           bash('cat .env*'), bash('cat .env.*'), bash('cat .env.l*'), bash('cat .env.l?cal'), bash('cat .env.loca[l]'),
+           bash('cat apps/api/.env.*'), bash('cat .env.e2e*'), bash('cat .env.e?e'), read('/repo/.env.e2e.local')],
     False: [bash('cat .env.example'), bash('cat .env.e2e'), bash('docker compose --env-file .env.e2e up'),
             bash('ls -a'), read('/repo/.env.example'), read('/repo/.env.e2e'),
             bash("cat > notes.md <<'EOF'\nhello\nEOF"), bash('cat <.env.example'), bash('echo $(<.env.e2e)'),
             bash('pnpm dev:local'), bash('gh issue create --body-file /tmp/body.md'),
-            bash('grep -n env AGENTS.md'), bash('ls .claude/hooks/block-env-read.py')],
+            bash('grep -n env AGENTS.md'), bash('ls .claude/hooks/block-env-read.py'),
+            # a .env glued to a name before it is some other file
+            bash('cat config.env'), bash('source venv/.venv/bin/activate'), bash('cat apps/api/.env.example')],
 }
 failures = [(want, p) for want, payloads in cases.items() for p in payloads if blocked(p) != want]
 for want, p in failures:

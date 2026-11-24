@@ -5,14 +5,15 @@ import json, re, sys
 payload = json.load(sys.stdin)
 tool, args = payload.get('tool_name', ''), payload.get('tool_input', {})
 
-# A .env file name: .env, .env.local, .env.development, ... but not .env.example or .env.e2e (committed, dummy values).
-# The exclusions must end where the name ends, or .env.e2e.local would slip through. A name can sit against shell
-# syntax on either side: <.env.x, $(<.env.x), {.env.x}, `.env.x`, (.env.x), .env.x>out.
-END = r'(?=$|[\s\'";|&()<>{},`])'
-ENV_FILE = rf'(?:^|[\s/\'"=<>(){{}},`])\.env(?:\.(?!(?:example|e2e){END})[\w.-]+)?{END}'
+# A .env file word: `.env` not glued to a name before it (so config.env and block-env-read.py don't count), then any
+# name or glob characters: .env, .env.local, .env*, .env.loca[l], against any shell syntax (<.env.x, {.env.x}, `.env.x`).
+# Every such word is a real .env file unless it is exactly one of the committed, dummy-value ones. Checking for the
+# safe names, not for the dangerous ones, is what keeps globs and new spellings blocked.
+ENV_WORD = re.compile(r'(?<![\w.-])\.env[\w.*?\[\]-]*')
+SAFE = {'.env.example', '.env.e2e'}
 
 def blocked(text: str) -> bool:
-    return bool(re.search(ENV_FILE, text))
+    return any(word not in SAFE for word in ENV_WORD.findall(text))
 
 if tool in ('Read', 'Edit', 'Write', 'NotebookEdit'):
     path = args.get('file_path', '')
