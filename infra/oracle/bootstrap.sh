@@ -15,9 +15,9 @@ if ! swapon --show | grep -q .; then
   echo '/swapfile none swap sw 0 0' >>/etc/fstab
 fi
 
-echo "== Docker"
+echo "== Docker, rclone"
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2
+DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 rclone
 systemctl enable --now docker
 
 echo "== Tailscale"
@@ -54,6 +54,20 @@ echo "== TravelBliss (newest main)"
 export TAG=main
 compose() { docker compose --env-file .env.production "$@"; }
 compose pull
+compose up -d --wait db cache
+# A rebuilt VM picks up where the old one stopped: the newest backup goes in before migrations run (#181).
+# has-backups: 0 restore, 1 none (a first VM), anything else stop, so a VM that can't reach its backups
+# never starts empty (its nightly backups would then replace the real ones).
+if ./backup.sh configured; then
+  found=0
+  ./backup.sh has-backups || found=$?
+  case $found in
+    0) ./backup.sh restore ;;
+    1) echo "No backups yet: starting with an empty database" ;;
+    *) echo "ERROR: couldn't list the backups; fix rclone, then rerun travelbliss-bootstrap" >&2 && exit 1 ;;
+  esac
+fi
+echo "30 3 * * * root $DIR/backup.sh backup >>/var/log/travelbliss-backup.log 2>&1" >/etc/cron.d/travelbliss
 # up runs the migrate service first and starts api only once it succeeds (compose.yml). No --wait: older
 # Compose releases (Ubuntu's docker-compose-v2) may count migrate's intended exit as a failure.
 compose up -d

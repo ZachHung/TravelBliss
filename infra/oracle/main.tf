@@ -59,6 +59,11 @@ variable "arm_memory_gbs" {
   default     = 2
   description = "Small on purpose: Oracle reclaims an idle ARM VM whose memory use stays under 20%, so a bigger VM idles sooner"
 }
+variable "rclone_conf_path" {
+  type        = string
+  default     = "~/.config/rclone/rclone.conf"
+  description = "rclone config with a remote named gdrive, for backups (#181); skipped if the file is missing"
+}
 variable "google_client_id" {
   type    = string
   default = ""
@@ -183,6 +188,11 @@ resource "oci_core_subnet" "net" {
 }
 
 locals {
+  # Optional: without it, backups are skipped until rclone.conf is copied to the VM (the guide, #183)
+  rclone_conf = fileexists(pathexpand(var.rclone_conf_path)) ? file(pathexpand(var.rclone_conf_path)) : null
+}
+
+locals {
   # Everything but the public URL, which bootstrap.sh adds once Tailscale says which tailnet this is
   secrets_env = <<-EOT
     API_POSTGRES_USER=travelbliss
@@ -205,13 +215,17 @@ locals {
 
   # shortcut: these secrets sit in the instance metadata, readable from inside the VM; fine for a VM only you run
   cloud_init = "#cloud-config\n${yamlencode({
-    write_files = [
+    write_files = concat([
       { path = "/root/travelbliss.env", permissions = "0600", content = "TS_AUTHKEY=${var.tailscale_auth_key}\nTS_NAME=travelbliss\n" },
       { path = "/root/travelbliss-secrets.env", permissions = "0600", content = local.secrets_env },
       { path = "/root/.travelbliss-backup-pass", permissions = "0600", content = random_password.backup.result },
       { path = "/opt/travelbliss/compose.yml", permissions = "0644", content = file("${path.module}/compose.yml") },
+      { path = "/opt/travelbliss/backup.sh", permissions = "0755", content = file("${path.module}/backup.sh") },
       { path = "/usr/local/bin/travelbliss-bootstrap", permissions = "0755", content = file("${path.module}/bootstrap.sh") },
-    ]
+      ], local.rclone_conf == null ? [] : [
+      # The Google Drive token: a rebuilt VM restores the newest backup on first boot (#181)
+      { path = "/root/.config/rclone/rclone.conf", permissions = "0600", content = local.rclone_conf },
+    ])
     runcmd = [["/usr/local/bin/travelbliss-bootstrap"]]
   })}"
 }

@@ -26,6 +26,12 @@ site_answers() {
   return 1
 }
 
+# On the VM only: the nightly backup (#181). Terraform doesn't reach a running VM, so each deploy keeps this in place.
+if [ "$(id -u)" = 0 ] && [ "$DIR" = /opt/travelbliss ]; then
+  command -v rclone >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone >/dev/null
+  echo "30 3 * * * root $DIR/backup.sh backup >>/var/log/travelbliss-backup.log 2>&1" >/etc/cron.d/travelbliss
+fi
+
 # Both "Run test" and "Images" trigger the workflow, so the same commit can arrive twice: don't touch a live site
 if [ "$FORCE" != --force ] && [ "$NEW" = "$OLD" ] && site_answers 10; then
   echo "== $NEW is already live (run the Deploy workflow manually to redeploy it)"
@@ -38,8 +44,15 @@ echo "== Deploying $NEW (running: $OLD)"
 if [ -z "${TRAVELBLISS_NO_PULL:-}" ]; then
   compose "$NEW" pull web api
 fi
+# Migrations only move forward, so a backup comes first and a failed one stops the deploy (#181). Until the VM has an
+# rclone remote (a one-time step in the guide, #183), there is nothing to back up to: say so and carry on.
+if "$DIR/backup.sh" configured; then
+  "$DIR/backup.sh" backup
+else
+  echo "== WARNING: backups aren't set up on this VM (no rclone remote): migrating without one" >&2
+fi
 # Before `up`: up replaces the api container before migrate finishes, so a failed migration would take the site down.
-# Here it stops the deploy with the old version still serving. Migrations only move forward.
+# Here it stops the deploy with the old version still serving.
 compose "$NEW" run --rm migrate
 # A failed `up` can leave the stack half-replaced: don't exit here, switch back below (even if the site answers)
 up_ok=true

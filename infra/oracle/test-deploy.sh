@@ -23,6 +23,8 @@ WORK=$(mktemp -d)
 export COMPOSE_PROJECT_NAME=tbdeploytest ENV_FILE=test.vars WEB_BIND=127.0.0.1:$PORT
 export TRAVELBLISS_DIR=$WORK TRAVELBLISS_ENV_FILE=test.vars TRAVELBLISS_SITE=http://127.0.0.1:$PORT
 export TRAVELBLISS_NO_PULL=1 # the t-* images exist only locally
+# Backups go to a local folder standing in for Google Drive, once rclone.conf exists (the backup checks below)
+export RCLONE_CONFIG=$WORK/rclone.conf TRAVELBLISS_BACKUP_REMOTE=gdrive:$WORK/drive TRAVELBLISS_BACKUP_PASS=$WORK/pass
 
 cleanup() {
   (cd "$WORK" && TAG=none docker compose --env-file test.vars down -v --remove-orphans >/dev/null 2>&1) || true
@@ -31,7 +33,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cp "$HERE/compose.yml" "$WORK/"
+cp "$HERE/compose.yml" "$HERE/backup.sh" "$WORK/"
 cat >"$WORK/test.vars" <<'EOF'
 API_POSTGRES_USER=travelbliss
 API_POSTGRES_PASSWORD=test-db-password
@@ -84,7 +86,7 @@ step() {
 }
 
 good t-a
-step 'fresh deploy' 0 t-a '== Live: t-a' -- t-a
+step 'fresh deploy, warning that backups are not set up' 0 t-a "backups aren.t set up" -- t-a
 step 'same commit again is a no-op' 0 t-a 'already live' -- t-a
 step '--force redeploys the live commit' 0 t-a '== Live: t-a' -- t-a --force
 good t-b
@@ -104,8 +106,43 @@ if [ "$kept" = "t-b t-c " ]; then echo "ok    pruning kept only t-b t-c"; else
   failures=$((failures + 1)) && echo "FAIL  pruning kept: $kept(want t-b t-c)"
 fi
 
+# Backups (#181), with rclone now configured
+printf '[gdrive]\ntype = local\n' >"$RCLONE_CONFIG"
+echo test-passphrase >"$TRAVELBLISS_BACKUP_PASS"
+dc() { (cd "$WORK" && TAG=$(live_tag) docker compose --env-file test.vars "$@"); }
+psql_db() { dc exec -T db sh -c "psql -qtA -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c \"$1\""; }
+# check <name> <expected exit> -- <command...>
+check() {
+  local name=$1 want=$2 rc=0
+  shift 3
+  "$@" >"$WORK/out.log" 2>&1 || rc=$?
+  if [ "$rc" = "$want" ]; then echo "ok    $name"; else
+    failures=$((failures + 1))
+    echo "FAIL  $name: exit $rc (want $want)"
+    sed 's/^/      | /' "$WORK/out.log"
+  fi
+}
+check 'has-backups: none yet' 1 -- "$WORK/backup.sh" has-backups
+good t-d
+step 'deploy backs up before migrating' 0 t-d '== Backed up: ' -- t-d
+check 'has-backups: one now' 0 -- "$WORK/backup.sh" has-backups
+backup=$(find "$WORK/drive" -name 'travelbliss-*.dump.enc' | head -1)
+check 'backup is encrypted (no pg_dump header)' 1 -- grep -q PGDMP "$backup"
+
+psql_db "create table backup_probe (x text); insert into backup_probe values ('kept')" >/dev/null
+check 'backup' 0 -- "$WORK/backup.sh" backup
+psql_db 'drop table backup_probe' >/dev/null
+check 'restore the newest backup' 0 -- "$WORK/backup.sh" restore
+dc up -d >/dev/null 2>&1 # restore leaves api and web stopped
+check 'restore brought the data back' 0 -- test "$(psql_db 'select x from backup_probe')" = kept
+
+export TRAVELBLISS_BACKUP_REMOTE=gdrive:/proc/travelbliss-no-such-drive # can't be written or listed
+good t-e
+step 'failed backup stops the deploy before migrating' 1 t-d '.' -- t-e
+check "has-backups: can't list" 2 -- "$WORK/backup.sh" has-backups
+
 if [ "$failures" != 0 ]; then
   echo "$failures failed"
   exit 1
 fi
-echo "all deploy paths pass"
+echo "all deploy and backup paths pass"
