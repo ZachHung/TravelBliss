@@ -23,15 +23,15 @@ The owner already runs an unrelated app on an Oracle Always Free VM reached over
   - Chosen over a bought domain (not free) and over a free dynamic-DNS name with ports 80/443 open and Caddy
     fetching certificates (more exposed, and a public IP to keep pointed at).
   - The hostname is permanent: Google's redirect URI and `API_PUBLIC_URL` are built from it.
-- **Web app and API on one origin.** Caddy on the VM serves the built web app and proxies `/graphql` and `/auth/*`
-  to the API. A static host on another site would make the session cookie third-party, which Safari and others block.
+- **Web app and API on one origin.** Caddy on the VM serves the built web app and proxies `/graphql`, `/auth/*`
+  and `/health` to the API. A static host on another site would make the session cookie third-party, which Safari and others block.
 - **Postgres and Redis run in Docker on the VM.** Postgres is dumped nightly, encrypted, to Google Drive (about 15
   days kept), and restored on a rebuilt VM's first boot. Redis is not backed up: it only holds sessions and
   sign-in flows, so a rebuild signs everyone out once.
 - **CI pushes each deploy over Tailscale.** GitHub Actions publishes the images to GHCR, joins the tailnet as an
   ephemeral `tag:ci` node, which the tailnet policy lets reach only `tag:travelbliss` over SSH, and on the VM runs
-  `migration:up` with the new image, then switches to it. If the API does not answer, it switches back to the
-  previous image and the deploy fails. Migrations only move forward. Chosen over the VM polling for new images,
+  `migration:up` with the new image, then switches to it. Unless `GET /health` passes and reports the new commit (#201), it switches back
+  to the previous image and the deploy fails. Migrations only move forward. Chosen over the VM polling for new images,
   where a failed deploy never shows in GitHub.
 - **Secrets live only on the VM.** Terraform generates the random ones (JWT and refresh secrets, encryption key,
   Postgres and Redis passwords). Provider secrets come from the git-ignored `terraform.tfvars`. GitHub holds only the

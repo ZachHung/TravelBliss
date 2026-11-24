@@ -7,7 +7,7 @@ type Result = 'pass' | 'fail';
 // A dependency that hangs (ioredis queues commands while reconnecting) must not hang the check
 const TIMEOUT_MS = 1000;
 
-const run = async (name: string, check: Check): Promise<Result> => {
+const runCheck = async (name: string, check: Check): Promise<Result> => {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error(`timed out after ${TIMEOUT_MS}ms`)), TIMEOUT_MS);
@@ -16,7 +16,10 @@ const run = async (name: string, check: Check): Promise<Result> => {
     await Promise.race([check(), timeout]);
     return 'pass';
   } catch (error) {
-    logger.warn('Health check failed', { check: name, error: (error as Error).message });
+    logger.warn('Health check failed', {
+      check: name,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return 'fail';
   } finally {
     clearTimeout(timer);
@@ -33,7 +36,7 @@ export const healthRoutes = (
 ): Router =>
   Router().get('/health', async (_req, res) => {
     const names = Object.keys(checks);
-    const results = await Promise.all(names.map((name) => run(name, checks[name])));
+    const results = await Promise.all(names.map((name) => runCheck(name, checks[name])));
     const status: Result = results.every((result) => result === 'pass') ? 'pass' : 'fail';
     res
       .status(status === 'pass' ? 200 : 503)

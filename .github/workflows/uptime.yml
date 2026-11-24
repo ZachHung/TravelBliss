@@ -31,7 +31,7 @@ jobs:
           # Three tries a minute apart, so a short blip doesn't open an issue
           for try in 1 2 3; do
             # Not -f: a 503's body says which check failed, and goes into the issue
-            if out=$(curl -sS -m 20 "$SITE_URL/health" 2>&1) && grep -q '"status":"pass"' <<<"$out"; then
+            if out=$(curl -sS -m 20 "$SITE_URL/health" 2>&1) && jq -e '.status == "pass"' <<<"$out" >/dev/null 2>&1; then
               echo "up=true" >>"$GITHUB_OUTPUT"
               exit 0
             fi

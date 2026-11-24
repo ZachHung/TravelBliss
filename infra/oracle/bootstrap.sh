@@ -15,9 +15,9 @@ if ! swapon --show | grep -q .; then
   echo '/swapfile none swap sw 0 0' >>/etc/fstab
 fi
 
-echo "== Docker, rclone"
+echo "== Docker, rclone, jq"
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 rclone
+DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 rclone jq
 systemctl enable --now docker
 
 echo "== Tailscale"

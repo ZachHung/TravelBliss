@@ -84,7 +84,7 @@ jobs:
             -e API_SECRET_JWT=ci -e API_JWT_EXPIRED=5m -e API_SECRET_REFRESH=ci -e API_REFRESH_EXPIRED=1d -e API_SESSION_MAX_AGE=7d \
             -e API_COOKIE_NAME=ci travelbliss-api:ci
           timeout 60 sh -c 'until docker logs api 2>&1 | grep -q "Server running"; do sleep 1; done' || { docker logs api; exit 1; }
-          curl -sf localhost:8000/health | grep -q '"status":"pass"' || { curl -s localhost:8000/health; docker logs api; exit 1; }
+          curl -sf localhost:8000/health | jq -e '.status == "pass"' >/dev/null || { curl -s localhost:8000/health; docker logs api; exit 1; }
 
   # Drives a real browser through register / sign in / reload / sign out against the throwaway e2e stack
   e2e:

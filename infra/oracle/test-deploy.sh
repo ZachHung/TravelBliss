@@ -14,6 +14,7 @@ A=ghcr.io/zachhung/travelbliss-api
 W=ghcr.io/zachhung/travelbliss-web
 PORT=${TEST_PORT:-18080}
 
+command -v jq >/dev/null || { echo "Needs jq: deploy.sh's health check uses it (apt-get install jq)" >&2; exit 2; }
 others=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^($A|$W):" | grep -vE ':(main|t-.*)$' || true)
 if [ -n "$others" ] && [ -z "${CI:-}" ]; then
   echo "Refusing to run: deploy.sh's pruning would delete these local images:" >&2
@@ -61,7 +62,8 @@ good() { derived "$1" "ENV GIT_SHA=$1"; }
 derived() { # <tag> <Dockerfile line>: an API image that differs from :main by one line
   printf 'FROM %s:main\n%s\n' "$A" "$2" | docker build -q -t "$A:$1" - >/dev/null && docker tag "$W:main" "$W:$1"
 }
-answers() { curl -sf -m 3 "$TRAVELBLISS_SITE/health" | grep -q '"status":"pass"'; }
+# deploy.sh's rule without a tag: GET /health through Caddy is 200 and passes
+healthy() { curl -sf -m 3 "$TRAVELBLISS_SITE/health" | jq -e '.status == "pass"' >/dev/null; }
 # Both fall back, so a step that fails before deploying anything still prints its FAIL line and deploy.sh's output
 api_tag() { docker inspect -f '{{.Config.Image}}' "$COMPOSE_PROJECT_NAME-api-1" 2>/dev/null | sed 's/.*://' || echo none; }
 live_tag() { cat "$WORK/.deployed-tag" 2>/dev/null || echo none; }
@@ -76,12 +78,12 @@ step() {
   live=$(live_tag)
   api=$(api_tag)
   [ "$rc" = "$want_rc" ] && [ "$live" = "$want_live" ] && [ "$api" = "$want_live" ] &&
-    answers && grep -qE "$want_out" "$WORK/out.log" || ok=false
+    healthy && grep -qE "$want_out" "$WORK/out.log" || ok=false
   if $ok; then
     echo "ok    $name"
   else
     failures=$((failures + 1))
-    echo "FAIL  $name: exit $rc (want $want_rc), live $live, api $api (want $want_live), site $(answers && echo up || echo DOWN)"
+    echo "FAIL  $name: exit $rc (want $want_rc), live $live, api $api (want $want_live), site $(healthy && echo up || echo DOWN)"
     sed 's/^/      | /' "$WORK/out.log"
   fi
 }
@@ -147,7 +149,7 @@ check 'backup' 0 -- "$WORK/backup.sh" backup
 psql_db 'drop table backup_probe' >/dev/null
 check 'restore the newest backup' 0 -- "$WORK/backup.sh" restore
 dc up -d >/dev/null 2>&1 # restore leaves api and web stopped; wait for them, or the next step sees the site down
-for _ in $(seq 60); do if answers; then break; fi; sleep 2; done
+for _ in $(seq 60); do if healthy; then break; fi; sleep 2; done
 check 'restore brought the data back' 0 -- test "$(psql_db 'select x from backup_probe')" = kept
 
 export TRAVELBLISS_BACKUP_REMOTE=gdrive:/proc/travelbliss-no-such-drive # can't be written or listed

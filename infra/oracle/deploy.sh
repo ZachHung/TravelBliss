@@ -18,19 +18,21 @@ compose() { TAG=$1 docker compose --env-file "$ENV_FILE" "${@:2}"; }
 # healthy <seconds> [tag]: GET /health through Caddy, as a visitor would, answers 200 (Postgres and Redis reachable),
 # and with a tag, from the image built from that commit (#201): an old container still answering doesn't count.
 healthy() {
-  local deadline=$((SECONDS + $1)) want='"status":"pass"'
-  [ -z "${2:-}" ] || want="\"version\":\"$2\""
+  local deadline=$((SECONDS + $1))
   while ((SECONDS < deadline)); do
-    # -f: a 503 (a dependency down) fails here, so a matching version alone is never enough
-    curl -sf -m 3 "$SITE/health" | grep -qF "$want" && return 0
+    curl -sf -m 3 "$SITE/health" |
+      jq -e --arg tag "${2:-}" '.status == "pass" and ($tag == "" or .version == $tag)' >/dev/null && return 0
     sleep 2
   done
   return 1
 }
 
-# On the VM only: the nightly backup (#181). Terraform doesn't reach a running VM, so each deploy keeps this in place.
+# On the VM only: the nightly backup (#181), and jq for `healthy`. Terraform doesn't reach a running VM, so each deploy
+# keeps this in place.
 if [ "$(id -u)" = 0 ] && [ "$DIR" = /opt/travelbliss ]; then
-  command -v rclone >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone >/dev/null
+  if ! command -v rclone >/dev/null || ! command -v jq >/dev/null; then
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone jq >/dev/null
+  fi
   echo "30 3 * * * root $DIR/backup.sh backup >>/var/log/travelbliss-backup.log 2>&1" >/etc/cron.d/travelbliss
 fi
 
