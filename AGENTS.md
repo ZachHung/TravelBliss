@@ -22,7 +22,7 @@ Monorepo for TravelBliss, a passenger rail booking service. pnpm workspace + Tur
   hand-edit a generated migration; the few hand-written ones are in [CODING_STANDARDS.md](CODING_STANDARDS.md).
 - Deploy (ADR 0006): `infra/oracle/` holds the VM's Terraform, `compose.yml` and `deploy.sh`; `images.yml` and
   `deploy.yml` publish and deploy each green commit on `main`. The live VM ignores Terraform changes: config reaches it
-  through each deploy, or by hand over `ssh ubuntu@travelbliss`.
+  through each deploy, or by hand over `ssh ubuntu@travelbliss`. Owner setup and troubleshooting: `docs/deploy.md`.
 - Code review: [CODING_STANDARDS.md](CODING_STANDARDS.md).
 
 ## Agent skills
