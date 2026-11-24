@@ -20,16 +20,18 @@ if tool in ('Read', 'Edit', 'Write', 'NotebookEdit'):
 elif tool == 'Grep':
     hit = blocked(' ' + args.get('path', '')) or blocked(' ' + args.get('glob', ''))
 elif tool == 'Bash':
-    # A reader and a .env name must share one command: a .env name in an issue body or a `test -f` elsewhere in the
-    # script reads nothing. A pipeline stays one command, so `... --env-file .env.x config | cat` is still blocked.
-    commands = re.split(r'\n|;|&&|\|\|', args.get('command', ''))
-    hit = any(blocked(c) and re.search(READERS, c.strip()) for c in commands)
+    # The whole script, not each command: shell joins a name to its reader too many ways (a loop variable, `\`
+    # continuations, $(...)). So a .env name that is only text next to any reader word is blocked too (see below).
+    command = args.get('command', '')
+    hit = blocked(command) and bool(re.search(READERS, command))
 else:
     hit = False
 
 if hit:
     print(
-        'Blocked: .env files hold real secrets. Use .env.example for variable names, or ask the user for a value.',
+        'Blocked: .env files hold real secrets. Use .env.example for variable names, or ask the user for a value. '
+        'If the .env name is only text (an issue body, a commit message, a comment), write that text to a file with '
+        'the Write tool and pass the file instead (--body-file, git commit -F).',
         file=sys.stderr,
     )
     sys.exit(2)
