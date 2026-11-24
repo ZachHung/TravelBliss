@@ -41,7 +41,10 @@ jobs:
           context: .
           file: apps/${{ matrix.app }}/Dockerfile
           push: ${{ github.event_name == 'push' }}
-          tags: ghcr.io/zachhung/travelbliss-${{ matrix.app }}:${{ github.sha }}
+          # :main moves with main, so a rebuilt VM starts the newest version before the next deploy (#178)
+          tags: |
+            ghcr.io/zachhung/travelbliss-${{ matrix.app }}:${{ github.sha }}
+            ghcr.io/zachhung/travelbliss-${{ matrix.app }}:main
           # Links the package to this repo on GHCR
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ vars.DEPLOY_ARCH || 'arm64' }}
