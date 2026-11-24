@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. Guide: #183.
+tenancy_ocid       = "ocid1.tenancy.oc1..aaaa..." # the tenancy= line of ~/.oci/config
+tailscale_auth_key = "tskey-auth-..."             # Tailscale admin > Settings > Keys (tag:travelbliss)
+
+# availability_domain = 1       # only if 0 keeps saying out of capacity
+# shape = "micro"               # x86, 1 GB: only if ARM stays out of capacity; then DEPLOY_ARCH=amd64 on GitHub
+# ssh_source = "203.0.113.7/32" # opens port 22 to that address only, to debug a VM Tailscale can't reach
+
+# Linked sign-in (docs/linked-sign-in-setup.md). Read on first boot only: to change them later, edit the VM's
+# /opt/travelbliss/.env.production over `ssh travelbliss`, then restart the api container.
+# google_client_id     = "....apps.googleusercontent.com"
+# google_client_secret = "..."
+# facebook_app_id      = ""
+# facebook_app_secret  = ""
