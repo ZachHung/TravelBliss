@@ -22,9 +22,15 @@ cases = {
            bash('echo ok\ngrep SECRET apps/api/.env.production'),
            # the name and its reader in different shell words: only a whole-script check sees both
            bash('for f in .env.local; do cat "$f"; done'), bash('cat \\\n.env.local'), bash('f=.env.local; cat "$f"'),
-           bash('echo "$(cat "$(ls -a | grep -m1 .env.local)")"')],
+           bash('echo "$(cat "$(ls -a | grep -m1 .env.local)")"'),
+           # the name against shell syntax, and reads with no reading command
+           bash('cat <.env.local'), bash('cat {.env.local}'), bash('cat {.env.local,.env}'), bash('echo $(<.env.local)'),
+           bash('while read l; do echo "$l"; done <.env.local'), bash('mapfile -t lines <.env.local'),
+           bash('diff <(sort .env.local) x'), bash('echo `cat .env.local`'), bash('cat .env.local>/tmp/copy')],
     False: [bash('cat .env.example'), bash('cat .env.e2e'), bash('docker compose --env-file .env.e2e up'),
-            bash('ls -a'), read('/repo/.env.example'), read('/repo/.env.e2e')],
+            bash('ls -a'), read('/repo/.env.example'), read('/repo/.env.e2e'),
+            # a heredoc is not a read; a redirect into a committed file is fine
+            bash("cat > notes.md <<'EOF'\nhello\nEOF"), bash('cat <.env.example'), bash('echo $(<.env.e2e)')],
 }
 failures = [(want, p) for want, payloads in cases.items() for p in payloads if blocked(p) != want]
 for want, p in failures:

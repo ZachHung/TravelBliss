@@ -6,10 +6,16 @@ payload = json.load(sys.stdin)
 tool, args = payload.get('tool_name', ''), payload.get('tool_input', {})
 
 # A .env file name: .env, .env.local, .env.development, ... but not .env.example or .env.e2e (committed, dummy values).
-# The exclusions must end where the name ends, or .env.e2e.local would slip through.
-END = r'(?=$|[\s\'";|&)])'
-ENV_FILE = rf'(?:^|[\s/\'"=])\.env(?:\.(?!(?:example|e2e){END})[\w.-]+)?{END}'
-READERS = r'\b(?:cat|head|tail|less|more|bat|grep|rg|ugrep|sed|awk|cut|sort|uniq|diff|xxd|od|strings|base64|cp|source|python3?|node|perl|ruby)\b|(?:^|[;&|]\s*)\.\s'
+# The exclusions must end where the name ends, or .env.e2e.local would slip through. A name can sit against shell
+# syntax on either side: <.env.x, $(<.env.x), {.env.x}, `.env.x`, (.env.x), .env.x>out.
+END = r'(?=$|[\s\'";|&()<>{},`])'
+ENV_FILE = rf'(?:^|[\s/\'"=<>(){{}},`])\.env(?:\.(?!(?:example|e2e){END})[\w.-]+)?{END}'
+# A read: a reading command, sourcing, the read/mapfile builtins, or input redirection (`<`, `$(<…)`, `<(…)`). A
+# heredoc (`<<`) is not a read of a file.
+READERS = (
+    r'\b(?:cat|head|tail|less|more|bat|grep|rg|ugrep|sed|awk|cut|sort|uniq|diff|xxd|od|strings|base64|cp|source'
+    r'|python3?|node|perl|ruby|read|mapfile|readarray)\b|(?:^|[;&|]\s*)\.\s|(?<!<)<(?!<)'
+)
 
 def blocked(text: str) -> bool:
     return bool(re.search(ENV_FILE, text))
