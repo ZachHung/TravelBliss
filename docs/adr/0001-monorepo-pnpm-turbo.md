@@ -19,9 +19,11 @@ TS 5.9 vs 6, two prettier configs, two env conventions, the API had no CI).
   per app (for example graphql 16 in the API and 17 in web) until upgraded deliberately.
 - One root env file per environment, read by both apps: `.env.local` for docker on the developer's machine,
   `.env.development` for the hosted dev environment. The API loads only `.env.${NODE_ENV}`, so values never mix
-  across environments. Web variables use `VITE_`, API variables use `API_`.
+  across environments. Web variables use `VITE_`, API variables use `API_`. (Amended 2026-11-24: the hosted
+  `development` environment is retired; the one hosted environment is `production`, see ADR 0006. The README,
+  `.env.example`, and `pnpm dev`'s `development` default still describe it until #184.)
 - Deploys stay independent. The API image is built from the repo root with `pnpm deploy`. The deploy target is
-  still open.
+  decided in ADR 0006.
 - CI caches `.turbo` with `actions/cache` instead of a remote cache, so no account or secret is needed.
 
 ## Consequences
