@@ -1,5 +1,6 @@
 import { type RegisterMutationVariables } from '@generated/codegen/graphql';
 import { render, screen, userEvent } from '@test-utils';
+import { GraphQLError } from 'graphql';
 import { REGISTER } from '@/graphql/mutations/register';
 import RegisterPage from './Register.page';
 
@@ -13,6 +14,20 @@ const fillTextFields = async () => {
     screen.getByLabelText(/confirm password/i, { selector: 'input' }),
     'secret1234'
   );
+};
+
+const pickBirthday = async () => {
+  await userEvent.click(screen.getByRole('button', { name: /birthday/i }));
+  // Opens on the year grid
+  await userEvent.click(await screen.findByRole('button', { name: '2000' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Mar' }));
+  await userEvent.click(await screen.findByRole('button', { name: /^12 March 2000$/ }));
+};
+
+const takenMessages = {
+  username: 'A user with this username already exist',
+  phoneNumber: 'A user with this phoneNumber already exist',
+  email: 'A user with this email already exist',
 };
 
 describe('Register page', () => {
@@ -58,14 +73,42 @@ describe('Register page', () => {
     });
 
     await fillTextFields();
-    await userEvent.click(screen.getByRole('button', { name: /birthday/i }));
-    // Opens on the year grid
-    await userEvent.click(await screen.findByRole('button', { name: '2000' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Mar' }));
-    await userEvent.click(await screen.findByRole('button', { name: /^12 March 2000$/ }));
+    await pickBirthday();
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
     await vi.waitFor(() => expect(input?.birthday).toBe('2000-03-12T00:00:00.000Z'));
     expect(input).not.toHaveProperty('confirmPassword');
   });
+
+  it.each(Object.keys(takenMessages) as (keyof typeof takenMessages)[])(
+    'shows only the taken-%s message, when that field is the one taken',
+    async (field) => {
+      render(<RegisterPage />, {
+        route: '/register',
+        mocks: [
+          {
+            request: { query: REGISTER, variables: () => true },
+            result: {
+              errors: [
+                new GraphQLError('User already exist', {
+                  extensions: { code: 'USER_EXISTED', where: field },
+                }),
+              ],
+            },
+          },
+        ],
+      });
+
+      await fillTextFields();
+      await pickBirthday();
+      await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+      expect(await screen.findByText(takenMessages[field])).toBeInTheDocument();
+      for (const [other, message] of Object.entries(takenMessages)) {
+        if (other !== field) {
+          expect(screen.queryByText(message)).not.toBeInTheDocument();
+        }
+      }
+    }
+  );
 });
