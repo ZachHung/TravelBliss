@@ -13,6 +13,7 @@ on:
 permissions:
   contents: read
   actions: read
+  deployments: read
 
 # One deploy at a time. A newer commit waits for the running one instead of cancelling it half-way.
 concurrency:
@@ -43,6 +44,14 @@ jobs:
               --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"')
             if [ "$result" != "completed/success" ]; then
               echo "Skip: $wf is $result for $SHA; its completion triggers this again."; exit 0
+            fi
+          done
+          # Both triggers usually find the commit ready. The second run starts once the first has finished (the
+          # concurrency group), so a successful deployment of it is already recorded: skip instead of recording
+          # another. A failed deploy has no success status, so it can be retried.
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=production&sha=$SHA" --jq '.[].id'); do
+            if gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" --jq '.[].state' | grep -qx success; then
+              echo "Skip: $SHA is already deployed to production."; exit 0
             fi
           done
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
