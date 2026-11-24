@@ -3,9 +3,10 @@ import { config } from 'dotenv';
 import { type CookieOptions } from 'express';
 import { type DeleteResult, type InsertResult, type UpdateResult } from 'typeorm';
 
-// One file per environment at the repo root: .env.local (docker on this machine), .env.development (hosted dev).
+// One file per environment at the repo root: .env.local (docker on this machine, the default), .env.e2e, and on the
+// VM .env.production (ADR 0006).
 // src/utils and dist/utils are both 4 levels deep. A missing file is skipped, so deploys can use real env vars.
-process.env.NODE_ENV ||= 'development';
+process.env.NODE_ENV ||= 'local';
 config({ path: resolve(__dirname, '../../../..', `.env.${process.env.NODE_ENV}`), quiet: true });
 
 export const getEnv = (name: string): string => {

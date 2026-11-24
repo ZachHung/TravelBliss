@@ -5,7 +5,7 @@ import { type SignInProvider } from './sign-in-provider';
 
 /**
  * The providers this deployment offers: each one whose credentials are set, and the dev provider only on a local
- * machine or in e2e (never `development`, which is a hosted environment). The web app shows a button for each.
+ * machine or in e2e (never in production, the one hosted environment). The web app shows a button for each.
  */
 export const configuredProviders = (env = process.env): SignInProvider[] =>
   [

@@ -17,27 +17,30 @@ Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10 (`corepack enable` picks the
 
 ```sh
 pnpm install
-cp .env.example .env.development   # hosted dev values (or .env.local, see below)
-pnpm --filter @travelbliss/api migration:up
-pnpm dev                           # API on :8000, web on :5173
+cp .env.example .env.local   # then fill it in
+pnpm dev:local               # Postgres and Redis in docker, migrations, then API on :8000 and web on :5173
 ```
 
-To run against Postgres and Redis in docker on your machine instead, fill in `.env.local` and run `pnpm dev:local`.
-It starts both containers, waits until they are healthy, applies migrations and runs the apps with that file. Stop
-the containers with `pnpm dev:local:down` (data is kept).
+`pnpm dev:local` starts both containers, waits until they are healthy, applies migrations and runs the apps with
+`.env.local`. Stop the apps with `pnpm dev:stop` and the containers with `pnpm dev:local:down` (data is kept). Plain
+`pnpm dev` runs the apps against containers that are already up.
+
+There is no hosted development environment (ADR 0006): the one hosted environment is production. If you still have a
+`.env.development` from before, delete it: `pnpm dev` would otherwise let it override `.env.local` for the web app.
 
 ### Environment variables
 
 Env files live at the repo root, one per environment, and only `.env.example` is committed (it lists every
 variable):
 
-| File               | Used by                                                  |
-| ------------------ | -------------------------------------------------------- |
-| `.env.local`       | `pnpm dev:local` and `apps/api/infra/docker-compose.yml` |
-| `.env.development` | `pnpm dev`, against the hosted dev environment           |
+| File              | Used by                                                              |
+| ----------------- | -------------------------------------------------------------------- |
+| `.env.local`      | `pnpm dev`, `pnpm dev:local` and `apps/api/infra/docker-compose.yml` |
+| `.env.e2e`        | `pnpm e2e` (committed: dummy values for its throwaway stack)         |
+| `.env.production` | the VM only, written by Terraform (`infra/oracle`, ADR 0006)         |
 
-The API loads exactly `.env.${NODE_ENV}`. Web variables start with `VITE_` (the only ones that reach the browser).
-API variables start with `API_`.
+The API loads exactly `.env.${NODE_ENV}`, and `NODE_ENV` defaults to `local`. Web variables start with `VITE_` (the
+only ones that reach the browser). API variables start with `API_`.
 
 ## Scripts
 
@@ -84,7 +87,7 @@ apps/api/src/
 ### Migrations
 
 TypeORM commands build the API first, so they always see the current entities. They use the env file for
-`NODE_ENV` (`.env.development` by default; prefix with `NODE_ENV=local` for docker):
+`NODE_ENV` (`.env.local` by default, so the docker Postgres from `pnpm dev:local` must be up):
 
 ```sh
 pnpm --filter @travelbliss/api migration:generate   # after changing an entity

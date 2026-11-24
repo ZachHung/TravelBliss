@@ -3,7 +3,7 @@ import { createLogger, format, transports } from 'winston';
 import '@/utils/helpers';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const env = (process.env.NODE_ENV ?? 'development').toUpperCase();
+const env = (process.env.NODE_ENV ?? 'local').toUpperCase();
 
 // Dev: one readable line, extra fields as JSON, stack on the following lines
 const devLine = format.printf(({ timestamp, level, message, stack, ...fields }) => {
