@@ -2,12 +2,22 @@
 # Runs deploy.sh against a throwaway copy of the production stack and checks every path it can take: a fresh
 # deploy, a duplicate, a --force redeploy, a good deploy and its pruning, a failing migration, an API that crashes,
 # and an `up` that fails. Needs Docker; uses the published :main images (pulled if missing) as the known-good build.
-#   infra/oracle/test-deploy.sh            # CI and local; leaves nothing behind
+#   infra/oracle/test-deploy.sh            # CI and local; removes its stack and its t-* test images afterwards
+# deploy.sh prunes every local travelbliss image but the new, the live and :main, so on a machine holding other
+# travelbliss tags (a pulled SHA, a local build) this refuses to run, outside CI, rather than delete them.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 A=ghcr.io/zachhung/travelbliss-api
 W=ghcr.io/zachhung/travelbliss-web
 PORT=${TEST_PORT:-18080}
+
+others=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^($A|$W):" | grep -vE ':(main|t-.*)$' || true)
+if [ -n "$others" ] && [ -z "${CI:-}" ]; then
+  echo "Refusing to run: deploy.sh's pruning would delete these local images:" >&2
+  echo "$others" >&2
+  echo "Remove them (docker rmi), or run in CI." >&2
+  exit 2
+fi
 WORK=$(mktemp -d)
 
 export COMPOSE_PROJECT_NAME=tbdeploytest ENV_FILE=test.vars WEB_BIND=127.0.0.1:$PORT
@@ -48,7 +58,9 @@ answers() {
   curl -sf -m 3 -X POST "$TRAVELBLISS_SITE/graphql" -H 'content-type: application/json' \
     -H 'apollo-require-preflight: true' -d '{"query":"{ __typename }"}' | grep -q '"Query"'
 }
-api_tag() { docker inspect -f '{{.Config.Image}}' "$COMPOSE_PROJECT_NAME-api-1" | sed 's/.*://'; }
+# Both fall back, so a step that fails before deploying anything still prints its FAIL line and deploy.sh's output
+api_tag() { docker inspect -f '{{.Config.Image}}' "$COMPOSE_PROJECT_NAME-api-1" 2>/dev/null | sed 's/.*://' || echo none; }
+live_tag() { cat "$WORK/.deployed-tag" 2>/dev/null || echo none; }
 
 failures=0
 # step <name> <expected exit> <expected live tag> <expected output (grep -E)> -- <deploy.sh args>
@@ -57,7 +69,7 @@ step() {
   shift 5
   bash "$HERE/deploy.sh" "$@" >"$WORK/out.log" 2>&1 || rc=$?
   local live api ok=true
-  live=$(cat "$WORK/.deployed-tag")
+  live=$(live_tag)
   api=$(api_tag)
   [ "$rc" = "$want_rc" ] && [ "$live" = "$want_live" ] && [ "$api" = "$want_live" ] &&
     answers && grep -qE "$want_out" "$WORK/out.log" || ok=false
@@ -91,4 +103,8 @@ if [ "$kept" = "t-b t-c " ]; then echo "ok    pruning kept only t-b t-c"; else
   failures=$((failures + 1)) && echo "FAIL  pruning kept: $kept(want t-b t-c)"
 fi
 
-[ "$failures" = 0 ] && echo "all deploy paths pass" || { echo "$failures failed"; exit 1; }
+if [ "$failures" != 0 ]; then
+  echo "$failures failed"
+  exit 1
+fi
+echo "all deploy paths pass"

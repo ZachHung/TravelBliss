@@ -3,6 +3,7 @@
 # Written by Terraform: /root/travelbliss.env, /root/travelbliss-secrets.env, /opt/travelbliss/compose.yml.
 # Log: /var/log/cloud-init-output.log
 set -euo pipefail
+# shellcheck source=/dev/null # written by Terraform, only on the VM
 . /root/travelbliss.env
 DIR=/opt/travelbliss
 cd "$DIR"

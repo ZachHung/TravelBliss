@@ -8,12 +8,13 @@ FORCE=${2:-}
 # The VM's values; test-deploy.sh points them at a throwaway stack
 DIR=${TRAVELBLISS_DIR:-/opt/travelbliss}
 SITE=${TRAVELBLISS_SITE:-http://127.0.0.1:8080}
-ENV_FILE=${TRAVELBLISS_ENV_FILE:-.env.production}
+# Exported: compose.yml's env_file reads ENV_FILE too
+export ENV_FILE=${TRAVELBLISS_ENV_FILE:-.env.production}
 cd "$DIR"
 # What's live now: the version to switch back to, even on a --force redeploy of it (an older build could predate
 # the live one's migrations). Its images and NEW's are the only ones a switch back can need.
 OLD=$(cat .deployed-tag 2>/dev/null || echo main)
-compose() { TAG=$1 ENV_FILE=$ENV_FILE docker compose --env-file "$ENV_FILE" "${@:2}"; }
+compose() { TAG=$1 docker compose --env-file "$ENV_FILE" "${@:2}"; }
 # Through Caddy, as a visitor would: checks web and api together
 site_answers() {
   local deadline=$((SECONDS + ${1:-60}))
