@@ -1,8 +1,8 @@
 import { Redis } from 'ioredis';
-import { getEnv } from '@/utils/helpers';
+import { env } from './env';
 import logger from './logger';
 
-const redisClient = new Redis(getEnv('API_REDIS_URI'));
+const redisClient = new Redis(env().API_REDIS_URI);
 // ioredis emits an error on every reconnect attempt: log once per outage, and once on recovery
 let isDown = false;
 redisClient.on('error', (error: Error) => {

@@ -1,9 +1,10 @@
 import { randomBytes } from 'crypto';
 import { compare, hash } from 'bcrypt';
 import { Raw, type EntityManager, type Repository } from 'typeorm';
+import { env } from '@/config/env';
 import { InjectRepository } from '@/core/module';
 import { Injectable } from '@/types/inversify';
-import { getEnv, mutationReturn } from '@/utils/helpers';
+import { mutationReturn } from '@/utils/helpers';
 import { User } from './user.entity';
 import {
   PasswordAlreadySetException,
@@ -40,7 +41,7 @@ export class UserService {
       }
     }
 
-    const hashedPassword = await hash(input.password, +getEnv('API_SALT_ROUND'));
+    const hashedPassword = await hash(input.password, env().API_SALT_ROUND);
 
     try {
       return await this.userRepository.save({ ...input, password: hashedPassword });
@@ -101,13 +102,13 @@ export class UserService {
       throw new WrongPassException();
     }
 
-    const newPassword = await hash(input.newPassword, +getEnv('API_SALT_ROUND'));
+    const newPassword = await hash(input.newPassword, env().API_SALT_ROUND);
     return this.editInfo({ password: newPassword }, userId);
   }
 
   /** A first password for a user who joined through a linked sign-in; changing one goes through changePassword. */
   public async setPassword(password: string, userId: string): Promise<User> {
-    const hashed = await hash(password, +getEnv('API_SALT_ROUND'));
+    const hashed = await hash(password, env().API_SALT_ROUND);
     // One conditional UPDATE, not read-then-write: of two concurrent calls only the first finds no password
     const result = await this.userRepository
       .createQueryBuilder()

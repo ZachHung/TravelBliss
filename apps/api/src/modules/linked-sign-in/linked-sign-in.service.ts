@@ -9,6 +9,7 @@ import {
 import { type Response } from 'express';
 import { Redis } from 'ioredis';
 import { type Repository } from 'typeorm';
+import { env } from '@/config/env';
 import logger from '@/config/logger';
 import TOKEN from '@/core/container/types.container';
 import { InjectRepository } from '@/core/module';
@@ -20,7 +21,7 @@ import { UserNotFoundException } from '@/modules/user/user.exception';
 import { UserService } from '@/modules/user/user.service';
 import { type Context } from '@/types';
 import { Inject, Injectable } from '@/types/inversify';
-import { cookieOptions, getEnv } from '@/utils/helpers';
+import { cookieOptions } from '@/utils/helpers';
 import { LinkedSignIn } from './linked-sign-in.entity';
 import {
   EmailTakenSignInToLinkException,
@@ -37,7 +38,7 @@ import {
 // Long enough to sign in at the provider, short enough that a leaked state is useless soon after
 const FLOW_TTL_SECONDS = 10 * 60;
 const flowKey = (state: string) => `linkedSignInFlow:${state}`;
-const stateCookieName = () => `${getEnv('API_COOKIE_NAME')}_ls`;
+const stateCookieName = () => `${env().API_COOKIE_NAME}_ls`;
 const stateCookiePath = '/auth';
 
 /** A started flow, kept server-side until the callback consumes it. userId set: connecting, not signing in. */

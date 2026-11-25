@@ -20,7 +20,7 @@ x-api-image: &api-image
     API_POSTGRES_HOST: db
     API_POSTGRES_PORT: 5432
     API_POSTGRES_SSL: 'false'
-    API_REDIS_URI: redis://default:${API_REDIS_PASSWORD:?set API_REDIS_PASSWORD}@cache:6379
+    API_REDIS_URI: redis://default:${API_REDIS_PASSWORD:?}@cache:6379
   logging: *logging
 
 services:
@@ -75,9 +75,9 @@ services:
     image: postgres:16.6-alpine
     environment:
       # :? as for TAG: an unset secret must stop compose, not become an empty password
-      POSTGRES_USER: ${API_POSTGRES_USER:?set API_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${API_POSTGRES_PASSWORD:?set API_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${API_POSTGRES_DB:?set API_POSTGRES_DB}
+      POSTGRES_USER: ${API_POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${API_POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${API_POSTGRES_DB:?}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -93,7 +93,7 @@ services:
   cache:
     image: redis:7.4.1-alpine
     environment:
-      REDIS_PASSWORD: ${API_REDIS_PASSWORD:?set API_REDIS_PASSWORD}
+      REDIS_PASSWORD: ${API_REDIS_PASSWORD:?}
     command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
     volumes:
       - redis_data:/data

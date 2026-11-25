@@ -1,7 +1,5 @@
 // `node dist/config/check-env.js`: exits 1, naming every problem, when this environment can't run the API.
 // deploy.sh runs it in the new image with the VM's settings, before backing up or migrating (#215).
-import '@/utils/helpers'; // loads the .env file for NODE_ENV, as the API does
-
 import { envProblems } from './env';
 
 const problems = envProblems();

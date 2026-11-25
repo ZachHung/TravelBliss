@@ -10,7 +10,7 @@ import cors from 'cors';
 import express, { json } from 'express';
 import { buildSchema } from 'type-graphql';
 import { PostgresDataSource } from './config/data-source';
-import { assertEnv } from './config/env';
+import { env } from './config/env';
 import logger from './config/logger';
 import container from './core/container/config.container';
 import {
@@ -25,12 +25,12 @@ import { withErrorCodes } from './core/shared/error-code';
 import { modules } from './modules';
 import { SessionService } from './modules/session/session.service';
 import { type Context } from './types';
-import { getEnv, webOrigin } from './utils/helpers';
+import { webOrigin } from './utils/helpers';
 
 export const bootstrap = async (): Promise<void> => {
-  // Before anything connects: a missing variable otherwise fails only when a request first reads it
-  assertEnv();
-  const isProduction = getEnv('NODE_ENV') === 'production';
+  // Throws naming every missing or malformed setting (data-source.ts, imported above, already parsed them once)
+  const settings = env();
+  const isProduction = settings.NODE_ENV === 'production';
   const app = express();
   const httpServer = http.createServer(app);
   await PostgresDataSource.initialize();
@@ -92,9 +92,9 @@ export const bootstrap = async (): Promise<void> => {
     })
   );
 
-  httpServer.listen(+getEnv('API_PORT'), () =>
+  httpServer.listen(settings.API_PORT, () =>
     logger.info(
-      `Server running in ${getEnv('NODE_ENV')} mode at http://localhost:${getEnv('API_PORT')}`
+      `Server running in ${settings.NODE_ENV} mode at http://localhost:${settings.API_PORT}`
     )
   );
 };

@@ -1,15 +1,15 @@
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'crypto';
 import { Request, Response } from 'express';
 import { Redis } from 'ioredis';
-import { JwtPayload, sign, SignOptions, verify } from 'jsonwebtoken';
-import ms from 'ms';
+import { JwtPayload, sign, verify } from 'jsonwebtoken';
+import { env } from '@/config/env';
 import logger from '@/config/logger';
 import TOKEN from '@/core/container/types.container';
 import { UserNotFoundException } from '@/modules/user/user.exception';
 import { UserService } from '@/modules/user/user.service';
 import { Context } from '@/types';
 import { Inject, Injectable } from '@/types/inversify';
-import { cookieOptions, getEnv } from '@/utils/helpers';
+import { cookieOptions } from '@/utils/helpers';
 import { InvalidCookiesException, InvalidTokenException } from './session.exception';
 import { AuthContext, UserTokens } from './session.type';
 
@@ -20,14 +20,14 @@ const REDIS_KEY = {
   VALID_FROM: 'sessionsValidFrom:',
 } as const;
 
-const refreshCookieName = (): string => `${getEnv('API_COOKIE_NAME')}_rf`; // ':' is not allowed in cookie names (cookie@0.7 throws)
+const refreshCookieName = (): string => `${env().API_COOKIE_NAME}_rf`; // ':' is not allowed in cookie names (cookie@0.7 throws)
 const refreshKey = (userId: string, token: string): string =>
   `${REDIS_KEY.REFRESH_TOKEN}${userId}:${token}`;
 
 // authTime: when the user actually signed in (OpenID Connect's auth_time), carried through every rotation
 type TokenClaims = { userId: string; token: string; iat: number; exp: number; authTime: number };
 
-const encryptionKey = () => Buffer.from(getEnv('API_ENCRYPTION_KEY'));
+const encryptionKey = () => Buffer.from(env().API_ENCRYPTION_KEY);
 const GCM_PREFIX = 'gcm';
 
 /**
@@ -46,15 +46,6 @@ const legacyCbcDecrypt = (text: string): string => {
 };
 
 const nowInSeconds = () => Math.floor(Date.now() / 1000);
-
-/** A duration env var such as "30d" in seconds; a typo fails loudly instead of meaning "expired". */
-const durationInSeconds = (name: string): number => {
-  const millis = ms(getEnv(name) as ms.StringValue);
-  if (!Number.isFinite(millis)) {
-    throw new Error(`Invalid duration in ${name}: '${getEnv(name)}'`);
-  }
-  return Math.floor(millis / 1000);
-};
 
 const verifyToken = (token: string, secret: string): TokenClaims | undefined => {
   if (!token) {
@@ -93,7 +84,7 @@ export class SessionService {
     if (!authorization?.startsWith('Bearer ')) {
       return;
     }
-    const auth = verifyToken(authorization.slice(7), getEnv('API_SECRET_JWT'));
+    const auth = verifyToken(authorization.slice(7), env().API_SECRET_JWT);
     if (!auth) {
       return;
     }
@@ -137,7 +128,7 @@ export class SessionService {
   public async refresh({ res, req }: Context): Promise<UserTokens> {
     const refreshToken = this.requireCookie(req, refreshCookieName());
 
-    const refreshTokenAuth = verifyToken(refreshToken, getEnv('API_SECRET_REFRESH'));
+    const refreshTokenAuth = verifyToken(refreshToken, env().API_SECRET_REFRESH);
     if (!refreshTokenAuth) {
       throw new InvalidTokenException();
     }
@@ -204,7 +195,7 @@ export class SessionService {
   }
 
   private async storeRefreshToken(userId: string, refreshToken: string, res: Response) {
-    const { exp } = verifyToken(refreshToken, getEnv('API_SECRET_REFRESH')) as TokenClaims;
+    const { exp } = verifyToken(refreshToken, env().API_SECRET_REFRESH) as TokenClaims;
     await this.store.set(refreshKey(userId, refreshToken), refreshToken, 'EXAT', exp);
     this.setRefreshCookie(res, refreshToken, exp);
   }
@@ -217,14 +208,15 @@ export class SessionService {
     userId: string,
     authTime = nowInSeconds()
   ): UserTokens & { refreshToken: string } {
-    const accessToken = sign({ userId }, getEnv('API_SECRET_JWT'), {
-      expiresIn: getEnv('API_JWT_EXPIRED') as SignOptions['expiresIn'],
+    const settings = env();
+    const accessToken = sign({ userId }, settings.API_SECRET_JWT, {
+      expiresIn: settings.API_JWT_EXPIRED, // seconds
     });
     const exp = Math.min(
-      nowInSeconds() + durationInSeconds('API_REFRESH_EXPIRED'),
-      authTime + durationInSeconds('API_SESSION_MAX_AGE')
+      nowInSeconds() + settings.API_REFRESH_EXPIRED,
+      authTime + settings.API_SESSION_MAX_AGE
     );
-    const refreshToken = sign({ userId, auth_time: authTime, exp }, getEnv('API_SECRET_REFRESH'), {
+    const refreshToken = sign({ userId, auth_time: authTime, exp }, settings.API_SECRET_REFRESH, {
       // Unique id: two tokens signed in the same second must still differ for rotation to work.
       jwtid: randomUUID(),
     });
