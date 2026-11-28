@@ -15,11 +15,12 @@ config({
 
 const text = z.string();
 const port = z.coerce.number().int().positive();
-// "30d", "5minutes": parsed once here, so a typo fails at boot instead of meaning "already expired"
+// "30d", "5minutes": parsed once here, so a typo fails at boot instead of meaning "already expired". Under 1s is
+// rejected too: "0", "-5m" or a bare "30" (ms reads it as 30ms) would floor to 0 seconds and sign expired tokens.
 const seconds = text.transform((value, ctx) => {
   const millis = ms(value as ms.StringValue);
-  if (!Number.isFinite(millis)) {
-    ctx.addIssue({ code: 'custom', message: `not a duration ('${value}')` });
+  if (!Number.isFinite(millis) || millis < 1000) {
+    ctx.addIssue({ code: 'custom', message: `not a duration of at least 1s ('${value}')` });
     return z.NEVER;
   }
   return Math.floor(millis / 1000);

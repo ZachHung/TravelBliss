@@ -53,10 +53,19 @@ describe('envProblems', () => {
     ).toEqual([
       expect.stringMatching(/^API_PORT: /),
       'API_ENCRYPTION_KEY: must be 32 bytes, not 5',
-      "API_SESSION_MAX_AGE: not a duration ('ninety days')",
+      "API_SESSION_MAX_AGE: not a duration of at least 1s ('ninety days')",
       'missing API_COOKIE_NAME',
     ]);
   });
+
+  it.each(['0', '-5m', '500ms', '30'])(
+    'rejects %s as a duration, since it would mean already expired',
+    (value) => {
+      expect(envProblems({ ...complete, API_JWT_EXPIRED: value })).toEqual([
+        `API_JWT_EXPIRED: not a duration of at least 1s ('${value}')`,
+      ]);
+    }
+  );
 });
 
 describe('env', () => {
