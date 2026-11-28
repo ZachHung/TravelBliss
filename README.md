@@ -13,7 +13,7 @@ feeds the web app's typed documents, so a schema change and its client fix land 
 
 ## Getting started
 
-Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10 (`corepack enable` picks the right version).
+Requirements: Node.js 22 (see `.nvmrc`) and pnpm 12 (`corepack enable` picks the right version).
 
 ```sh
 pnpm install
