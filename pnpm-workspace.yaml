@@ -18,6 +18,8 @@ permissions:
 
 # One version for a dependency both apps use: they write `catalog:` instead of a range, so a bump is one line here.
 # graphql stays per app on purpose: the API waits on type-graphql for 17 (#133).
+# strict: `pnpm add` of a dependency the catalog lists writes `catalog:`, never a second range
+catalogMode: strict
 catalog:
   'vitest': ^5.1.1
   '@vitest/coverage-v8': ^5.1.1
