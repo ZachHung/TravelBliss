@@ -178,6 +178,7 @@ check 'restore brought the data back' 0 -- test "$(psql_db 'select x from backup
 marker=$WORK/.first-boot-restore-done
 check 'a successful deploy marks the VM as having served' 0 -- test -f "$marker"
 # One pipeline: check() writes the command's output to out.log, so a grep of out.log would read an emptied file
+# shellcheck disable=SC2016 # $1 expands in the inner bash
 check 'first boot on a VM that has served: skips' 0 -- \
   bash -c '"$1" first-boot | grep -q "already restored or served"' _ "$WORK/backup.sh"
 rm "$marker"

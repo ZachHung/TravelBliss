@@ -55,6 +55,8 @@ compose up -d --wait db cache
 # VM (#217), and a VM that can't list its backups stops here rather than start empty: its nightly backups would then
 # replace the real ones.
 ./backup.sh first-boot
+# Again, now that the restore has settled: that's when converge.sh adds the nightly backup's cron line
+./converge.sh
 # up runs the migrate service first and starts api only once it succeeds (compose.yml). No --wait: older
 # Compose releases (Ubuntu's docker-compose-v2) may count migrate's intended exit as a failure.
 compose up -d

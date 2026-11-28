@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # converge.sh: the VM's host setup, as root, safe to run again (#217): swap, the packages the stack needs, Docker, and
-# the nightly backup's cron line. First boot (bootstrap.sh) and every deploy (deploy.sh) run it; Terraform doesn't
-# reach a running VM, so a change here reaches it with the next deploy. Installs only what's missing, never upgrades.
+# the nightly backup's cron line once the VM has restored or served. First boot (bootstrap.sh) and every deploy
+# (deploy.sh) run it; Terraform doesn't reach a running VM, so a change here reaches it with the next deploy. Installs
+# only what's missing, never upgrades.
 set -euo pipefail
 DIR=/opt/travelbliss
 
@@ -23,4 +24,9 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 systemctl enable --now docker >/dev/null
 
-echo "30 3 * * * root $DIR/backup.sh backup >>/var/log/travelbliss-backup.log 2>&1" >/etc/cron.d/travelbliss
+# Only once the first-boot restore has settled (backup.sh first-boot, or a deploy, marks it): on a new VM that couldn't
+# list its backups, a nightly dump of its empty database would become the newest backup, and a rerun would restore it.
+# An existing cron line is left alone.
+if [ -f "$DIR/.first-boot-restore-done" ]; then
+  echo "30 3 * * * root $DIR/backup.sh backup >>/var/log/travelbliss-backup.log 2>&1" >/etc/cron.d/travelbliss
+fi
