@@ -3,9 +3,9 @@ import { join } from 'path';
 import 'reflect-metadata';
 
 import { DataSource, type DataSourceOptions } from 'typeorm';
-import { env } from './env';
+import { postgresEnv } from './env';
 
-const settings = env();
+const settings = postgresEnv();
 const postgresConfig: DataSourceOptions = {
   type: 'postgres',
   host: settings.API_POSTGRES_HOST,

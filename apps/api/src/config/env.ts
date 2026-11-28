@@ -82,16 +82,24 @@ const withDefaults = (parsed: z.output<typeof schema>) => ({
   API_PUBLIC_URL: parsed.API_PUBLIC_URL ?? `http://localhost:${parsed.API_PORT}`,
 });
 
-const parse = (raw: NodeJS.ProcessEnv) => {
-  // An empty value (KEY= in an env file) counts as unset
-  const set = Object.fromEntries(Object.entries(raw).filter(([, value]) => value !== ''));
-  const result = schema.safeParse(set);
-  const issues = [
-    ...(result.error?.issues ?? []),
-    ...((set.NODE_ENV === 'production' && inProduction.safeParse(set).error?.issues) || []),
-  ];
-  const problems = issues.map(({ path: [name], message }) =>
+// An empty value (KEY= in an env file) counts as unset
+const withoutEmpty = (raw: NodeJS.ProcessEnv) =>
+  Object.fromEntries(Object.entries(raw).filter(([, value]) => value !== ''));
+
+const describe = (issues: z.core.$ZodIssue[], set: Record<string, unknown>) =>
+  issues.map(({ path: [name], message }) =>
     String(name) in set ? `${String(name)}: ${message}` : `missing ${String(name)}`
+  );
+
+const parse = (raw: NodeJS.ProcessEnv) => {
+  const set = withoutEmpty(raw);
+  const result = schema.safeParse(set);
+  const problems = describe(
+    [
+      ...(result.error?.issues ?? []),
+      ...((set.NODE_ENV === 'production' && inProduction.safeParse(set).error?.issues) || []),
+    ],
+    set
   );
   return { problems, parsed: result.success && !problems.length ? result.data : undefined };
 };
@@ -109,4 +117,28 @@ export const env = (raw: NodeJS.ProcessEnv = process.env): Env => {
     throw new Error(`The environment can't run the API: ${problems.join('; ')}`);
   }
   return withDefaults(parsed);
+};
+
+const postgres = schema.pick({
+  API_POSTGRES_HOST: true,
+  API_POSTGRES_PORT: true,
+  API_POSTGRES_USER: true,
+  API_POSTGRES_PASSWORD: true,
+  API_POSTGRES_DB: true,
+  API_POSTGRES_SSL: true,
+});
+
+/**
+ * Only the Postgres settings: the TypeORM CLI loads data-source.ts, and a migration, a rollback above all, must not
+ * need the app's secrets or URLs. The API itself still checks everything through env() at boot.
+ */
+export const postgresEnv = (raw: NodeJS.ProcessEnv = process.env): z.output<typeof postgres> => {
+  const set = withoutEmpty(raw);
+  const result = postgres.safeParse(set);
+  if (!result.success) {
+    throw new Error(
+      `The environment can't reach Postgres: ${describe(result.error.issues, set).join('; ')}`
+    );
+  }
+  return result.data;
 };

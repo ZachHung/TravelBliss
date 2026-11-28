@@ -1,4 +1,4 @@
-import { env, envProblems } from './env';
+import { env, envProblems, postgresEnv } from './env';
 
 const complete = {
   NODE_ENV: 'local',
@@ -132,6 +132,36 @@ describe('env', () => {
   it('throws with every problem in one message', () => {
     expect(() => env({ ...complete, API_PORT: '', API_REDIS_URI: '' })).toThrow(
       "The environment can't run the API: missing API_PORT; missing API_REDIS_URI"
+    );
+  });
+});
+
+describe('postgresEnv', () => {
+  it('needs only the Postgres settings, so migrations run without the app secrets', () => {
+    expect(
+      postgresEnv({
+        NODE_ENV: 'production',
+        API_POSTGRES_HOST: 'db',
+        API_POSTGRES_PORT: '5432',
+        API_POSTGRES_USER: 'u',
+        API_POSTGRES_PASSWORD: 'p',
+        API_POSTGRES_DB: 'db',
+      })
+    ).toEqual({
+      API_POSTGRES_HOST: 'db',
+      API_POSTGRES_PORT: 5432,
+      API_POSTGRES_USER: 'u',
+      API_POSTGRES_PASSWORD: 'p',
+      API_POSTGRES_DB: 'db',
+      API_POSTGRES_SSL: false,
+    });
+  });
+
+  it('throws naming each missing Postgres setting', () => {
+    expect(() =>
+      postgresEnv({ API_POSTGRES_HOST: 'db', API_POSTGRES_PORT: '5432', API_POSTGRES_DB: 'db' })
+    ).toThrow(
+      "The environment can't reach Postgres: missing API_POSTGRES_USER; missing API_POSTGRES_PASSWORD"
     );
   });
 });
