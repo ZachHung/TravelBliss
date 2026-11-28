@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Runs deploy.sh against a throwaway copy of the production stack and checks every path it can take: a fresh
-# deploy, a duplicate, a --force redeploy, a good deploy and its pruning, a missing setting, a failing migration, an API that crashes,
-# a build answering as another commit, and an `up` that fails. Needs Docker; uses the :main images as the known-good
-# build: pulled if missing, which is the last published one. CI builds them from the checkout instead, so a change to
-# the images is tested before it's published; to do the same locally, build both from the repo root first:
+# deploy, a duplicate, a --force redeploy, a good deploy and its pruning, a missing setting, a failing migration, an
+# API that crashes, a build answering as another commit, and an `up` that fails. Needs Docker; uses the :main images as
+# the known-good build: pulled if missing, which is the last published one. CI builds them from the checkout instead,
+# so a change to the images is tested before it's published; to do the same locally, build both from the repo root
+# first:
 #   docker build -f apps/api/Dockerfile -t ghcr.io/zachhung/travelbliss-api:main .   (and apps/web, ...-web:main)
 #   infra/oracle/test-deploy.sh            # CI and local; removes its stack and its t-* test images afterwards
 # deploy.sh prunes every local travelbliss image but the new, the live and :main, so on a machine holding other
