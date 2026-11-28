@@ -61,6 +61,12 @@ echo "== Deploying $NEW (running: $OLD)"
 if [ -z "${TRAVELBLISS_NO_PULL:-}" ]; then
   compose "$NEW" pull web api
 fi
+# The new build checks this VM's settings against what it needs (#215): a variable it added but nobody set stops the
+# deploy here, naming it, before the backup and the migration, with the live version still serving.
+if ! compose "$NEW" run --rm --no-deps api node dist/config/check-env.js; then
+  echo "== $NEW can't run with $DIR/$ENV_FILE: set what's listed above there, then redeploy" >&2
+  exit 1
+fi
 # Migrations only move forward, so a backup comes first and a failed one stops the deploy (#181). Until the VM has an
 # rclone remote (a one-time step in the guide, #183), there is nothing to back up to: say so and carry on.
 if "$DIR/backup.sh" configured; then

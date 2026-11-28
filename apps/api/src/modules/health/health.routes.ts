@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { env } from '@/config/env';
 import logger from '@/config/logger';
 
 type Check = () => Promise<unknown>;
@@ -30,10 +31,7 @@ const runCheck = async (name: string, check: Check): Promise<Result> => {
  * GET /health (#201): can this API do its job, and which commit is it? Public, so it names only pass or fail per
  * dependency; the reason goes to the log. 503 when any check fails. `version` is the image's GIT_SHA build arg.
  */
-export const healthRoutes = (
-  checks: Record<string, Check>,
-  version = process.env.GIT_SHA || 'dev'
-): Router =>
+export const healthRoutes = (checks: Record<string, Check>, version = env().GIT_SHA): Router =>
   Router().get('/health', async (_req, res) => {
     const names = Object.keys(checks);
     const results = await Promise.all(names.map((name) => runCheck(name, checks[name])));

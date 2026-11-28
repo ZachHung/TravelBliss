@@ -1,6 +1,7 @@
 import { createLogger, format, transports } from 'winston';
-// Loads the root .env file first, so API_LOG_LEVEL and NODE_ENV are set below
-import '@/utils/helpers';
+// Loads the root .env file first, so API_LOG_LEVEL and NODE_ENV are set below. Reads them raw, not through env():
+// the logger reports why the API failed to start, so an invalid environment must not stop it loading.
+import '@/config/env';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const env = (process.env.NODE_ENV ?? 'unset').toUpperCase();

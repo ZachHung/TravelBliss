@@ -168,3 +168,8 @@ replaced by surprise. To change a value later (Google's client, a cookie name):
 2. `cd /opt/travelbliss && sudo TAG=$(cat .deployed-tag) docker compose --env-file .env.production up -d api`.
 
 Only a rebuild (`terraform apply -replace=oci_core_instance.travelbliss`) writes that file from Terraform again.
+
+**A change that needs a new variable** (it's in `apps/api/src/config/env.ts`'s list): set it in that file on the VM,
+as in step 1, before or after merging. Until it's set, each deploy stops before the backup and the migration with
+`missing <NAME>`, and the live version keeps serving; redeploy (Actions → Deploy → Run workflow) once it's there.
+Add it to `secrets_env` in `main.tf` too, so a rebuilt VM has it.

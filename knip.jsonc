@@ -2,8 +2,8 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     "apps/api": {
-      // TypeORM loads migrations by glob; `pnpm schema` runs the built schema.ts
-      "entry": ["src/index.ts", "src/schema.ts", "src/migration/*.ts"],
+      // TypeORM loads migrations by glob; `pnpm schema` runs the built schema.ts; deploy.sh runs check-env.ts (#215)
+      "entry": ["src/index.ts", "src/schema.ts", "src/config/check-env.ts", "src/migration/*.ts"],
     },
     "apps/web": {
       // Imported by the generated codegen output, which is git-ignored

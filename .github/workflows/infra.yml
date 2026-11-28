@@ -45,7 +45,12 @@ jobs:
           terraform -chdir=infra/oracle init -backend=false -input=false
           terraform -chdir=infra/oracle validate
       - name: compose config
-        run: TAG=ci ENV_FILE=/dev/null docker compose -f infra/oracle/compose.yml --env-file /dev/null config -q
+        # compose.yml refuses unset secrets (:?); dummy values here, and it must fail without them
+        run: |
+          compose() { docker compose -f infra/oracle/compose.yml --env-file /dev/null config -q; }
+          TAG=ci ENV_FILE=/dev/null API_POSTGRES_USER=ci API_POSTGRES_PASSWORD=ci API_POSTGRES_DB=ci \
+            API_REDIS_PASSWORD=ci compose
+          if TAG=ci ENV_FILE=/dev/null compose 2>/dev/null; then echo 'compose.yml accepted unset secrets' >&2; exit 1; fi
       - name: hook tests
         run: python3 .claude/hooks/block-env-read.test.py
 
