@@ -1,11 +1,11 @@
 name: Deploy
 
-# Deploys main to production (ADR 0006, #180) once both "Run test" and "Images" passed for the same commit.
-# Each of the two triggers this when it completes; the first to finish finds the other still running and stops.
+# Deploys main to production (ADR 0006, #180) once "Run test", "Images" and, when it ran, "Infra" passed for the same
+# commit. Each triggers this when it completes; any that finishes first finds another still running and stops.
 on:
   workflow_run:
-    # By `name:`, as workflow_run requires. The same two are checked by file in the check job: change both together.
-    workflows: ['Run test', 'Images']
+    # By `name:`, as workflow_run requires. The same ones are checked by file in the check job: change both together.
+    workflows: ['Run test', 'Images', 'Infra']
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -39,12 +39,19 @@ jobs:
           if [ "$SHA" != "$main" ]; then
             echo "Skip: $SHA is no longer the tip of main ($main); its own run deploys that one."; exit 0
           fi
-          for wf in test_pull_request.yml images.yml; do # "Run test" and "Images" in on.workflow_run
+          for wf in test_pull_request.yml images.yml infra.yml; do # the workflows in on.workflow_run
             result=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --commit "$SHA" --event push --limit 1 \
               --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"')
-            if [ "$result" != "completed/success" ]; then
-              echo "Skip: $wf is $result for $SHA; its completion triggers this again."; exit 0
+            # Infra runs only for a push touching its paths, and a push creates all its runs at once: none means
+            # nothing of the deploy scripts changed (#213)
+            if [ "$wf" = infra.yml ] && [ "$result" = null/null ]; then
+              continue
             fi
+            case $result in
+              completed/success) ;;
+              completed/*) echo "Skip: $wf is $result for $SHA; not deploying it. Fix and push, or rerun $wf."; exit 0 ;;
+              *) echo "Skip: $wf is $result for $SHA; its completion triggers this again."; exit 0 ;;
+            esac
           done
           # Both triggers usually find the commit ready. The second run starts once the first has finished (the
           # concurrency group), so a successful deployment of it is already recorded: skip instead of recording
