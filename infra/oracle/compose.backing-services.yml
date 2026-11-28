@@ -1,0 +1,37 @@
+# Postgres and Redis as every stack runs them (#219): image, secrets, data volume and healthcheck. Extended by
+# production (compose.yml, beside this file on the VM: vm-files.txt ships both) and by local dev and e2e
+# (apps/api/infra/docker-compose.yml), which add only what differs: restart and logging, or host ports. Each of those
+# declares the pg_data and redis_data volumes. CI's service containers can't extend a file, so infra.yml checks their
+# image tags match these.
+services:
+  db:
+    image: postgres:16.6-alpine
+    environment:
+      # :? as for TAG: an unset secret must stop compose, not become an empty password
+      POSTGRES_USER: ${API_POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${API_POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${API_POSTGRES_DB:?}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER']
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      # Check every second while starting, so `up --wait` doesn't sit out a whole 15s interval
+      start_period: 30s
+      start_interval: 1s
+
+  cache:
+    image: redis:7.4.1-alpine
+    environment:
+      REDIS_PASSWORD: ${API_REDIS_PASSWORD:?}
+    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'redis-cli --no-auth-warning -a $$REDIS_PASSWORD ping | grep PONG || exit 1']
+      interval: 1s
+      timeout: 3s
+      retries: 5
