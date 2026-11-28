@@ -79,20 +79,15 @@ jobs:
         run: sudo apt-get install -y -qq rclone >/dev/null
       # The known-good :main build, from this checkout rather than the last published one, so a change to the images
       # (GET /health, the Caddyfile) is tested before it ships. Reuses images.yml's build cache.
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v7
+      - uses: ./.github/actions/app-image
         with:
-          context: .
-          file: apps/api/Dockerfile
-          tags: ghcr.io/zachhung/travelbliss-api:main
+          app: api
+          tags: main
           load: true
-          cache-from: type=gha,scope=api-${{ vars.DEPLOY_ARCH || 'arm64' }}
-      - uses: docker/build-push-action@v7
+      - uses: ./.github/actions/app-image
         with:
-          context: .
-          file: apps/web/Dockerfile
-          tags: ghcr.io/zachhung/travelbliss-web:main
+          app: web
+          tags: main
           load: true
-          cache-from: type=gha,scope=web-${{ vars.DEPLOY_ARCH || 'arm64' }}
       - name: Every deploy.sh and backup.sh path against a throwaway stack
         run: infra/oracle/test-deploy.sh
