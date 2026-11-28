@@ -23,6 +23,7 @@ catalogMode: strict
 catalog:
   'vitest': ^5.1.1
   '@vitest/coverage-v8': ^5.1.1
+  '@vitest/ui': ^5.1.1
   'vite': ^8.3.8
   'dayjs': ^1.11.23
   'zod': ^4.6.7

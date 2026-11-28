@@ -186,6 +186,9 @@ catalogs:
     '@vitest/coverage-v8':
       specifier: ^5.1.1
       version: 5.1.1
+    '@vitest/ui':
+      specifier: ^5.1.1
+      version: 5.1.1
     dayjs:
       specifier: ^1.11.23
       version: 1.11.23
@@ -344,6 +347,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.1.1(vitest@5.1.1)
+      '@vitest/ui':
+        specifier: 'catalog:'
+        version: 5.1.1(vitest@5.1.1)
       unplugin-swc:
         specifier: ^2.0.0
         version: 2.0.0(@swc/core@1.16.22)(esbuild@0.28.2)(rolldown@1.2.19)(rollup@4.68.2)(vite@8.3.8(@types/node@22.20.6)(esbuild@0.28.2)(jiti@2.7.0)(sugarss@5.0.2(postcss@8.5.33))(yaml@2.9.1))
@@ -451,7 +457,7 @@ importers:
         specifier: 'catalog:'
         version: 5.1.1(vitest@5.1.1)
       '@vitest/ui':
-        specifier: ^5.1.1
+        specifier: 'catalog:'
         version: 5.1.1(vitest@5.1.1)
       jsdom:
         specifier: ^31.0.1
