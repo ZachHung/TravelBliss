@@ -28,7 +28,7 @@ import { type Context } from './types';
 import { webOrigin } from './utils/helpers';
 
 export const bootstrap = async (): Promise<void> => {
-  // Throws naming every missing or malformed setting (data-source.ts, imported above, already parsed them once)
+  // Throws naming every missing or malformed setting, before anything connects
   const settings = env();
   const isProduction = settings.NODE_ENV === 'production';
   const app = express();

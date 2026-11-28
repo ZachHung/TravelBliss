@@ -86,7 +86,7 @@ const withDefaults = (parsed: z.output<typeof schema>) => ({
 const withoutEmpty = (raw: NodeJS.ProcessEnv) =>
   Object.fromEntries(Object.entries(raw).filter(([, value]) => value !== ''));
 
-const describe = (issues: z.core.$ZodIssue[], set: Record<string, unknown>) =>
+const toProblems = (issues: z.core.$ZodIssue[], set: Record<string, unknown>) =>
   issues.map(({ path: [name], message }) =>
     String(name) in set ? `${String(name)}: ${message}` : `missing ${String(name)}`
   );
@@ -94,7 +94,7 @@ const describe = (issues: z.core.$ZodIssue[], set: Record<string, unknown>) =>
 const parse = (raw: NodeJS.ProcessEnv) => {
   const set = withoutEmpty(raw);
   const result = schema.safeParse(set);
-  const problems = describe(
+  const problems = toProblems(
     [
       ...(result.error?.issues ?? []),
       ...((set.NODE_ENV === 'production' && inProduction.safeParse(set).error?.issues) || []),
@@ -137,7 +137,7 @@ export const postgresEnv = (raw: NodeJS.ProcessEnv = process.env): z.output<type
   const result = postgres.safeParse(set);
   if (!result.success) {
     throw new Error(
-      `The environment can't reach Postgres: ${describe(result.error.issues, set).join('; ')}`
+      `The environment can't reach Postgres: ${toProblems(result.error.issues, set).join('; ')}`
     );
   }
   return result.data;
