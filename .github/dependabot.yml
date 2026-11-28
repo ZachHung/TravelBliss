@@ -4,6 +4,11 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    # pnpm resolves nothing published less than a day ago (minimumReleaseAge, on by default since pnpm 11), and checks
+    # the lockfile against it too: a PR for a newer version would fail CI. Security updates skip cooldowns, so one of
+    # those can fail for up to a day; re-run it then.
+    cooldown:
+      default-days: 1
     # At most two npm version-update PRs a week (GitHub Actions adds a third). Majors get their own group so they
     # can't hide among safe updates, and a failing major doesn't hold back minor and patch updates. Related majors
     # (e.g. stylelint and its config) arrive in the same PR. Majors do wait on each other: when one breaks CI,
