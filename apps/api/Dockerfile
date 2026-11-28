@@ -5,9 +5,14 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
 FROM base AS build
-COPY . /repo
 WORKDIR /repo
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# The download layer needs only what resolving reads, so it stays cached (images.yml's build cache) until the
+# lockfile, the workspace settings or the pnpm version changes. Not a cache mount: the store must be in the layer
+# for CI's cache to keep it, and the offline install below reads it from there.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm fetch
+COPY . .
+RUN pnpm install --offline --frozen-lockfile
 RUN pnpm --filter @travelbliss/api build
 # Copies the API's "files" plus its production node_modules, without the rest of the workspace
 RUN pnpm deploy --filter @travelbliss/api --prod --legacy /app
