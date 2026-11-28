@@ -4,6 +4,7 @@
 #   restore    the newest backup (or the one named) into the db service; the app is stopped while it runs
 #   configured exit 0 when an rclone remote for backups exists (deploy.sh and bootstrap.sh ask this first)
 #   has-backups exit 0: the remote holds a backup; 1: it holds none; 2: it couldn't be listed (a rebuild must stop)
+#   first-boot the newest backup into a new VM's database, once: bootstrap.sh runs it before the app starts (#217)
 # Cron runs `backup` nightly; deploy.sh runs it before every migration. Redis is not backed up (sessions only).
 # Same encryption as openGym's backups: openssl aes-256-cbc with pbkdf2.
 set -euo pipefail
@@ -61,8 +62,31 @@ restore() {
   echo "== Restored: $REMOTE/$name. api and web are stopped: start them with TAG=\$(cat .deployed-tag) docker compose --env-file $ENV_FILE up -d"
 }
 
+# Once per VM, marked by a file: rerunning bootstrap on a VM that has served must never restore over its data.
+# Marked when it restored, when there was nothing to restore, and when backups aren't set up. Not when the backups
+# couldn't be listed: that stops the boot before the app starts, and a rerun after fixing rclone tries again.
+first_boot() {
+  local marker=$DIR/.first-boot-restore-done name
+  if [ -f "$marker" ]; then
+    echo "== First-boot restore already done on this VM ($marker): skipping"
+    return 0
+  fi
+  if ! configured; then
+    echo "== Backups aren't set up: starting with an empty database"
+  elif ! name=$(newest); then
+    echo "ERROR: couldn't list the backups in $REMOTE; fix rclone, then rerun travelbliss-bootstrap" >&2
+    return 2
+  elif [ -n "$name" ]; then
+    restore "$name"
+  else
+    echo "== No backups yet: starting with an empty database"
+  fi
+  touch "$marker"
+}
+
 case ${1:-} in
   backup) backup ;;
+  first-boot) first_boot ;;
   restore) restore "${2:-}" ;;
   configured) configured ;;
   has-backups)
@@ -70,7 +94,7 @@ case ${1:-} in
     [ -n "$found" ]
     ;;
   *)
-    echo "usage: backup.sh backup | restore [file] | configured | has-backups" >&2
+    echo "usage: backup.sh backup | restore [file] | configured | has-backups | first-boot" >&2
     exit 2
     ;;
 esac

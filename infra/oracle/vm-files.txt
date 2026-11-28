@@ -3,3 +3,4 @@
 compose.yml 0644
 deploy.sh 0755
 backup.sh 0755
+converge.sh 0755
