@@ -8,7 +8,7 @@ Monorepo for TravelBliss, a passenger rail booking service. pnpm workspace + Tur
 ## Commands
 
 - Package manager: pnpm 12. Run tasks from the root through turbo: `pnpm test` is the full gate (peers check, typecheck, lint, vitest, build, prettier). `pnpm typecheck` for a quick check. `pnpm run` installs first whenever the lockfile changed, after a pull included; `pnpm clean` removes every `node_modules`.
-- One app only: `pnpm turbo run <task> --filter @travelbliss/<app>`.
+- One app only: `pnpm turbo run <task> --filter @travelbliss/<app>`. `pnpm --filter @travelbliss/<app> test:ui` opens the vitest UI.
 - Run locally against docker Postgres/Redis: `pnpm dev:local` (uses root `.env.local`). Stop every dev server you started with `pnpm dev:stop`.
 - Changing API resolvers or types regenerates `apps/api/schema.graphql`; commit it with the web changes it needs.
 

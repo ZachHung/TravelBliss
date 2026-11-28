@@ -15,6 +15,7 @@
     "lint": "eslint . --cache",
     "test": "vitest run",
     "test:watch": "vitest --reporter verbose",
+    "test:ui": "vitest --ui",
     "docker:local:up": "docker compose --env-file ../../.env.local -f infra/docker-compose.yml up",
     "docker:local:down": "docker compose --env-file ../../.env.local -f infra/docker-compose.yml down",
     "docker:serve:up": "docker compose --env-file ../../.env.local -f infra/docker-compose.yml --profile serve up --build",
@@ -58,6 +59,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/ms": "2.1.0",
     "@vitest/coverage-v8": "catalog:",
+    "@vitest/ui": "catalog:",
     "unplugin-swc": "^2.0.0",
     "vite": "catalog:",
     "vitest": "catalog:"
