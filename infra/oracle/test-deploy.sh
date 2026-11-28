@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Runs deploy.sh against a throwaway copy of the production stack and checks every path it can take: a fresh
 # deploy, a duplicate, a --force redeploy, a good deploy and its pruning, a missing setting, a failing migration, an
-# API that crashes, a build answering as another commit, and an `up` that fails. Needs Docker; uses the :main images as
-# the known-good build: pulled if missing, which is the last published one. CI builds them from the checkout instead,
-# so a change to the images is tested before it's published; to do the same locally, build both from the repo root
-# first:
+# API that crashes, a build answering as another commit, an `up` that fails, and a new VM's first-boot restore. Needs
+# Docker; uses the :main images as the known-good build: pulled if missing, which is the last published one. CI builds
+# them from the checkout instead, so a change to the images is tested before it's published; to do the same locally,
+# build both from the repo root first:
 #   docker build -f apps/api/Dockerfile -t ghcr.io/zachhung/travelbliss-api:main .   (and apps/web, ...-web:main)
 #   infra/oracle/test-deploy.sh            # CI and local; removes its stack and its t-* test images afterwards
 # deploy.sh prunes every local travelbliss image but the new, the live and :main, so on a machine holding other
@@ -174,10 +174,38 @@ dc up -d >/dev/null 2>&1 # restore leaves api and web stopped; wait for them, or
 for _ in $(seq 60); do if healthy; then break; fi; sleep 2; done
 check 'restore brought the data back' 0 -- test "$(psql_db 'select x from backup_probe')" = kept
 
+# A new VM's first boot (#217): the newest backup once, then never again on that VM
+marker=$WORK/.first-boot-restore-done
+check 'a successful deploy marks the VM as having served' 0 -- test -f "$marker"
+# One pipeline: check() writes the command's output to out.log, so a grep of out.log would read an emptied file
+# shellcheck disable=SC2016 # $1 expands in the inner bash
+check 'first boot on a VM that has served: skips' 0 -- \
+  bash -c '"$1" first-boot | grep -q "already restored or served"' _ "$WORK/backup.sh"
+rm "$marker"
+RCLONE_CONFIG=$WORK/no-rclone.conf check "first boot with backups not set up: starts empty" 0 -- \
+  "$WORK/backup.sh" first-boot
+check "first boot with backups not set up: tries again once they are" 1 -- test -f "$marker"
+psql_db 'drop table backup_probe' >/dev/null
+check 'first boot restores the newest backup' 0 -- "$WORK/backup.sh" first-boot
+dc up -d >/dev/null 2>&1
+for _ in $(seq 60); do if healthy; then break; fi; sleep 2; done
+check 'first boot brought the data back' 0 -- test "$(psql_db 'select x from backup_probe')" = kept
+psql_db "insert into backup_probe values ('since')" >/dev/null
+check 'first boot run again: skips' 0 -- "$WORK/backup.sh" first-boot
+check 'first boot run again: keeps what was written since' 0 -- \
+  test "$(psql_db 'select count(*) from backup_probe')" = 2
+rm "$marker"
+export TRAVELBLISS_BACKUP_REMOTE=gdrive:$WORK/empty-drive
+check 'first boot with no backups: starts empty' 0 -- "$WORK/backup.sh" first-boot
+check 'first boot with no backups: marks the VM' 0 -- test -f "$marker"
+rm "$marker"
+
 export TRAVELBLISS_BACKUP_REMOTE=gdrive:/proc/travelbliss-no-such-drive # can't be written or listed
 good t-e
 step 'failed backup stops the deploy before migrating' 1 t-d '.' -- t-e
 check "has-backups: can't list" 2 -- "$WORK/backup.sh" has-backups
+check "first boot that can't list the backups: stops" 2 -- "$WORK/backup.sh" first-boot
+check "first boot that can't list the backups: tries again next time" 1 -- test -f "$marker"
 
 if [ "$failures" != 0 ]; then
   echo "$failures failed"

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# First boot (cloud-init, as root): swap, Docker, Tailscale (+ Funnel), .env.production, then the newest main images.
-# Written by Terraform: /root/travelbliss.env, /root/travelbliss-secrets.env, /opt/travelbliss/compose.yml.
+# First boot (cloud-init, as root): host setup (converge.sh), Tailscale (+ Funnel), .env.production, the first-boot
+# restore, then the newest main images.
+# Written by Terraform: /root/travelbliss.env, /root/travelbliss-secrets.env, and vm-files.txt's files in
+# /opt/travelbliss.
 # Log: /var/log/cloud-init-output.log
 set -euo pipefail
 # shellcheck source=/dev/null # written by Terraform, only on the VM
@@ -8,17 +10,9 @@ set -euo pipefail
 DIR=/opt/travelbliss
 cd "$DIR"
 
-echo "== Swap"
-# The 1 GB micro VM runs out of memory pulling images without it; harmless on ARM
-if ! swapon --show | grep -q .; then
-  fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
-  echo '/swapfile none swap sw 0 0' >>/etc/fstab
-fi
-
-echo "== Docker, rclone, jq"
-apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 rclone jq
-systemctl enable --now docker
+echo "== Host setup: swap, Docker, rclone, jq, the backup cron"
+# The same step every deploy runs (#217)
+./converge.sh
 
 echo "== Tailscale"
 command -v tailscale >/dev/null || curl -fsSL https://tailscale.com/install.sh | sh
@@ -54,20 +48,15 @@ echo "== TravelBliss (newest main)"
 export TAG=main
 compose() { docker compose --env-file .env.production "$@"; }
 compose pull
+# The same check each deploy runs (#215): stop here, naming what's missing, rather than migrate with a broken setup
+compose run --rm --no-deps api node dist/config/check-env.js
 compose up -d --wait db cache
-# A rebuilt VM picks up where the old one stopped: the newest backup goes in before migrations run (#181).
-# has-backups: 0 restore, 1 none (a first VM), anything else stop, so a VM that can't reach its backups
-# never starts empty (its nightly backups would then replace the real ones).
-if ./backup.sh configured; then
-  found=0
-  ./backup.sh has-backups || found=$?
-  case $found in
-    0) ./backup.sh restore ;;
-    1) echo "No backups yet: starting with an empty database" ;;
-    *) echo "ERROR: couldn't list the backups; fix rclone, then rerun travelbliss-bootstrap" >&2 && exit 1 ;;
-  esac
-fi
-echo "30 3 * * * root $DIR/backup.sh backup >>/var/log/travelbliss-backup.log 2>&1" >/etc/cron.d/travelbliss
+# A rebuilt VM picks up where the old one stopped: the newest backup goes in before migrations run (#181). Once per
+# VM (#217), and a VM that can't list its backups stops here rather than start empty: its nightly backups would then
+# replace the real ones.
+./backup.sh first-boot
+# Again, now that the restore has settled: that's when converge.sh adds the nightly backup's cron line
+./converge.sh
 # up runs the migrate service first and starts api only once it succeeds (compose.yml). No --wait: older
 # Compose releases (Ubuntu's docker-compose-v2) may count migrate's intended exit as a failure.
 compose up -d

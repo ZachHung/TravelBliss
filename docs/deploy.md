@@ -150,7 +150,9 @@ See [Linked sign-in setup › Production](linked-sign-in-setup.md#production).
      `ssh ubuntu@travelbliss`, `cd /opt/travelbliss && sudo docker ps -a`: `api` should be `(healthy)`, and
      `sudo docker compose --env-file .env.production logs --tail 50 api` says why it isn't.
   3. If the VM is gone: `terraform apply`. First boot restores the newest backup before migrating, and **stops**
-     rather than start empty if it can't list the backups.
+     rather than start empty if it can't list the backups: fix rclone, then rerun `travelbliss-bootstrap`. It
+     restores once per VM (`/opt/travelbliss/.first-boot-restore-done`), so a rerun on a VM that has served never
+     replaces its data; to restore there anyway, use `backup.sh restore` below.
 - **Deploy by hand, or redeploy:** Actions → Deploy → Run workflow redeploys the tip of `main`, even when it's
   already live. On the VM, `/opt/travelbliss/deploy.sh <sha>` does the same as CI.
 - **Restore a backup:** `ssh root@travelbliss /opt/travelbliss/backup.sh restore [file]`. It restores the newest, or

@@ -40,13 +40,9 @@ answers() {
   return 1
 }
 
-# On the VM only: the nightly backup (#181), and jq for `healthy`. Terraform doesn't reach a running VM, so each deploy
-# keeps this in place.
+# On the VM only: the same host setup first boot ran (#217), so a change to it reaches a running VM
 if [ "$(id -u)" = 0 ] && [ "$DIR" = /opt/travelbliss ]; then
-  if ! command -v rclone >/dev/null || ! command -v jq >/dev/null; then
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone jq >/dev/null
-  fi
-  echo "30 3 * * * root $DIR/backup.sh backup >>/var/log/travelbliss-backup.log 2>&1" >/etc/cron.d/travelbliss
+  "$DIR/converge.sh"
 fi
 
 # Both "Run test" and "Images" trigger the workflow, so the same commit can arrive twice: don't touch a live site
@@ -83,6 +79,8 @@ compose "$NEW" up -d --remove-orphans || up_ok=false
 
 if $up_ok && healthy 60 "$NEW"; then
   echo "$NEW" >.deployed-tag
+  # This VM has served now: a rerun of first boot must never restore a backup over it (backup.sh first-boot, #217)
+  touch .first-boot-restore-done
   echo "== Live: $NEW"
   # Keep the new images and the ones they replaced (and :main, which first boot runs); the disk is small
   stale=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^ghcr.io/zachhung/travelbliss-' |
