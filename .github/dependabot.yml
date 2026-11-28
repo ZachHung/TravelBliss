@@ -42,6 +42,13 @@ updates:
     groups:
       backing-services:
         patterns: ['*']
+    ignore:
+      # A Postgres major can't start on the existing data volume: it needs a dump and restore, planned as its own
+      # change, not a weekly bump. Redis majors are a decision too (Redis 8 changed its licence).
+      - dependency-name: 'postgres'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'redis'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: 'docker'
     directories: ['/apps/api', '/apps/web']
     schedule:
@@ -49,6 +56,11 @@ updates:
     groups:
       base-images:
         patterns: ['*']
+    ignore:
+      # Node follows .nvmrc and engines, as @types/node does above: bump its major in all of them together. Node 25+
+      # also drops the corepack both Dockerfiles use.
+      - dependency-name: 'node'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
