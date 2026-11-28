@@ -1,5 +1,5 @@
 # Build from the repo root: docker build -f apps/api/Dockerfile .
-FROM node:22-slim AS base
+FROM node:26-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
