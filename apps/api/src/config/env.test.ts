@@ -58,6 +58,22 @@ describe('envProblems', () => {
     ]);
   });
 
+  it.each([
+    'travelbliss.example',
+    'https://travelbliss.example/',
+    'https://travelbliss.example/api',
+  ])('rejects %s as an origin', (value) => {
+    expect(envProblems({ ...complete, API_PUBLIC_URL: value })).toEqual([
+      expect.stringMatching(/^API_PUBLIC_URL: /),
+    ]);
+  });
+
+  it('rejects a port above 65535', () => {
+    expect(envProblems({ ...complete, API_PORT: '99999' })).toEqual([
+      expect.stringMatching(/^API_PORT: /),
+    ]);
+  });
+
   it.each(['0', '-5m', '500ms', '30'])(
     'rejects %s as a duration, since it would mean already expired',
     (value) => {

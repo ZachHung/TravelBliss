@@ -14,7 +14,12 @@ config({
 });
 
 const text = z.string();
-const port = z.coerce.number().int().positive();
+const port = z.coerce.number().int().positive().max(65535);
+// Compared with the browser's Origin and joined with paths, so no scheme or a trailing slash would fail only at runtime
+const origin = text.refine(
+  (url) => URL.canParse(url) && new URL(url).origin === url,
+  'must be an origin like https://host, without a path or trailing slash'
+);
 // "30d", "5minutes": parsed once here, so a typo fails at boot instead of meaning "already expired". Under 1s is
 // rejected too: "0", "-5m" or a bare "30" (ms reads it as 30ms) would floor to 0 seconds and sign expired tokens.
 const seconds = text.transform((value, ctx) => {
@@ -30,8 +35,8 @@ const seconds = text.transform((value, ctx) => {
 const schema = z.object({
   NODE_ENV: text,
   API_PORT: port,
-  API_CORS_ORIGIN: text.optional(),
-  API_PUBLIC_URL: text.optional(),
+  API_CORS_ORIGIN: origin.optional(),
+  API_PUBLIC_URL: origin.optional(),
   // The commit the image was built from, a build arg (#201)
   GIT_SHA: text.default('dev'),
 
@@ -66,7 +71,7 @@ const schema = z.object({
 });
 
 // Their localhost defaults would send browsers and sign-in providers to the wrong place on a public host
-const inProduction = z.object({ API_CORS_ORIGIN: text, API_PUBLIC_URL: text });
+const inProduction = z.object({ API_CORS_ORIGIN: origin, API_PUBLIC_URL: origin });
 
 export type Env = ReturnType<typeof withDefaults>;
 
