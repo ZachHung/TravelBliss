@@ -40,3 +40,27 @@ peerDependencyRules:
     'eslint-config-mantine>@eslint/js': '10'
     'eslint-plugin-jsx-a11y>eslint': '10'
     'eslint-plugin-react>eslint': '10'
+
+# Each checkout's node_modules links into one shared store (~/.pnpm/store) instead of holding copies: about 5 MB
+# instead of 695 MB, so a new worktree installs in seconds.
+enableGlobalVirtualStore: true
+
+# Dependencies these packages use without declaring them. From the shared store, unlike a project's own
+# node_modules/.pnpm, nothing undeclared is reachable, so each is declared here. A new "cannot resolve" or
+# implicit-any from inside a dependency is the same gap: add it here. Remove one once its package declares it.
+packageExtensions:
+  # Its index.d.ts imports WithRequired from here without listing it (types only)
+  '@as-integrations/express5':
+    dependencies:
+      '@apollo/utils.withrequired': ^3.0.0
+  # Its ESM build imports react-dom (useCollapse) but lists only react as a peer
+  '@mantine/hooks':
+    peerDependencies:
+      react-dom: '*'
+  # Its React components' types need @types/react, which it doesn't list beside its react peer
+  '@apollo/client':
+    peerDependencies:
+      '@types/react': '*'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
