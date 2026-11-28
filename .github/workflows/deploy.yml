@@ -4,7 +4,7 @@ name: Deploy
 # commit. Each triggers this when it completes; any that finishes first finds another still running and stops.
 on:
   workflow_run:
-    # By `name:`, as workflow_run requires. The same ones are checked by file in the check job: change both together.
+    # By `name:`, as workflow_run requires. deploy-gate.sh checks the same ones by file; its test fails if they drift.
     workflows: ['Run test', 'Images', 'Infra']
     types: [completed]
     branches: [main]
@@ -29,43 +29,18 @@ jobs:
     outputs:
       sha: ${{ steps.ready.outputs.sha }}
     steps:
+      # The gate script from main's tip, which is this commit whenever it can deploy
+      - uses: actions/checkout@v7
       - name: Is this commit ready, and still the newest on main?
         id: ready
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        # Prints the sha only when it should deploy; its rules and their tests: infra/oracle/deploy-gate.sh (#216)
+        # Two lines: inside echo's argument, a failing gate (an API error) wouldn't fail the step
         run: |
-          main=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
-          if [ "$SHA" != "$main" ]; then
-            echo "Skip: $SHA is no longer the tip of main ($main); its own run deploys that one."; exit 0
-          fi
-          for wf in test_pull_request.yml images.yml infra.yml; do # the workflows in on.workflow_run
-            result=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --commit "$SHA" --event push --limit 1 \
-              --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"')
-            # Infra runs only for a push touching its paths, and a push creates all its runs at once: none means
-            # nothing of the deploy scripts changed (#213)
-            if [ "$wf" = infra.yml ] && [ "$result" = null/null ]; then
-              continue
-            fi
-            case $result in
-              completed/success) ;;
-              completed/*) echo "Skip: $wf is $result for $SHA; not deploying it. Fix and push, or rerun $wf."; exit 0 ;;
-              *) echo "Skip: $wf is $result for $SHA; its completion triggers this again."; exit 0 ;;
-            esac
-          done
-          # Both triggers usually find the commit ready. The second run starts once the first has finished (the
-          # concurrency group), so a successful deployment of it is already recorded: skip instead of recording
-          # another. A failed deploy has no success status, so it can be retried. A manual run always deploys
-          # (e.g. after the VM was rebuilt, or its compose or env changed), so it skips this check.
-          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
-            for id in $(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=production&sha=$SHA" --jq '.[].id'); do
-              if gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" --jq '.[].state' | grep -qx success; then
-                echo "Skip: $SHA is already deployed to production. To redeploy it, run this workflow manually."
-                exit 0
-              fi
-            done
-          fi
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          sha=$(infra/oracle/deploy-gate.sh "$SHA" "$GITHUB_EVENT_NAME")
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: check

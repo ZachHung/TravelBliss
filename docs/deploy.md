@@ -9,7 +9,8 @@ What you end up with:
   origin.
 - One Oracle Cloud Always Free VM, built by Terraform from [`infra/oracle/`](../infra/oracle/), with no inbound port
   open.
-- Every merge to `main` that passes CI deploys itself (`.github/workflows/deploy.yml`):
+- Every merge to `main` that passes CI deploys itself (`.github/workflows/deploy.yml`; which commits, and why one
+  is skipped: [`deploy-gate.sh`](../infra/oracle/deploy-gate.sh)):
   1. migrations run with the new image
   2. the stack switches to it
   3. it switches back unless `GET /health` is healthy and reports the commit it just deployed
