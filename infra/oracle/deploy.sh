@@ -79,6 +79,8 @@ compose "$NEW" up -d --remove-orphans || up_ok=false
 
 if $up_ok && healthy 60 "$NEW"; then
   echo "$NEW" >.deployed-tag
+  # This VM has served now: a rerun of first boot must never restore a backup over it (backup.sh first-boot, #217)
+  touch .first-boot-restore-done
   echo "== Live: $NEW"
   # Keep the new images and the ones they replaced (and :main, which first boot runs); the disk is small
   stale=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^ghcr.io/zachhung/travelbliss-' |

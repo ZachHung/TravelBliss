@@ -176,6 +176,14 @@ check 'restore brought the data back' 0 -- test "$(psql_db 'select x from backup
 
 # A new VM's first boot (#217): the newest backup once, then never again on that VM
 marker=$WORK/.first-boot-restore-done
+check 'a successful deploy marks the VM as having served' 0 -- test -f "$marker"
+# One pipeline: check() writes the command's output to out.log, so a grep of out.log would read an emptied file
+check 'first boot on a VM that has served: skips' 0 -- \
+  bash -c '"$1" first-boot | grep -q "already restored or served"' _ "$WORK/backup.sh"
+rm "$marker"
+RCLONE_CONFIG=$WORK/no-rclone.conf check "first boot with backups not set up: starts empty" 0 -- \
+  "$WORK/backup.sh" first-boot
+check "first boot with backups not set up: tries again once they are" 1 -- test -f "$marker"
 psql_db 'drop table backup_probe' >/dev/null
 check 'first boot restores the newest backup' 0 -- "$WORK/backup.sh" first-boot
 dc up -d >/dev/null 2>&1

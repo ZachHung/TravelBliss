@@ -63,16 +63,18 @@ restore() {
 }
 
 # Once per VM, marked by a file: rerunning bootstrap on a VM that has served must never restore over its data.
-# Marked when it restored, when there was nothing to restore, and when backups aren't set up. Not when the backups
-# couldn't be listed: that stops the boot before the app starts, and a rerun after fixing rclone tries again.
+# Marked when it restored or found nothing to restore, and by each successful deploy (deploy.sh), so a VM that served
+# before this existed is covered too. Not when backups aren't set up or couldn't be listed: a rerun after fixing
+# rclone tries again.
 first_boot() {
   local marker=$DIR/.first-boot-restore-done name
   if [ -f "$marker" ]; then
-    echo "== First-boot restore already done on this VM ($marker): skipping"
+    echo "== This VM has already restored or served ($marker): skipping the first-boot restore"
     return 0
   fi
   if ! configured; then
-    echo "== Backups aren't set up: starting with an empty database"
+    echo "== Backups aren't set up: starting with an empty database; set up rclone, then rerun travelbliss-bootstrap"
+    return 0
   elif ! name=$(newest); then
     echo "ERROR: couldn't list the backups in $REMOTE; fix rclone, then rerun travelbliss-bootstrap" >&2
     return 2
