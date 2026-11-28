@@ -1,8 +1,12 @@
-import { bootstrap } from './app';
+import { env } from './config/env';
 import logger from './config/logger';
 
 (async (): Promise<void> => {
   try {
+    // Before importing the app: data-source.ts and redis.ts read their settings as they load, so they would crash
+    // here unlogged, naming only their own. This names every problem, through the catch below.
+    env();
+    const { bootstrap } = await import('./app');
     await bootstrap();
   } catch (error: unknown) {
     logger.error('Failed to start', error instanceof Error ? error : { error });
