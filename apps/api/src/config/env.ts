@@ -33,7 +33,8 @@ const seconds = text.transform((value, ctx) => {
 
 // Every setting the API reads. .env.example says what each one is for; a new one goes in both (#215).
 const schema = z.object({
-  NODE_ENV: text,
+  // Closed list: a typo like 'prod' would otherwise pass and switch off every production-only check
+  NODE_ENV: z.enum(['local', 'e2e', 'production', 'test']),
   API_PORT: port,
   API_CORS_ORIGIN: origin.optional(),
   API_PUBLIC_URL: origin.optional(),

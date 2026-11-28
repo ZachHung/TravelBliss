@@ -79,6 +79,12 @@ describe('envProblems', () => {
     ]);
   });
 
+  it('rejects a NODE_ENV outside the known ones, so a typo cannot pass as not-production', () => {
+    expect(envProblems({ ...complete, NODE_ENV: 'prod' })).toEqual([
+      expect.stringMatching(/^NODE_ENV: /),
+    ]);
+  });
+
   it('rejects a port above 65535', () => {
     expect(envProblems({ ...complete, API_PORT: '99999' })).toEqual([
       expect.stringMatching(/^API_PORT: /),
