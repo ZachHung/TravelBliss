@@ -38,7 +38,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cp "$HERE/compose.yml" "$HERE/backup.sh" "$WORK/"
+# The same files the VM runs from (#216)
+while read -r file _; do
+  case $file in '' | '#'*) continue ;; esac
+  cp "$HERE/$file" "$WORK/"
+done <"$HERE/vm-files.txt"
 cat >"$WORK/test.vars" <<'EOF'
 API_POSTGRES_USER=travelbliss
 API_POSTGRES_PASSWORD=test-db-password
