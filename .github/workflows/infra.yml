@@ -51,16 +51,17 @@ jobs:
           TAG=ci ENV_FILE=/dev/null API_POSTGRES_USER=ci API_POSTGRES_PASSWORD=ci API_POSTGRES_DB=ci \
             API_REDIS_PASSWORD=ci compose
           if TAG=ci ENV_FILE=/dev/null compose 2>/dev/null; then echo 'compose.yml accepted unset secrets' >&2; exit 1; fi
-      - name: CI's service images match backing-services.yml
+      - name: CI's service images match compose.backing-services.yml
         # Service containers can't extend a compose file (#219), so a Dependabot bump there must reach them too
         run: |
           python3 - <<'EOF'
           import sys, yaml
-          pinned = {s["image"] for s in yaml.safe_load(open("infra/oracle/backing-services.yml"))["services"].values()}
+          shared = "infra/oracle/compose.backing-services.yml"
+          pinned = {s["image"] for s in yaml.safe_load(open(shared))["services"].values()}
           jobs = yaml.safe_load(open(".github/workflows/test_pull_request.yml"))["jobs"]
           used = {s["image"] for job in jobs.values() for s in job.get("services", {}).values()}
           if used - pinned:
-              sys.exit(f"test_pull_request.yml runs {sorted(used - pinned)}; backing-services.yml pins {sorted(pinned)}")
+              sys.exit(f"test_pull_request.yml runs {sorted(used - pinned)}; {shared} pins {sorted(pinned)}")
           EOF
       - name: deploy gate tests
         run: infra/oracle/test-deploy-gate.sh

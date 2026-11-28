@@ -72,12 +72,12 @@ services:
     restart: unless-stopped
 
   db:
-    extends: { file: backing-services.yml, service: db }
+    extends: { file: compose.backing-services.yml, service: db }
     restart: unless-stopped
     logging: *logging
 
   cache:
-    extends: { file: backing-services.yml, service: cache }
+    extends: { file: compose.backing-services.yml, service: cache }
     restart: unless-stopped
     logging: *logging
 

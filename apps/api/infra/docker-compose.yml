@@ -30,11 +30,11 @@ services:
         condition: service_healthy
 
   db:
-    extends: { file: ../../../infra/oracle/backing-services.yml, service: db }
+    extends: { file: ../../../infra/oracle/compose.backing-services.yml, service: db }
     ports:
       - ${API_POSTGRES_PORT:-5432}:5432
 
   cache:
-    extends: { file: ../../../infra/oracle/backing-services.yml, service: cache }
+    extends: { file: ../../../infra/oracle/compose.backing-services.yml, service: cache }
     ports:
       - '${API_REDIS_PORT:-6379}:6379'

@@ -32,7 +32,9 @@ updates:
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
   # The image pins, by hand until now (#219): Postgres and Redis in one file, plus the apps' base images. A bump to
-  # backing-services.yml must also reach test_pull_request.yml's service containers; Infra fails the PR until it does.
+  # compose.backing-services.yml must also reach test_pull_request.yml's service containers; Infra fails the PR until
+  # it does. That file's name must match Dependabot's compose pattern, `(docker-)?compose(-x)?(.x)?.ya?ml`, or it's
+  # never scanned.
   - package-ecosystem: 'docker-compose'
     directory: '/infra/oracle'
     schedule:
