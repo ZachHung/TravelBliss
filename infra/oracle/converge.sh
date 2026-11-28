@@ -26,7 +26,7 @@ systemctl enable --now docker >/dev/null
 
 # Only once the first-boot restore has settled (backup.sh first-boot, or a deploy, marks it): on a new VM that couldn't
 # list its backups, a nightly dump of its empty database would become the newest backup, and a rerun would restore it.
-# An existing cron line is left alone.
+# Without the mark, an existing cron line is left alone, so a VM that already ran its backups keeps them.
 if [ -f "$DIR/.first-boot-restore-done" ]; then
   echo "30 3 * * * root $DIR/backup.sh backup >>/var/log/travelbliss-backup.log 2>&1" >/etc/cron.d/travelbliss
 fi
