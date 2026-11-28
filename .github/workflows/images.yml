@@ -29,27 +29,15 @@ jobs:
         app: [api, web]
     steps:
       - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4
       - if: github.event_name == 'push'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v7
+      # :main moves with main, so a rebuilt VM starts the newest version before the next deploy (#178)
+      - uses: ./.github/actions/app-image
         with:
-          context: .
-          file: apps/${{ matrix.app }}/Dockerfile
+          app: ${{ matrix.app }}
           push: ${{ github.event_name == 'push' }}
-          # :main moves with main, so a rebuilt VM starts the newest version before the next deploy (#178)
-          tags: |
-            ghcr.io/zachhung/travelbliss-${{ matrix.app }}:${{ github.sha }}
-            ghcr.io/zachhung/travelbliss-${{ matrix.app }}:main
-          # GET /health reports GIT_SHA, so a deploy can check which commit answers (#201)
-          build-args: GIT_SHA=${{ github.sha }}
-          # source links the package to this repo on GHCR
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.app }}-${{ vars.DEPLOY_ARCH || 'arm64' }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ vars.DEPLOY_ARCH || 'arm64' }}
+          write-cache: true

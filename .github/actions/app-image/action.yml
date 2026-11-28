@@ -1,0 +1,60 @@
+# One app image, built the way production gets it (#218): its Dockerfile, the GHCR name, GIT_SHA for GET /health
+# (#201), the source labels, and one build cache per app and architecture. images.yml pushes it; api_image and
+# deploy-test load it. Run it on the VM's architecture (DEPLOY_ARCH): a job's runner can't be chosen here, and a
+# cache scope only helps the jobs whose architecture matches it.
+name: App image
+description: Build an app image the way images.yml publishes it, and push or load it
+inputs:
+  app:
+    description: api or web
+    required: true
+  tags:
+    description: Tags for ghcr.io/zachhung/travelbliss-<app>, one per line
+    default: |
+      ${{ github.sha }}
+      main
+  push:
+    description: Push to GHCR (the caller logs in first)
+    default: 'false'
+  load:
+    description: Load into the runner's Docker, for a job that runs it
+    default: 'false'
+  write-cache:
+    description: Write the build cache; only images.yml does, so each scope has one writer
+    default: 'false'
+outputs:
+  image:
+    description: The image name, without a tag
+    value: ghcr.io/zachhung/travelbliss-${{ inputs.app }}
+runs:
+  using: composite
+  steps:
+    - uses: docker/setup-buildx-action@v4
+    - id: tags
+      shell: bash
+      env:
+        TAGS: ${{ inputs.tags }}
+        IMAGE: ghcr.io/zachhung/travelbliss-${{ inputs.app }}
+      run: |
+        {
+          echo 'list<<EOF'
+          while read -r tag; do [ -z "$tag" ] || echo "$IMAGE:$tag"; done <<<"$TAGS"
+          echo EOF
+        } >>"$GITHUB_OUTPUT"
+    - uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: apps/${{ inputs.app }}/Dockerfile
+        push: ${{ inputs.push }}
+        load: ${{ inputs.load }}
+        tags: ${{ steps.tags.outputs.list }}
+        build-args: GIT_SHA=${{ github.sha }}
+        # source links the package to this repo on GHCR
+        labels: |
+          org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          org.opencontainers.image.revision=${{ github.sha }}
+        # Written by images.yml, read by every caller: a test build reuses the layers images.yml built
+        cache-from: type=gha,scope=${{ inputs.app }}-${{ runner.arch }}
+        cache-to: >-
+          ${{ inputs.write-cache == 'true'
+          && format('type=gha,mode=max,scope={0}-{1}', inputs.app, runner.arch) || '' }}
