@@ -70,8 +70,9 @@ const schema = z.object({
   API_FACEBOOK_APP_SECRET: text.optional(),
 });
 
-// Their localhost defaults would send browsers and sign-in providers to the wrong place on a public host
-const inProduction = z.object({ API_CORS_ORIGIN: origin, API_PUBLIC_URL: origin });
+// Their localhost defaults would send browsers and sign-in providers to the wrong place on a public host. Presence
+// only: schema checks the shape, and checking it here too would report a bad value twice.
+const inProduction = z.object({ API_CORS_ORIGIN: text, API_PUBLIC_URL: text });
 
 export type Env = ReturnType<typeof withDefaults>;
 

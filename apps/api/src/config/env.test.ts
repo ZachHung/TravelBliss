@@ -40,6 +40,17 @@ describe('envProblems', () => {
     ]);
   });
 
+  it('reports a malformed origin once in production', () => {
+    expect(
+      envProblems({
+        ...complete,
+        NODE_ENV: 'production',
+        API_CORS_ORIGIN: 'https://travelbliss.example',
+        API_PUBLIC_URL: 'https://travelbliss.example/',
+      })
+    ).toEqual([expect.stringMatching(/^API_PUBLIC_URL: /)]);
+  });
+
   it('names malformed values alongside missing ones', () => {
     const { API_COOKIE_NAME: _, ...rest } = complete;
 
