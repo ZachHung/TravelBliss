@@ -2,10 +2,10 @@
   "name": "travelbliss",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.12.2",
+  "packageManager": "pnpm@12.23.0",
   "engines": {
     "node": ">=22.22.2",
-    "pnpm": ">=10"
+    "pnpm": ">=12"
   },
   "scripts": {
     "dev": "NODE_ENV=local turbo run dev",
@@ -15,7 +15,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "test": "turbo run typecheck lint test build format:check knip --concurrency=1 --ui=stream",
+    "test": "pnpm peers check && turbo run typecheck lint test build format:check knip --concurrency=1 --ui=stream",
     "format:check": "prettier --check \"**/*.{ts,tsx,css,json,md,yml,yaml}\"",
     "knip": "knip",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,md,yml,yaml}\" && turbo run lint -- --fix",
@@ -39,13 +39,6 @@
     "turbo": "2.11.13",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.73.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@swc/core",
-      "bcrypt",
-      "esbuild"
-    ]
   },
   "lint-staged": {
     "*.{ts,tsx}": [

@@ -1,2 +1,40 @@
 packages:
   - apps/*
+
+# Packages whose install scripts may run (pnpm 11+ fails an install on any other package that has one). Was
+# package.json's pnpm.onlyBuiltDependencies, which pnpm 11 no longer reads.
+allowBuilds:
+  '@swc/core': true
+  'bcrypt': true
+  'esbuild': true
+  # Its postinstall only warns about TypeScript; pnpm 10 never ran it either
+  '@apollo/protobufjs': false
+
+# Agent skills a dependency ships (pnpm 12): pnpm links approved ones into agent skill folders. None approved here;
+# this repo's agent setup is chosen by hand (.claude/), not by what a dependency publishes.
+permissions:
+  '@apollo/client':
+    skills: false
+
+# One version for a dependency both apps use: they write `catalog:` instead of a range, so a bump is one line here.
+# graphql stays per app on purpose: the API waits on type-graphql for 17 (#133).
+catalog:
+  'vitest': ^5.1.1
+  '@vitest/coverage-v8': ^5.1.1
+  'vite': ^8.3.8
+  'dayjs': ^1.11.23
+  'zod': ^4.6.7
+
+# Peer ranges this repo knowingly runs ahead of, so `pnpm peers check` (in `pnpm test`) flags only new drift. Each
+# was taken on purpose and runs here: lint, the API tests and e2e pass on these versions.
+peerDependencyRules:
+  allowedVersions:
+    # graphql-scalars 2.0.1 for the PhoneNumber ReDoS fix; type-graphql still declares ^1 (#189, #133)
+    'type-graphql>graphql-scalars': '2'
+    # ioredis 6 (#168); typeorm declares ^5 for its optional Redis cache, which the API doesn't use
+    'typeorm>ioredis': '6'
+    # ESLint 10; these configs and plugins still declare ^9
+    'eslint-config-mantine>eslint': '10'
+    'eslint-config-mantine>@eslint/js': '10'
+    'eslint-plugin-jsx-a11y>eslint': '10'
+    'eslint-plugin-react>eslint': '10'
