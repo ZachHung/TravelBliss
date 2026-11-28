@@ -1,0 +1,5 @@
+# The files from infra/oracle/ that /opt/travelbliss on the VM runs from: <file> <mode>.
+# Read by main.tf (a new VM's first boot) and ship.sh (every deploy), so the two can't drift (#216).
+compose.yml 0644
+deploy.sh 0755
+backup.sh 0755

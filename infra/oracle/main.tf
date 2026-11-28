@@ -213,16 +213,23 @@ locals {
     API_FACEBOOK_APP_SECRET=${var.facebook_app_secret}
   EOT
 
+  # The files /opt/travelbliss runs from, as each deploy's ship.sh copies them (#216)
+  vm_files = [
+    for line in split("\n", file("${path.module}/vm-files.txt")) : {
+      path        = "/opt/travelbliss/${split(" ", line)[0]}"
+      permissions = split(" ", line)[1]
+      content     = file("${path.module}/${split(" ", line)[0]}")
+    } if line != "" && !startswith(line, "#")
+  ]
+
   # shortcut: these secrets sit in the instance metadata, readable from inside the VM; fine for a VM only you run
   cloud_init = "#cloud-config\n${yamlencode({
     write_files = concat([
       { path = "/root/travelbliss.env", permissions = "0600", content = "TS_AUTHKEY=${var.tailscale_auth_key}\nTS_NAME=travelbliss\n" },
       { path = "/root/travelbliss-secrets.env", permissions = "0600", content = local.secrets_env },
       { path = "/root/.travelbliss-backup-pass", permissions = "0600", content = random_password.backup.result },
-      { path = "/opt/travelbliss/compose.yml", permissions = "0644", content = file("${path.module}/compose.yml") },
-      { path = "/opt/travelbliss/backup.sh", permissions = "0755", content = file("${path.module}/backup.sh") },
       { path = "/usr/local/bin/travelbliss-bootstrap", permissions = "0755", content = file("${path.module}/bootstrap.sh") },
-      ], local.rclone_conf == null ? [] : [
+      ], local.vm_files, local.rclone_conf == null ? [] : [
       # The Google Drive token: a rebuilt VM restores the newest backup on first boot (#181)
       { path = "/root/.config/rclone/rclone.conf", permissions = "0600", content = local.rclone_conf },
     ])
