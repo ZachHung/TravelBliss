@@ -51,6 +51,8 @@ jobs:
           TAG=ci ENV_FILE=/dev/null API_POSTGRES_USER=ci API_POSTGRES_PASSWORD=ci API_POSTGRES_DB=ci \
             API_REDIS_PASSWORD=ci compose
           if TAG=ci ENV_FILE=/dev/null compose 2>/dev/null; then echo 'compose.yml accepted unset secrets' >&2; exit 1; fi
+      - name: deploy gate tests
+        run: infra/oracle/test-deploy-gate.sh
       - name: hook tests
         run: python3 .claude/hooks/block-env-read.test.py
 
