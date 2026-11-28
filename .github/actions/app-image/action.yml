@@ -57,4 +57,4 @@ runs:
         cache-from: type=gha,scope=${{ inputs.app }}-${{ runner.arch }}
         cache-to: >-
           ${{ inputs.write-cache == 'true'
-            && format('type=gha,mode=max,scope={0}-{1}', inputs.app, runner.arch) || '' }}
+          && format('type=gha,mode=max,scope={0}-{1}', inputs.app, runner.arch) || '' }}
