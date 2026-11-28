@@ -72,37 +72,12 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:16.6-alpine
-    environment:
-      # :? as for TAG: an unset secret must stop compose, not become an empty password
-      POSTGRES_USER: ${API_POSTGRES_USER:?}
-      POSTGRES_PASSWORD: ${API_POSTGRES_PASSWORD:?}
-      POSTGRES_DB: ${API_POSTGRES_DB:?}
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER']
-      interval: 15s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
-      start_interval: 1s
+    extends: { file: backing-services.yml, service: db }
     restart: unless-stopped
     logging: *logging
 
   cache:
-    image: redis:7.4.1-alpine
-    environment:
-      REDIS_PASSWORD: ${API_REDIS_PASSWORD:?}
-    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test:
-        ['CMD-SHELL', 'redis-cli --no-auth-warning -a $$REDIS_PASSWORD ping | grep PONG || exit 1']
-      interval: 1s
-      timeout: 3s
-      retries: 5
+    extends: { file: backing-services.yml, service: cache }
     restart: unless-stopped
     logging: *logging
 

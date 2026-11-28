@@ -31,6 +31,22 @@ updates:
       # Follows the Node runtime (.nvmrc, Dockerfile), not npm: bump its major together with Node
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+  # The image pins, by hand until now (#219): Postgres and Redis in one file, plus the apps' base images. A bump to
+  # backing-services.yml must also reach test_pull_request.yml's service containers; Infra fails the PR until it does.
+  - package-ecosystem: 'docker-compose'
+    directory: '/infra/oracle'
+    schedule:
+      interval: 'weekly'
+    groups:
+      backing-services:
+        patterns: ['*']
+  - package-ecosystem: 'docker'
+    directories: ['/apps/api', '/apps/web']
+    schedule:
+      interval: 'weekly'
+    groups:
+      base-images:
+        patterns: ['*']
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
