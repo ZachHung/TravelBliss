@@ -41,9 +41,13 @@ done
 # concurrency group, so a later one finds the earlier one's success recorded: skip instead of recording another. A
 # failed deploy has no success status, so it can be retried. A manual run always deploys (e.g. after the VM was rebuilt,
 # or its compose or env changed).
+# Each read is assigned on its own: inside `for … in $(…)` or an `if` condition, a failed read would count as "not
+# deployed" and deploy again instead of failing the job.
 if [ "$EVENT" = workflow_run ]; then
-  for id in $(api "repos/$REPO/deployments?environment=production&sha=$SHA" | jq -r '.[].id'); do
-    if api "repos/$REPO/deployments/$id/statuses" | jq -e 'any(.[]; .state == "success")' >/dev/null; then
+  ids=$(api "repos/$REPO/deployments?environment=production&sha=$SHA" | jq -r '.[].id')
+  for id in $ids; do
+    deployed=$(api "repos/$REPO/deployments/$id/statuses" | jq 'any(.[]; .state == "success")')
+    if [ "$deployed" != false ]; then
       skip "$SHA is already deployed to production. To redeploy it, run this workflow manually."
     fi
   done

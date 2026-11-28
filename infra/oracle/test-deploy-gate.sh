@@ -29,14 +29,19 @@ given() {
   rm -rf "$FAKE_API"
   answer "repos/o/r/commits/main" "{\"sha\":\"${TIP:-$SHA}\"}"
   answer "repos/o/r/deployments?environment=production&sha=$SHA" '[]'
-  local wf state
+  local wf state conclusion
   for wf in test_pull_request.yml images.yml infra.yml; do
     state=${RUNS[$wf]:-none}
     if [ "$state" = none ]; then
       answer "repos/o/r/actions/workflows/$wf/runs?head_sha=$SHA&event=push&per_page=1" '{"workflow_runs":[]}'
     else
+      # <status>/<conclusion>; an empty conclusion is null, as for a run still going
+      conclusion=null
+      if [ -n "${state#*/}" ]; then
+        conclusion="\"${state#*/}\""
+      fi
       answer "repos/o/r/actions/workflows/$wf/runs?head_sha=$SHA&event=push&per_page=1" \
-        "{\"workflow_runs\":[{\"status\":\"${state%/*}\",\"conclusion\":$([ -n "${state#*/}" ] && echo "\"${state#*/}\"" || echo null)}]}"
+        "{\"workflow_runs\":[{\"status\":\"${state%/*}\",\"conclusion\":$conclusion}]}"
     fi
   done
 }
@@ -44,7 +49,11 @@ given() {
 # case <name> <deploy|skip> <stderr substring> [event]
 case_() {
   local name=$1 want=$2 why=$3 event=${4:-workflow_run} out err got
-  out=$("$HERE/deploy-gate.sh" "$SHA" "$event" 2>"$WORK/err") || { echo "FAIL  $name: exited $?"; failures=$((failures + 1)); return; }
+  if ! out=$("$HERE/deploy-gate.sh" "$SHA" "$event" 2>"$WORK/err"); then
+    echo "FAIL  $name: exited non-zero: $(cat "$WORK/err")"
+    failures=$((failures + 1))
+    return
+  fi
   err=$(cat "$WORK/err")
   got=$([ "$out" = "$SHA" ] && echo deploy || echo skip)
   if [ "$got" = "$want" ] && [[ $err == *"$why"* ]]; then
@@ -85,17 +94,28 @@ case_ 'already deployed, manual run: deploys anyway' deploy '' workflow_dispatch
 answer "repos/o/r/deployments/8/statuses" '[{"state":"failure"}]'
 case_ 'only failed deployments: retries' deploy ''
 
-rm -rf "$FAKE_API"
-if "$HERE/deploy-gate.sh" "$SHA" workflow_run >/dev/null 2>&1; then
-  echo "FAIL  GitHub API unreachable: should fail the job, not deploy or skip"
-  failures=$((failures + 1))
-else
-  echo "ok    GitHub API unreachable: fails the job"
-fi
+# fails <name> <path>: with that one answer missing (an API error), the gate fails the job instead of deciding
+fails() {
+  given
+  answer "repos/o/r/deployments?environment=production&sha=$SHA" '[{"id":7}]'
+  answer "repos/o/r/deployments/7/statuses" '[{"state":"failure"}]'
+  rm "$FAKE_API/$(printf '%s' "$2" | tr '/?&=' '____')"
+  if "$HERE/deploy-gate.sh" "$SHA" workflow_run >/dev/null 2>&1; then
+    echo "FAIL  $1: should fail the job, not deploy or skip"
+    failures=$((failures + 1))
+  else
+    echo "ok    $1: fails the job"
+  fi
+}
+RUNS=([test_pull_request.yml]=$ok [images.yml]=$ok)
+fails 'main unreadable' "repos/o/r/commits/main"
+fails 'a workflow run unreadable' "repos/o/r/actions/workflows/images.yml/runs?head_sha=$SHA&event=push&per_page=1"
+fails 'deployments unreadable' "repos/o/r/deployments?environment=production&sha=$SHA"
+fails 'a deployment status unreadable' "repos/o/r/deployments/7/statuses"
 
 # deploy.yml triggers on workflow names, the gate checks files: the same workflows, in both
-gating=$(sed -n 's/^GATING=(\(.*\))$/\1/p' "$HERE/deploy-gate.sh")
-if python3 - "$ROOT" $gating <<'EOF'
+read -ra gating <<<"$(sed -n 's/^GATING=(\(.*\))$/\1/p' "$HERE/deploy-gate.sh")"
+if python3 - "$ROOT" "${gating[@]}" <<'EOF'
 import sys, yaml
 root, files = sys.argv[1], sys.argv[2:]
 wf = f"{root}/.github/workflows"
@@ -112,4 +132,8 @@ else
   failures=$((failures + 1))
 fi
 
-[ "$failures" = 0 ] && echo "All passed" || { echo "$failures failed"; exit 1; }
+if [ "$failures" != 0 ]; then
+  echo "$failures failed"
+  exit 1
+fi
+echo "All passed"
